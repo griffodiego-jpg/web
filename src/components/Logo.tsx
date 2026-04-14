@@ -1,27 +1,38 @@
 /**
- * Logo provisional de Griffo como SVG inline.
- * Reemplazar por el SVG real cuando lo tengamos (va en /public/iconos/header-icon.svg).
+ * Logo de Griffo: óvalo azul con "griffo" en blanco, lowercase.
+ * Aproximación en SVG puro basada en el logo oficial.
+ * Cuando tengamos el archivo SVG original lo reemplazamos por un <Image />.
  */
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 180 48"
+      viewBox="0 0 300 160"
       className={className}
-      aria-label="Griffo"
       role="img"
+      aria-label="Griffo"
     >
+      {/* Óvalo azul */}
+      <ellipse
+        cx="150"
+        cy="80"
+        rx="145"
+        ry="70"
+        fill="var(--color-primary-value)"
+      />
+      {/* Texto "griffo" en blanco — lowercase, bold, itálica suave */}
       <text
-        x="0"
-        y="34"
-        fontFamily="Inter, Arial, sans-serif"
-        fontSize="34"
+        x="150"
+        y="108"
+        textAnchor="middle"
+        fontFamily="'Inter', system-ui, Arial, sans-serif"
+        fontSize="80"
         fontWeight="900"
-        letterSpacing="1"
-        fill="currentColor"
+        fill="#ffffff"
+        fontStyle="italic"
+        letterSpacing="-2"
       >
-        GRIFFO
+        griffo
       </text>
-      <circle cx="155" cy="24" r="6" fill="currentColor" />
     </svg>
   );
 }

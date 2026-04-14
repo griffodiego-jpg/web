@@ -23,8 +23,8 @@ export function Header() {
       id="navbar-header"
       className="fixed top-0 left-0 right-0 z-30 bg-white shadow flex items-center justify-between px-5 py-2.5"
     >
-      <Link href="/" aria-label="Inicio" className="text-primary">
-        <Logo className="h-8 w-auto" />
+      <Link href="/" aria-label="Inicio" className="block">
+        <Logo className="h-10 w-auto" />
       </Link>
 
       {/* Hamburger */}

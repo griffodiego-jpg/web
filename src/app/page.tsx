@@ -2,15 +2,17 @@ import Link from "next/link";
 import { BannerCarousel, type Banner } from "@/components/BannerCarousel";
 import { siteConfig } from "@/lib/site-config";
 
-// Placeholder banners — reemplazar cuando tengamos las imágenes reales
-// (van a /public/banners/).
+// Banners del home. Soporta imagen o hero de texto (fallback).
+// Cuando tengamos los banners finales reemplazamos por { image: "/banners/..." }.
 const banners: Banner[] = [
   {
-    id: 1,
+    id: "buscador-patente",
     href: siteConfig.externalCatalog,
-    alt: "Catálogo Griffo",
-    image: "/banners/banner-1.jpg",
+    alt: "Nuevo: Buscador por patente",
     external: true,
+    title: "Nuevo! Buscador por Patente",
+    subtitle:
+      "Encontrá el repuesto exacto en segundos. También podés buscar por vehículo, número de pieza, palabra o medidas.",
   },
 ];
 
@@ -49,40 +51,62 @@ export default function HomePage() {
     <>
       <BannerCarousel banners={banners} />
 
-      <section className="py-10 mt-10">
-        <h2 className="sr-only">Importantes</h2>
-        <div className="flex items-stretch gap-6 flex-col lg:flex-row w-full px-5 lg:px-10">
+      <section className="py-12">
+        <h2 className="sr-only">Destacados</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-5 lg:px-10">
           {featureCards.map((card) => (
-            <article
-              key={card.title}
-              className="relative flex justify-center items-center flex-col gap-5 p-10 min-h-[270px] flex-1 bg-no-repeat bg-center bg-cover overflow-hidden bg-gray-800"
-              style={{ backgroundImage: `url(${card.image})` }}
-            >
-              <div className="absolute inset-0 bg-black/35" aria-hidden />
-              <h3 className="relative text-center font-bold text-2xl text-white">
-                {card.title}
-              </h3>
-              {card.external ? (
-                <a
-                  href={card.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="relative flex items-center justify-center gap-5 w-fit px-8 py-2 uppercase bg-black text-white font-bold rounded-full border border-black hover:bg-white hover:text-black transition"
-                >
-                  {card.cta}
-                </a>
-              ) : (
-                <Link
-                  href={card.href}
-                  className="relative flex items-center justify-center gap-5 w-fit px-8 py-2 uppercase bg-black text-white font-bold rounded-full border border-black hover:bg-white hover:text-black transition"
-                >
-                  {card.cta}
-                </Link>
-              )}
-            </article>
+            <FeatureCardTile key={card.title} card={card} />
           ))}
         </div>
       </section>
     </>
+  );
+}
+
+function FeatureCardTile({ card }: { card: FeatureCard }) {
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    card.external ? (
+      <a
+        href={card.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block overflow-hidden shadow-lg hover:shadow-xl transition"
+      >
+        {children}
+      </a>
+    ) : (
+      <Link
+        href={card.href}
+        className="group block overflow-hidden shadow-lg hover:shadow-xl transition"
+      >
+        {children}
+      </Link>
+    );
+
+  return (
+    <Wrapper>
+      <article className="relative bg-gray-800 min-h-[340px] flex flex-col">
+        {/* Imagen de fondo */}
+        <div
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-gray-800"
+          style={{ backgroundImage: `url(${card.image})` }}
+          aria-hidden
+        />
+        {/* Overlay oscuro */}
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition" />
+
+        {/* Título centrado */}
+        <div className="relative flex-1 flex items-center justify-center p-10">
+          <h3 className="text-white text-3xl lg:text-4xl font-black uppercase tracking-wide drop-shadow-md">
+            {card.title}
+          </h3>
+        </div>
+
+        {/* Barra inferior azul con el CTA */}
+        <div className="relative bg-primary group-hover:bg-primary-dark transition text-white text-center py-3.5 font-bold uppercase tracking-wider text-sm">
+          {card.cta}
+        </div>
+      </article>
+    </Wrapper>
   );
 }

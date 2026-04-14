@@ -1,16 +1,19 @@
 @import "tailwindcss";
 
 /*
- * Brand tokens — estos valores son un placeholder basados en lo que suele usar Griffo.
- * Cuando me pases el CSS/logo real ajustamos el primary exacto.
+ * Paleta corporativa de Griffo (Pantone oficial):
+ * - Primary:   Pantone 2945 C — #00549F  (azul principal, el del logo)
+ * - Accent:    Pantone 312 C  — #00ADD0  (celeste claro)
+ * - Dark:      Pantone 308 C  — #005B82  (azul oscuro, hover/footer)
  */
 :root {
   --background: #ffffff;
   --foreground: #1a1a1a;
 
-  --color-primary-value: #c8102e;   /* rojo corporativo (placeholder) */
-  --color-primary-dark: #9b0c24;
-  --color-gray-value: #2a2a2a;      /* footer */
+  --color-primary-value: #00549f;
+  --color-primary-dark: #005b82;
+  --color-accent-value: #00add0;
+  --color-gray-value: #1a2a33; /* footer */
   --color-muted: #6b7280;
 }
 
@@ -19,6 +22,7 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--color-primary-value);
   --color-primary-dark: var(--color-primary-dark);
+  --color-accent: var(--color-accent-value);
   --color-gray: var(--color-gray-value);
   --font-sans:
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
