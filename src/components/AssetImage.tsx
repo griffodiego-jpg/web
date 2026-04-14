@@ -6,29 +6,31 @@ import { useState } from "react";
 /**
  * Imagen con fallback visual automático.
  *
- * Intenta cargar `src` (típicamente una ruta en /public/images/...). Si el
- * archivo no existe (404) o falla, muestra un placeholder estilizado que
- * indica qué imagen debería ir ahí. Cuando el archivo real aparece en el
- * repo, el fallback desaparece solo sin cambiar código.
- *
- * Útil durante el desarrollo mientras faltan assets del sitio original.
+ * - Si `src` carga OK, muestra la imagen a su **tamaño natural**
+ *   (w-full h-auto) — sin recortes ni estiramientos.
+ * - Si falla, muestra un placeholder estilizado con el aspecto
+ *   especificado en `fallbackAspect` (default 4:3).
  */
 export function AssetImage({
   src,
   alt,
   caption,
   className = "",
-  aspect = "aspect-[4/3]",
+  fallbackAspect = "aspect-[4/3]",
   variant = "photo",
+  fill = false,
 }: {
   src: string;
   alt: string;
-  /** Texto mostrado en el placeholder (default = alt). */
+  /** Texto en el placeholder cuando falla (default = alt). */
   caption?: string;
   className?: string;
-  /** Tailwind aspect-* class para el contenedor. */
-  aspect?: string;
+  /** Tailwind aspect-* que aplica SOLO al placeholder. */
+  fallbackAspect?: string;
   variant?: "photo" | "video";
+  /** Si true, la imagen llena todo el contenedor padre con object-cover
+   *  (útil para heros donde el layout define el tamaño). */
+  fill?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -36,8 +38,23 @@ export function AssetImage({
     return (
       <Placeholder
         label={caption ?? alt}
-        className={`${aspect} ${className}`}
+        className={
+          fill
+            ? `w-full h-full ${className}`
+            : `${fallbackAspect} ${className}`
+        }
         variant={variant}
+      />
+    );
+  }
+
+  if (fill) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-full object-cover ${className}`}
+        onError={() => setFailed(true)}
       />
     );
   }
@@ -46,7 +63,7 @@ export function AssetImage({
     <img
       src={src}
       alt={alt}
-      className={`${className} w-full h-full object-cover`}
+      className={`w-full h-auto ${className}`}
       onError={() => setFailed(true)}
     />
   );
@@ -61,13 +78,13 @@ function Placeholder({
   className: string;
   variant: "photo" | "video";
 }) {
+  const id = label.replace(/[^a-z0-9]/gi, "-");
   return (
     <div
       className={`${className} w-full relative overflow-hidden rounded bg-gradient-to-br from-[#e6f1fa] via-[#d4e6f3] to-[#bcd5e8] flex items-center justify-center`}
       role="img"
       aria-label={label}
     >
-      {/* Patrón decorativo de fondo */}
       <svg
         className="absolute inset-0 w-full h-full opacity-20"
         viewBox="0 0 400 300"
@@ -76,7 +93,7 @@ function Placeholder({
       >
         <defs>
           <pattern
-            id={`grid-${label}`}
+            id={`grid-${id}`}
             width="40"
             height="40"
             patternUnits="userSpaceOnUse"
@@ -89,10 +106,9 @@ function Placeholder({
             />
           </pattern>
         </defs>
-        <rect width="400" height="300" fill={`url(#grid-${label})`} />
+        <rect width="400" height="300" fill={`url(#grid-${id})`} />
       </svg>
 
-      {/* Icono central */}
       <div className="relative flex flex-col items-center justify-center text-center px-6">
         {variant === "video" ? (
           <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg">

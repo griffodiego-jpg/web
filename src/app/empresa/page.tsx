@@ -34,65 +34,50 @@ export default function EmpresaPage() {
         <h1 className="text-2xl text-primary font-bold">Empresa</h1>
       </div>
 
-      {/* Hero con imagen + texto superpuesto */}
+      {/* Hero: en desktop 2 columnas lado a lado; en mobile imagen con texto superpuesto */}
       <section className="relative grid lg:grid-cols-2 grid-cols-1 lg:bg-primary">
         <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10">
-          <p className="text-xl lg:text-2xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
+          <p className="text-xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
             Conocé nuestra trayectoria, nuestros valores y el compromiso que
             nos impulsa a mejorar e innovar cada día.
           </p>
         </div>
-        <div className="relative min-h-[260px] lg:min-h-[360px]">
+        <div className="relative min-h-[260px] lg:min-h-[380px]">
           <AssetImage
             src={a.historiaInicios}
             alt="Inicios de Griffo"
             caption="Foto: inicios de Griffo"
-            aspect=""
-            className="absolute inset-0 lg:mix-blend-normal mix-blend-multiply opacity-60 lg:opacity-100"
+            fill
+            className="lg:mix-blend-normal mix-blend-multiply opacity-60 lg:opacity-100"
           />
         </div>
       </section>
 
       {/* Nav interna sticky con anchors */}
-      <nav className="bg-gray py-3 sticky top-14 z-[5] overflow-x-auto shadow">
+      <nav className="bg-gray py-2 sticky top-14 z-[5] overflow-x-auto shadow">
         <ul className="container mx-auto max-w-6xl px-5 flex lg:justify-center items-center gap-8 lg:gap-10 whitespace-nowrap text-sm">
           <li>
-            <a
-              href="#nuestra-historia"
-              className="text-white hover:text-accent transition"
-            >
+            <a href="#nuestra-historia" className="text-white hover:text-accent transition py-2 block">
               Nuestra Historia
             </a>
           </li>
           <li>
-            <a
-              href="#segmentos"
-              className="text-white hover:text-accent transition"
-            >
+            <a href="#segmentos" className="text-white hover:text-accent transition py-2 block">
               Segmentos del Mercado
             </a>
           </li>
           <li>
-            <a
-              href="#mision"
-              className="text-white hover:text-accent transition"
-            >
+            <a href="#mision" className="text-white hover:text-accent transition py-2 block">
               Misión &amp; Visión
             </a>
           </li>
           <li>
-            <a
-              href="#comercio"
-              className="text-white hover:text-accent transition"
-            >
+            <a href="#comercio" className="text-white hover:text-accent transition py-2 block">
               Comercio Exterior
             </a>
           </li>
           <li>
-            <a
-              href="#compromiso"
-              className="text-white hover:text-accent transition"
-            >
+            <a href="#compromiso" className="text-white hover:text-accent transition py-2 block">
               Compromiso Ambiental
             </a>
           </li>
@@ -102,13 +87,13 @@ export default function EmpresaPage() {
       {/* NUESTRA HISTORIA */}
       <section
         id="nuestra-historia"
-        className="container mx-auto max-w-6xl px-5 lg:px-20 py-16 scroll-mt-32"
+        className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 scroll-mt-32"
       >
-        <h2 className="text-2xl lg:text-3xl text-primary font-bold mb-6">
+        <h2 className="text-2xl text-primary font-bold mb-5">
           Nuestra Historia
         </h2>
-        <div className="grid lg:grid-cols-2 grid-cols-1 gap-8">
-          <div className="space-y-5 text-gray-800 leading-relaxed">
+        <div className="grid lg:grid-cols-2 grid-cols-1 gap-5">
+          <div className="space-y-5">
             <p>
               La historia de <b>Griffo</b> comienza en 1968, cuando{" "}
               <b>Domingo Griffo</b> dio sus primeros pasos como fabricante de
@@ -140,7 +125,7 @@ export default function EmpresaPage() {
               fabricar productos confiables, robustos y de excelente calidad.
             </p>
           </div>
-          <div className="space-y-5 text-gray-800 leading-relaxed">
+          <div className="space-y-5">
             <p>
               Hoy,{" "}
               <strong>
@@ -155,30 +140,27 @@ export default function EmpresaPage() {
               terminales, y el sector industrial, con soluciones a medida para
               diversas aplicaciones técnicas.
             </p>
-            <div className="aspect-[4/3]">
-              <AssetImage
-                src={a.historiaHoy}
-                alt="Griffo hoy"
-                caption="Foto: planta actual de Griffo"
-                aspect=""
-              />
-            </div>
+            <AssetImage
+              src={a.historiaHoy}
+              alt="Griffo hoy"
+              caption="Foto: planta actual de Griffo"
+            />
           </div>
         </div>
       </section>
 
       {/* SEGMENTOS DEL MERCADO */}
-      <section id="segmentos" className="bg-primary py-16 scroll-mt-32">
-        <div className="container mx-auto max-w-6xl px-5 lg:px-20">
-          <h2 className="text-2xl lg:text-3xl text-white font-bold mb-6">
+      <section id="segmentos" className="bg-primary scroll-mt-32">
+        <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-10">
+          <h2 className="text-2xl text-white font-bold mb-5">
             Segmentos del Mercado
           </h2>
-          <div className="grid lg:grid-cols-2 grid-cols-1 gap-8 items-center">
-            <div className="space-y-3">
+          <div className="grid lg:grid-cols-2 grid-cols-1 gap-5 items-center">
+            <div className="space-y-2">
               <h3 className="text-xl text-white font-bold">
                 Aftermarket Autopartista
               </h3>
-              <p className="text-white leading-relaxed">
+              <p className="text-white">
                 Contamos con líneas de fuelles de suspensión, dirección y
                 transmisión bajo catálogo. Desde sus inicios ha innovado en la
                 manera de hacer las cosas en toda la cadena comercial. Hoy
@@ -186,34 +168,28 @@ export default function EmpresaPage() {
                 trasciende las fronteras del país.
               </p>
             </div>
-            <div className="aspect-[4/3] bg-white/10 rounded overflow-hidden">
-              <AssetImage
-                src={a.familiaFuelle}
-                alt="Familia de fuelles Griffo"
-                caption="Familia de fuelles"
-                aspect=""
-              />
-            </div>
+            <AssetImage
+              src={a.familiaFuelle}
+              alt="Familia de fuelles Griffo"
+              caption="Familia de fuelles"
+            />
           </div>
         </div>
       </section>
 
       {/* DESARROLLO A MEDIDA */}
-      <section className="container mx-auto max-w-6xl px-5 lg:px-20 py-16">
-        <div className="grid lg:grid-cols-2 grid-cols-1 gap-8 items-center">
-          <div className="aspect-[4/3]">
-            <AssetImage
-              src={a.industriales}
-              alt="Piezas industriales a medida"
-              caption="Piezas industriales a medida"
-              aspect=""
-            />
-          </div>
-          <div className="space-y-3">
-            <h2 className="text-xl lg:text-2xl text-primary font-bold">
+      <section className="container mx-auto max-w-6xl px-5 lg:px-20 py-10">
+        <div className="grid lg:grid-cols-2 grid-cols-1 gap-5 items-center">
+          <AssetImage
+            src={a.industriales}
+            alt="Piezas industriales a medida"
+            caption="Piezas industriales a medida"
+          />
+          <div className="space-y-2">
+            <h2 className="text-xl text-primary font-bold">
               Desarrollo de piezas de caucho moldeadas a medida
             </h2>
-            <p className="text-gray-800 leading-relaxed">
+            <p>
               Diseñamos y producimos piezas de caucho moldeado para industrias
               tan diversas como la alimenticia, petrolera, de electrodomésticos
               y autopartista. Construimos relaciones comerciales duraderas
@@ -227,15 +203,15 @@ export default function EmpresaPage() {
       </section>
 
       {/* MISIÓN & VISIÓN */}
-      <section id="mision" className="bg-gray-100 py-16 scroll-mt-32">
-        <div className="container mx-auto max-w-6xl px-5 lg:px-20 grid lg:grid-cols-2 grid-cols-1 gap-10">
+      <section id="mision" className="bg-gray-100 scroll-mt-32">
+        <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 grid lg:grid-cols-2 grid-cols-1 gap-x-10 gap-5">
           <div className="flex flex-col lg:flex-row gap-5 items-center lg:items-start">
-            <MisionIcon className="w-20 lg:w-32 shrink-0" />
-            <div className="space-y-2">
-              <h2 className="text-xl lg:text-2xl text-primary font-bold text-center lg:text-left">
+            <MisionIcon className="lg:w-40 w-20 mx-auto lg:mx-0 shrink-0" />
+            <div className="space-y-2.5">
+              <h2 className="text-xl text-primary font-bold text-center lg:text-left">
                 Misión
               </h2>
-              <p className="text-center lg:text-left text-gray-800 leading-relaxed">
+              <p className="text-center lg:text-left">
                 Ser una empresa eficiente, enfocada en entender y brindar
                 soluciones a los clientes, con estándares de calidad al nivel
                 de los mejores competidores globales, bajo un modelo de
@@ -244,12 +220,12 @@ export default function EmpresaPage() {
             </div>
           </div>
           <div className="flex flex-col lg:flex-row gap-5 items-center lg:items-start">
-            <VisionIcon className="w-20 lg:w-32 shrink-0" />
-            <div className="space-y-2">
-              <h2 className="text-xl lg:text-2xl text-primary font-bold text-center lg:text-left">
+            <VisionIcon className="lg:w-40 w-20 mx-auto lg:mx-0 shrink-0" />
+            <div className="space-y-2.5">
+              <h2 className="text-xl text-primary font-bold text-center lg:text-left">
                 Visión
               </h2>
-              <p className="text-center lg:text-left text-gray-800 leading-relaxed">
+              <p className="text-center lg:text-left">
                 Ser una <strong>marca calificada</strong> y reconocida por
                 ofrecer soluciones en piezas moldeadas de caucho y componentes,
                 bajo demanda y por catálogo, con calidad, experiencia técnica y
@@ -261,25 +237,25 @@ export default function EmpresaPage() {
       </section>
 
       {/* FRASE DESTACADA */}
-      <section className="bg-primary py-14">
-        <p className="container mx-auto max-w-4xl px-5 text-center text-white text-xl lg:text-2xl font-bold leading-relaxed">
+      <div className="bg-primary py-10">
+        <p className="container mx-auto max-w-4xl px-5 text-center text-white text-xl font-bold">
           Nos enfocamos en entender las necesidades de nuestros clientes y
           brindar soluciones en un modelo de negocios que genere beneficios
           para todas las partes, impulsando relaciones de largo plazo.
         </p>
-      </section>
+      </div>
 
       {/* COMERCIO EXTERIOR */}
       <section
         id="comercio"
-        className="container mx-auto max-w-6xl px-5 lg:px-20 py-16 lg:py-20 scroll-mt-32"
+        className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 lg:py-20 scroll-mt-32"
       >
-        <div className="grid lg:grid-cols-2 grid-cols-1 gap-10 items-center">
+        <div className="grid lg:grid-cols-2 grid-cols-1 gap-5 place-items-center">
           <div className="space-y-5">
-            <h2 className="text-2xl lg:text-3xl text-primary font-bold">
+            <h2 className="text-2xl text-primary font-bold">
               Comercio Exterior
             </h2>
-            <p className="text-gray-800 leading-relaxed">
+            <p>
               Disponemos de un departamento de comercio exterior especializado
               en atender mercados fuera de Argentina, asegurando a nuestros
               clientes una atención profesional, cercana y constante. Este
@@ -288,7 +264,7 @@ export default function EmpresaPage() {
               logística y el cumplimiento riguroso de los plazos, garantizando
               que cada envío llegue a tiempo.
             </p>
-            <p className="text-gray-800 leading-relaxed">
+            <p>
               Nuestro compromiso con la calidad y la seriedad nos ha permitido
               construir relaciones comerciales sólidas en la región.
               Actualmente, tenemos presencia en Brasil, Bolivia, Chile y
@@ -304,26 +280,21 @@ export default function EmpresaPage() {
       </section>
 
       {/* COMPROMISO AMBIENTAL */}
-      <section
-        id="compromiso"
-        className="bg-gray-100 py-16 scroll-mt-32"
-      >
-        <div className="container mx-auto max-w-6xl px-5 lg:px-20 grid lg:grid-cols-2 grid-cols-1 gap-10 items-center">
+      <section id="compromiso" className="bg-gray-100 scroll-mt-32">
+        <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 grid lg:grid-cols-2 grid-cols-1 gap-5 items-center">
           <div className="space-y-5">
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Compromiso ambiental
-            </h2>
-            <h3 className="text-lg text-gray-800">
+            <h2 className="text-2xl font-bold">Compromiso ambiental</h2>
+            <h3 className="text-lg">
               En Griffo creemos que producir con responsabilidad es parte de
               hacer bien nuestro trabajo.
             </h3>
-            <p className="text-gray-800 leading-relaxed">
+            <p>
               Por eso <strong>reciclamos el scrap</strong> de caucho de nuestra
               producción para transformarlo en pisos para plazas, gimnasios y
               canchas de futbol, dándole una segunda vida útil a un material
               que de otro modo se descartaría.
             </p>
-            <p className="text-gray-800 leading-relaxed">
+            <p>
               Además, <strong>incorporamos paneles solares</strong> en nuestra
               planta para{" "}
               <strong>reducir el consumo energético</strong> tradicional y
@@ -331,14 +302,11 @@ export default function EmpresaPage() {
               industrial más sustentable.
             </p>
           </div>
-          <div className="aspect-[4/3]">
-            <AssetImage
-              src={a.panelyscrap}
-              alt="Paneles solares y reciclado de scrap"
-              caption="Paneles solares y reciclado de scrap"
-              aspect=""
-            />
-          </div>
+          <AssetImage
+            src={a.panelyscrap}
+            alt="Paneles solares y reciclado de scrap"
+            caption="Paneles solares y reciclado de scrap"
+          />
         </div>
       </section>
     </>
