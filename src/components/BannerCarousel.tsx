@@ -2,14 +2,32 @@
 
 import { useEffect, useState } from "react";
 
+/**
+ * Fuente responsive para un banner. Replica el patrón `<picture srcset>`
+ * del sitio original de Griffo: distintos archivos por breakpoint.
+ */
+export type ResponsiveImage = {
+  /** Imagen por defecto (desktop grande). */
+  default: string;
+  /** Imagen para pantallas hasta 1024px (desktop chico / landscape tablet). */
+  lg?: string;
+  /** Imagen para pantallas hasta 768px (tablet). */
+  md?: string;
+  /** Imagen para pantallas hasta 414px (mobile). */
+  sm?: string;
+  alt: string;
+  width?: number;
+  height?: number;
+};
+
 export type Banner = {
   id: string | number;
   href: string;
   alt: string;
-  /** Imagen de fondo. Si no hay, se muestra un hero de texto con `title`/`subtitle`. */
-  image?: string;
+  /** Imagen estática (string) o set responsive. */
+  image?: string | ResponsiveImage;
   external?: boolean;
-  /** Hero de texto (fallback o primer banner sin imagen). */
+  /** Hero de texto (fallback si no hay imagen). */
   title?: string;
   subtitle?: string;
 };
@@ -48,25 +66,7 @@ export function BannerCarousel({
         style={{ transform: `translateX(-${index * 100}%)` }}
       >
         {banners.map((b) => (
-          <a
-            key={b.id}
-            href={b.href}
-            target={b.external ? "_blank" : undefined}
-            rel={b.external ? "noopener noreferrer" : undefined}
-            className="shrink-0 w-full"
-            aria-label={b.alt}
-          >
-            {b.image ? (
-              <div
-                className="w-full aspect-[16/6] bg-center bg-cover bg-no-repeat"
-                style={{ backgroundImage: `url(${b.image})` }}
-                role="img"
-                aria-label={b.alt}
-              />
-            ) : (
-              <TextHero title={b.title} subtitle={b.subtitle} />
-            )}
-          </a>
+          <BannerSlide key={b.id} banner={b} />
         ))}
       </div>
 
@@ -90,6 +90,90 @@ export function BannerCarousel({
   );
 }
 
+function BannerSlide({ banner }: { banner: Banner }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const showImage = banner.image && !imgFailed;
+
+  const content = showImage ? (
+    <BannerImage
+      image={banner.image!}
+      onError={() => setImgFailed(true)}
+    />
+  ) : (
+    <TextHero title={banner.title} subtitle={banner.subtitle} />
+  );
+
+  const common = {
+    className: "shrink-0 w-full block",
+    "aria-label": banner.alt,
+  };
+
+  return banner.external ? (
+    <a
+      href={banner.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      {...common}
+    >
+      {content}
+    </a>
+  ) : (
+    <a href={banner.href} {...common}>
+      {content}
+    </a>
+  );
+}
+
+/**
+ * Renderiza <picture> con srcset adaptativo. Mismos breakpoints que
+ * el sitio original (414 / 768 / 1024 / default).
+ */
+function BannerImage({
+  image,
+  onError,
+}: {
+  image: string | ResponsiveImage;
+  onError?: () => void;
+}) {
+  if (typeof image === "string") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={image}
+        alt=""
+        className="w-full h-auto block"
+        loading="eager"
+        onError={onError}
+      />
+    );
+  }
+
+  return (
+    <picture>
+      {image.sm && (
+        <source srcSet={image.sm} media="(max-width: 414px)" />
+      )}
+      {image.md && (
+        <source srcSet={image.md} media="(max-width: 768px)" />
+      )}
+      {image.lg && (
+        <source srcSet={image.lg} media="(max-width: 1024px)" />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={image.default}
+        alt={image.alt}
+        width={image.width}
+        height={image.height}
+        className="w-full h-auto block"
+        loading="eager"
+        onError={onError}
+      />
+    </picture>
+  );
+}
+
 /**
  * Hero de texto usado como fallback hasta tener los banners finales.
  * Reproduce la composición del banner "Buscador por Patente" del sitio original.
@@ -103,7 +187,6 @@ function TextHero({
 }) {
   return (
     <div className="w-full bg-gradient-to-br from-[#e6f1fa] via-[#f4f9fd] to-[#dce9f5] relative overflow-hidden">
-      {/* Líneas decorativas de fondo */}
       <svg
         className="absolute inset-0 w-full h-full opacity-30"
         preserveAspectRatio="none"
@@ -122,16 +205,9 @@ function TextHero({
           strokeWidth="1.5"
           fill="none"
         />
-        <path
-          d="M0,350 Q300,300 600,330 T1200,290"
-          stroke="var(--color-accent-value)"
-          strokeWidth="1.5"
-          fill="none"
-        />
       </svg>
 
       <div className="relative container mx-auto max-w-6xl px-6 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-[auto_1fr] items-center gap-10">
-        {/* Ilustración placeholder (lupa + browser) */}
         <div className="hidden lg:flex justify-center">
           <svg width="220" height="200" viewBox="0 0 220 200" aria-hidden>
             <rect
@@ -144,9 +220,6 @@ function TextHero({
               stroke="var(--color-primary-value)"
               strokeWidth="3"
             />
-            <circle cx="35" cy="40" r="4" fill="#d1d5db" />
-            <circle cx="50" cy="40" r="4" fill="#d1d5db" />
-            <circle cx="65" cy="40" r="4" fill="#d1d5db" />
             <line
               x1="20"
               y1="55"
@@ -155,8 +228,6 @@ function TextHero({
               stroke="var(--color-primary-value)"
               strokeWidth="2"
             />
-            <rect x="35" y="70" width="40" height="6" fill="#d1d5db" />
-            <rect x="35" y="85" width="60" height="6" fill="#d1d5db" />
             <circle
               cx="150"
               cy="130"

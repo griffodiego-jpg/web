@@ -2,17 +2,30 @@ import Link from "next/link";
 import { BannerCarousel, type Banner } from "@/components/BannerCarousel";
 import { siteConfig } from "@/lib/site-config";
 
-// Banners del home. Soporta imagen o hero de texto (fallback).
-// Cuando tengamos los banners finales reemplazamos por { image: "/banners/..." }.
+// Banners del home.
+// El set responsive apunta a archivos que deben existir en /public/banners/.
+// Si alguno falta, el navegador cae al siguiente disponible o al default.
+// Mientras el default NO exista, se muestra el hero de texto como fallback.
 const banners: Banner[] = [
   {
     id: "buscador-patente",
     href: siteConfig.externalCatalog,
     alt: "Nuevo: Buscador por patente",
     external: true,
+    // Texto usado si ninguna imagen está disponible todavía.
     title: "Nuevo! Buscador por Patente",
     subtitle:
       "Encontrá el repuesto exacto en segundos. También podés buscar por vehículo, número de pieza, palabra o medidas.",
+    image: {
+      alt: "Nuevo buscador por patente",
+      // Archivos esperados en /public/banners/ (hay que subirlos al repo):
+      default: "/banners/buscador-patente-desktop.jpg", // > 1024px
+      lg: "/banners/buscador-patente-desktop-sm.jpg", //   ≤ 1024px
+      md: "/banners/buscador-patente-tablet.jpg", //        ≤ 768px
+      sm: "/banners/buscador-patente-mobile.jpg", //        ≤ 414px
+      width: 1440,
+      height: 500,
+    },
   },
 ];
 
