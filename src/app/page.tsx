@@ -1,33 +1,6 @@
 import Link from "next/link";
-import { BannerCarousel, type Banner } from "@/components/BannerCarousel";
+import { BuscadorPatenteBanner } from "@/components/BuscadorPatenteBanner";
 import { siteConfig } from "@/lib/site-config";
-
-// Banners del home.
-// El set responsive apunta a archivos que deben existir en /public/banners/.
-// Si alguno falta, el navegador cae al siguiente disponible o al default.
-// Mientras el default NO exista, se muestra el hero de texto como fallback.
-const banners: Banner[] = [
-  {
-    id: "buscador-patente",
-    href: siteConfig.externalCatalog,
-    alt: "Nuevo: Buscador por patente",
-    external: true,
-    // Texto usado si ninguna imagen está disponible todavía.
-    title: "Nuevo! Buscador por Patente",
-    subtitle:
-      "Encontrá el repuesto exacto en segundos. También podés buscar por vehículo, número de pieza, palabra o medidas.",
-    image: {
-      alt: "Nuevo buscador por patente",
-      // Archivos esperados en /public/banners/ (hay que subirlos al repo):
-      default: "/banners/buscador-patente-desktop.jpg", // > 1024px
-      lg: "/banners/buscador-patente-desktop-sm.jpg", //   ≤ 1024px
-      md: "/banners/buscador-patente-tablet.jpg", //        ≤ 768px
-      sm: "/banners/buscador-patente-mobile.jpg", //        ≤ 414px
-      width: 1440,
-      height: 500,
-    },
-  },
-];
 
 type FeatureCard = {
   title: string;
@@ -62,7 +35,21 @@ const featureCards: FeatureCard[] = [
 export default function HomePage() {
   return (
     <>
-      <BannerCarousel banners={banners} />
+      {/*
+        Banner principal: reconstrucción vectorial del "Buscador por Patente".
+        Se adapta solo a todos los tamaños de pantalla (mobile/tablet/desktop).
+        Envuelto en <a> para mantener el comportamiento del slide original
+        (clickeable, lleva al catálogo externo).
+      */}
+      <a
+        href={siteConfig.externalCatalog}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Nuevo buscador por patente — Ir al catálogo"
+        className="block"
+      >
+        <BuscadorPatenteBanner />
+      </a>
 
       <section className="py-12">
         <h2 className="sr-only">Destacados</h2>
@@ -99,23 +86,19 @@ function FeatureCardTile({ card }: { card: FeatureCard }) {
   return (
     <Wrapper>
       <article className="relative bg-gray-800 min-h-[340px] flex flex-col">
-        {/* Imagen de fondo */}
         <div
           className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-gray-800"
           style={{ backgroundImage: `url(${card.image})` }}
           aria-hidden
         />
-        {/* Overlay oscuro */}
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition" />
 
-        {/* Título centrado */}
         <div className="relative flex-1 flex items-center justify-center p-10">
           <h3 className="text-white text-3xl lg:text-4xl font-black uppercase tracking-wide drop-shadow-md">
             {card.title}
           </h3>
         </div>
 
-        {/* Barra inferior azul con el CTA */}
         <div className="relative bg-primary group-hover:bg-primary-dark transition text-white text-center py-3.5 font-bold uppercase tracking-wider text-sm">
           {card.cta}
         </div>
