@@ -1,8 +1,10 @@
-/* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
-import { remoteAssets } from "@/lib/assets";
+import { AssetImage } from "@/components/AssetImage";
+import { AssetVideo } from "@/components/AssetVideo";
+import { MisionIcon, VisionIcon } from "@/components/MisionVisionIcons";
+import { localAssets } from "@/lib/assets";
 
-const a = remoteAssets.empresa;
+const a = localAssets.empresa;
 
 export const metadata: Metadata = {
   title: "Empresa",
@@ -33,18 +35,20 @@ export default function EmpresaPage() {
       </div>
 
       {/* Hero con imagen + texto superpuesto */}
-      <section className="relative grid lg:grid-cols-2 grid-cols-1 lg:bg-primary bg-primary/70">
+      <section className="relative grid lg:grid-cols-2 grid-cols-1 lg:bg-primary">
         <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10">
-          <p className="text-xl lg:text-2xl text-white font-bold lg:max-w-md text-center lg:text-left">
+          <p className="text-xl lg:text-2xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
             Conocé nuestra trayectoria, nuestros valores y el compromiso que
             nos impulsa a mejorar e innovar cada día.
           </p>
         </div>
-        <div className="relative">
-          <img
+        <div className="relative min-h-[260px] lg:min-h-[360px]">
+          <AssetImage
             src={a.historiaInicios}
             alt="Inicios de Griffo"
-            className="w-full h-full object-cover mix-blend-multiply opacity-60 lg:opacity-100 lg:mix-blend-normal"
+            caption="Foto: inicios de Griffo"
+            aspect=""
+            className="absolute inset-0 lg:mix-blend-normal mix-blend-multiply opacity-60 lg:opacity-100"
           />
         </div>
       </section>
@@ -73,7 +77,7 @@ export default function EmpresaPage() {
               href="#mision"
               className="text-white hover:text-accent transition"
             >
-              Misión & Visión
+              Misión &amp; Visión
             </a>
           </li>
           <li>
@@ -151,11 +155,14 @@ export default function EmpresaPage() {
               terminales, y el sector industrial, con soluciones a medida para
               diversas aplicaciones técnicas.
             </p>
-            <img
-              src={a.historiaHoy}
-              alt="Griffo hoy"
-              className="w-full rounded"
-            />
+            <div className="aspect-[4/3]">
+              <AssetImage
+                src={a.historiaHoy}
+                alt="Griffo hoy"
+                caption="Foto: planta actual de Griffo"
+                aspect=""
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -179,11 +186,14 @@ export default function EmpresaPage() {
                 trasciende las fronteras del país.
               </p>
             </div>
-            <img
-              src={a.familiaFuelle}
-              alt="Familia de fuelles Griffo"
-              className="w-full rounded"
-            />
+            <div className="aspect-[4/3] bg-white/10 rounded overflow-hidden">
+              <AssetImage
+                src={a.familiaFuelle}
+                alt="Familia de fuelles Griffo"
+                caption="Familia de fuelles"
+                aspect=""
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -191,11 +201,14 @@ export default function EmpresaPage() {
       {/* DESARROLLO A MEDIDA */}
       <section className="container mx-auto max-w-6xl px-5 lg:px-20 py-16">
         <div className="grid lg:grid-cols-2 grid-cols-1 gap-8 items-center">
-          <img
-            src={a.industriales}
-            alt="Piezas industriales a medida"
-            className="w-full rounded"
-          />
+          <div className="aspect-[4/3]">
+            <AssetImage
+              src={a.industriales}
+              alt="Piezas industriales a medida"
+              caption="Piezas industriales a medida"
+              aspect=""
+            />
+          </div>
           <div className="space-y-3">
             <h2 className="text-xl lg:text-2xl text-primary font-bold">
               Desarrollo de piezas de caucho moldeadas a medida
@@ -216,12 +229,8 @@ export default function EmpresaPage() {
       {/* MISIÓN & VISIÓN */}
       <section id="mision" className="bg-gray-100 py-16 scroll-mt-32">
         <div className="container mx-auto max-w-6xl px-5 lg:px-20 grid lg:grid-cols-2 grid-cols-1 gap-10">
-          <div className="flex flex-col lg:flex-row gap-5">
-            <img
-              src={a.misionIcon}
-              alt="Misión"
-              className="lg:w-40 w-20 mx-auto lg:mx-0 h-auto"
-            />
+          <div className="flex flex-col lg:flex-row gap-5 items-center lg:items-start">
+            <MisionIcon className="w-20 lg:w-32 shrink-0" />
             <div className="space-y-2">
               <h2 className="text-xl lg:text-2xl text-primary font-bold text-center lg:text-left">
                 Misión
@@ -234,12 +243,8 @@ export default function EmpresaPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-col lg:flex-row gap-5">
-            <img
-              src={a.visionIcon}
-              alt="Visión"
-              className="lg:w-40 w-20 mx-auto lg:mx-0 h-auto"
-            />
+          <div className="flex flex-col lg:flex-row gap-5 items-center lg:items-start">
+            <VisionIcon className="w-20 lg:w-32 shrink-0" />
             <div className="space-y-2">
               <h2 className="text-xl lg:text-2xl text-primary font-bold text-center lg:text-left">
                 Visión
@@ -290,15 +295,10 @@ export default function EmpresaPage() {
               Uruguay, trabajando para expandir a nuevos destinos.
             </p>
           </div>
-          <video
+          <AssetVideo
             src={a.comercioVideo}
             poster={a.comercioPoster}
-            className="w-full rounded"
-            muted
-            autoPlay
-            loop
-            playsInline
-            preload="metadata"
+            label="Video: Comercio Exterior"
           />
         </div>
       </section>
@@ -331,11 +331,14 @@ export default function EmpresaPage() {
               industrial más sustentable.
             </p>
           </div>
-          <img
-            src={a.panelyscrap}
-            alt="Paneles solares y reciclado de scrap"
-            className="w-full rounded"
-          />
+          <div className="aspect-[4/3]">
+            <AssetImage
+              src={a.panelyscrap}
+              alt="Paneles solares y reciclado de scrap"
+              caption="Paneles solares y reciclado de scrap"
+              aspect=""
+            />
+          </div>
         </div>
       </section>
     </>
