@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/*
+ * Brand tokens — estos valores son un placeholder basados en lo que suele usar Griffo.
+ * Cuando me pases el CSS/logo real ajustamos el primary exacto.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+
+  --color-primary-value: #c8102e;   /* rojo corporativo (placeholder) */
+  --color-primary-dark: #9b0c24;
+  --color-gray-value: #2a2a2a;      /* footer */
+  --color-muted: #6b7280;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--color-primary-value);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-gray: var(--color-gray-value);
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Utilidad para el header fijo (mismo comportamiento que el site original) */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* Carousel dots */
+.carousel-dots button {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.3s ease;
+}
+.carousel-dots button[data-active="true"] {
+  background: #fff;
+  width: 28px;
+}
+
+/* Hover dropdown del menú */
+.has-dropdown:hover > .dropdown,
+.has-dropdown:focus-within > .dropdown {
+  display: block;
+}
