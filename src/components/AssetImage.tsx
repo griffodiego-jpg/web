@@ -35,14 +35,19 @@ export function AssetImage({
   const [failed, setFailed] = useState(false);
 
   if (failed) {
+    if (fill) {
+      return (
+        <Placeholder
+          label={caption ?? alt}
+          className={`absolute inset-0 ${className}`}
+          variant={variant}
+        />
+      );
+    }
     return (
       <Placeholder
         label={caption ?? alt}
-        className={
-          fill
-            ? `w-full h-full ${className}`
-            : `${fallbackAspect} ${className}`
-        }
+        className={`${fallbackAspect} ${className}`}
         variant={variant}
       />
     );
@@ -53,7 +58,7 @@ export function AssetImage({
       <img
         src={src}
         alt={alt}
-        className={`w-full h-full object-cover ${className}`}
+        className={`absolute inset-0 w-full h-full object-cover ${className}`}
         onError={() => setFailed(true)}
       />
     );

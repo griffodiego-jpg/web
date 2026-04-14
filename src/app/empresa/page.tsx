@@ -36,13 +36,13 @@ export default function EmpresaPage() {
 
       {/* Hero: en desktop 2 columnas lado a lado; en mobile imagen con texto superpuesto */}
       <section className="relative grid lg:grid-cols-2 grid-cols-1 lg:bg-primary">
-        <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10">
+        <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10 lg:min-h-[380px]">
           <p className="text-xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
             Conocé nuestra trayectoria, nuestros valores y el compromiso que
             nos impulsa a mejorar e innovar cada día.
           </p>
         </div>
-        <div className="relative min-h-[260px] lg:min-h-[380px]">
+        <div className="relative h-[260px] lg:h-[380px]">
           <AssetImage
             src={a.historiaInicios}
             alt="Inicios de Griffo"
@@ -149,9 +149,9 @@ export default function EmpresaPage() {
         </div>
       </section>
 
-      {/* SEGMENTOS DEL MERCADO */}
-      <section id="segmentos" className="bg-primary scroll-mt-32">
-        <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-10">
+      {/* SEGMENTOS DEL MERCADO — blue card contenida, no full-width */}
+      <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-6 scroll-mt-32" id="segmentos">
+        <section className="bg-primary px-6 lg:px-12 py-10 rounded">
           <h2 className="text-2xl text-white font-bold mb-5">
             Segmentos del Mercado
           </h2>
@@ -172,10 +172,11 @@ export default function EmpresaPage() {
               src={a.familiaFuelle}
               alt="Familia de fuelles Griffo"
               caption="Familia de fuelles"
+              className="rounded"
             />
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* DESARROLLO A MEDIDA */}
       <section className="container mx-auto max-w-6xl px-5 lg:px-20 py-10">
@@ -203,8 +204,8 @@ export default function EmpresaPage() {
       </section>
 
       {/* MISIÓN & VISIÓN */}
-      <section id="mision" className="bg-gray-100 scroll-mt-32">
-        <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 grid lg:grid-cols-2 grid-cols-1 gap-x-10 gap-5">
+      <section id="mision" className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 scroll-mt-32">
+        <div className="grid lg:grid-cols-2 grid-cols-1 gap-x-10 gap-10">
           <div className="flex flex-col lg:flex-row gap-5 items-center lg:items-start">
             <MisionIcon className="lg:w-40 w-20 mx-auto lg:mx-0 shrink-0" />
             <div className="space-y-2.5">
@@ -236,13 +237,15 @@ export default function EmpresaPage() {
         </div>
       </section>
 
-      {/* FRASE DESTACADA */}
-      <div className="bg-primary py-10">
-        <p className="container mx-auto max-w-4xl px-5 text-center text-white text-xl font-bold">
-          Nos enfocamos en entender las necesidades de nuestros clientes y
-          brindar soluciones en un modelo de negocios que genere beneficios
-          para todas las partes, impulsando relaciones de largo plazo.
-        </p>
+      {/* FRASE DESTACADA — card azul contenida */}
+      <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-6">
+        <div className="bg-primary px-6 lg:px-12 py-10 rounded">
+          <p className="max-w-4xl mx-auto text-center text-white text-xl font-bold">
+            Nos enfocamos en entender las necesidades de nuestros clientes y
+            brindar soluciones en un modelo de negocios que genere beneficios
+            para todas las partes, impulsando relaciones de largo plazo.
+          </p>
+        </div>
       </div>
 
       {/* COMERCIO EXTERIOR */}
@@ -280,8 +283,8 @@ export default function EmpresaPage() {
       </section>
 
       {/* COMPROMISO AMBIENTAL */}
-      <section id="compromiso" className="bg-gray-100 scroll-mt-32">
-        <div className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 grid lg:grid-cols-2 grid-cols-1 gap-5 items-center">
+      <section id="compromiso" className="container mx-auto max-w-6xl px-5 lg:px-20 py-10 scroll-mt-32">
+        <div className="grid lg:grid-cols-2 grid-cols-1 gap-5 items-center">
           <div className="space-y-5">
             <h2 className="text-2xl font-bold">Compromiso ambiental</h2>
             <h3 className="text-lg">
