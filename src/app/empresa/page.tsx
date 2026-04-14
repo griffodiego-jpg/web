@@ -34,23 +34,23 @@ export default function EmpresaPage() {
         <h1 className="text-2xl text-primary font-bold">Empresa</h1>
       </div>
 
-      {/* Hero: en desktop 2 columnas lado a lado; en mobile imagen con texto superpuesto */}
-      <section className="relative grid lg:grid-cols-2 grid-cols-1 lg:bg-primary">
-        <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10 lg:min-h-[380px]">
-          <p className="text-xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
+      {/* Hero: 2 columnas en desktop (texto a la izquierda, foto panorámica
+          a la derecha). En mobile: foto como fondo con texto superpuesto.
+          La foto se muestra a su tamaño natural — sin recorte forzado. */}
+      <section className="relative lg:bg-primary bg-primary/70 grid lg:grid-cols-2 grid-cols-1 items-stretch">
+        <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10 py-10">
+          <p className="text-xl lg:text-2xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
             Conocé nuestra trayectoria, nuestros valores y el compromiso que
             nos impulsa a mejorar e innovar cada día.
           </p>
         </div>
-        <div className="relative h-[260px] lg:h-[380px]">
-          <AssetImage
-            src={a.historiaInicios}
-            alt="Inicios de Griffo"
-            caption="Foto: inicios de Griffo"
-            fill
-            className="lg:mix-blend-normal mix-blend-multiply opacity-60 lg:opacity-100"
-          />
-        </div>
+        {/* Imagen a su tamaño natural (w-full h-auto) — sin recorte. */}
+        <AssetImage
+          src={a.historiaInicios}
+          alt="Inicios de Griffo"
+          caption="Foto: inicios de Griffo"
+          className="lg:mix-blend-normal mix-blend-multiply opacity-60 lg:opacity-100"
+        />
       </section>
 
       {/* Nav interna sticky con anchors */}
