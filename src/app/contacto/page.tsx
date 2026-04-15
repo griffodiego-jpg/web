@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/ContactForm";
+import { LocalBusinessJsonLd } from "@/components/StructuredData";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Contacto",
   description:
-    "Escribinos tu consulta. Estamos en La Tablada, Provincia de Buenos Aires.",
+    "Escribinos tu consulta. Estamos en La Tablada, Provincia de Buenos Aires. Atención de Lunes a Viernes de 8:00 a 17:00 hs.",
+  alternates: { canonical: "/contacto" },
+  openGraph: {
+    title: "Contacto | Griffo",
+    description:
+      "Ubicación, teléfono y formulario de contacto. Mariquita Thompson 443, La Tablada, Buenos Aires.",
+    url: "/contacto",
+    type: "website",
+  },
 };
 
 /**
@@ -32,6 +41,7 @@ const MAPS_EMBED_URL = `https://www.google.com/maps?q=${encodeURIComponent(
 export default function ContactoPage() {
   return (
     <>
+      <LocalBusinessJsonLd />
       <section className="container mx-auto max-w-6xl px-5 pt-10 pb-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Columna izquierda: datos de contacto */}

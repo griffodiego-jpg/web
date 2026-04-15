@@ -4,9 +4,15 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { WhatsappFloat } from "@/components/WhatsappFloat";
 import { BackToTop } from "@/components/BackToTop";
+import {
+  OrganizationJsonLd,
+  WebSiteJsonLd,
+} from "@/components/StructuredData";
+
+const SITE_URL = "https://web-omega-wheat-25.vercel.app";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://griffo.com.ar"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Griffo | Inicio",
     template: "%s | Griffo",
@@ -18,6 +24,9 @@ export const metadata: Metadata = {
     "piezas de caucho",
     "industria automotriz",
     "industria industrial",
+    "fuelles",
+    "homocinéticas",
+    "desarrollo a medida",
   ],
   authors: [{ name: "Griffo" }],
   openGraph: {
@@ -27,12 +36,39 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_AR",
     siteName: "Griffo",
+    url: SITE_URL,
+    images: [
+      {
+        url: `${SITE_URL}/header-icon.svg`,
+        width: 1200,
+        height: 630,
+        alt: "Griffo — Impulsamos Soluciones",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     site: "@Griffo",
+    title: "Griffo",
+    description:
+      "Empresa líder en piezas de caucho moldeado para la industria automotriz e industrial.",
   },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+  verification: {
+    // TODO: agregar verification tokens cuando se registre en Search Console
+  },
 };
 
 export default function RootLayout({
@@ -59,10 +95,22 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
+        {/* JSON-LD estructurado global (Organization + WebSite) */}
+        <OrganizationJsonLd />
+        <WebSiteJsonLd />
       </head>
       <body className="min-h-full flex flex-col bg-white text-foreground">
+        {/* Skip link para accesibilidad — aparece al tabular */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-primary focus:text-white focus:px-4 focus:py-2 focus:rounded focus:font-bold focus:shadow-lg"
+        >
+          Saltar al contenido principal
+        </a>
         <Header />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" className="flex-1">
+          {children}
+        </main>
         <Footer />
         <WhatsappFloat />
         <BackToTop />

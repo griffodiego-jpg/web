@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AssetImage } from "@/components/AssetImage";
 import { AssetVideo } from "@/components/AssetVideo";
 import { MisionIcon, VisionIcon } from "@/components/MisionVisionIcons";
+import { ManufacturerJsonLd } from "@/components/StructuredData";
 import { localAssets } from "@/lib/assets";
 
 const a = localAssets.empresa;
@@ -9,7 +10,7 @@ const a = localAssets.empresa;
 export const metadata: Metadata = {
   title: "Empresa",
   description:
-    "Conocé nuestra historia, misión y el compromiso que nos impulsa a ser líderes en innovación y calidad.",
+    "Conocé nuestra historia, misión y el compromiso que nos impulsa a ser líderes en innovación y calidad. Fabricantes de piezas de caucho moldeado desde 1968.",
   keywords: [
     "Empresa",
     "piezas de caucho",
@@ -18,17 +19,22 @@ export const metadata: Metadata = {
     "historia",
     "misión",
     "compromiso",
+    "Griffo",
   ],
+  alternates: { canonical: "/empresa" },
   openGraph: {
-    title: "Empresa",
+    title: "Empresa | Griffo",
     description:
-      "Conocé nuestra historia, misión y el compromiso que nos impulsa a ser líderes en innovación y calidad.",
+      "Desde 1968 fabricamos piezas de caucho moldeado para la industria automotriz e industrial.",
+    url: "/empresa",
+    type: "website",
   },
 };
 
 export default function EmpresaPage() {
   return (
     <>
+      <ManufacturerJsonLd />
       {/* Hero: 2 columnas en desktop (texto a la izquierda, foto panorámica
           a la derecha). En mobile: foto como fondo con texto superpuesto.
           La foto se muestra a su tamaño natural — sin recorte forzado. */}

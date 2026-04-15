@@ -84,3 +84,35 @@ body {
     transform: translateX(-50%);
   }
 }
+
+/*
+ * Accesibilidad: focus visible corporativo.
+ * Aparece SOLO cuando el usuario navega por teclado (no con mouse).
+ * Cumple WCAG 2.1 AA (criterio 2.4.7 Focus Visible).
+ */
+:focus-visible {
+  outline: 2px solid var(--color-accent-value);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Smooth scroll + scroll margin para evitar que los anchors queden
+   tapados por el header sticky. */
+html {
+  scroll-behavior: smooth;
+}
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Respeta la preferencia del usuario de reducir animaciones. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

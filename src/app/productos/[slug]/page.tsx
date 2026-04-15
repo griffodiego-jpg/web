@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AssetImage } from "@/components/AssetImage";
 import { ComingSoon } from "@/components/PageHero";
+import {
+  BreadcrumbJsonLd,
+  ProductJsonLd,
+} from "@/components/StructuredData";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { navigation } from "@/lib/site-config";
 import {
@@ -37,15 +41,35 @@ export async function generateMetadata({
   const { slug } = await params;
   const producto = findProducto(slug);
   const detalle = productosDetalle[slug];
+  const canonicalUrl = `/productos/${slug}`;
   return {
     title: detalle?.title ?? producto?.label ?? "Producto",
     description: detalle?.description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: detalle
       ? {
           title: detalle.title,
           description: detalle.description,
-          images: [detalle.image],
+          url: canonicalUrl,
           type: "article",
+          images: [
+            {
+              url: detalle.image,
+              width: 1200,
+              height: 630,
+              alt: detalle.title,
+            },
+          ],
+        }
+      : undefined,
+    twitter: detalle
+      ? {
+          card: "summary_large_image",
+          title: detalle.title,
+          description: detalle.description,
+          images: [detalle.image],
         }
       : undefined,
   };
@@ -61,9 +85,28 @@ export default async function ProductoDetallePage({
   if (!producto) notFound();
 
   const detalle = productosDetalle[slug];
+  const productoUrl = `/productos/${slug}`;
 
   return (
     <>
+      {/* JSON-LD: Product + Breadcrumb para rich snippets en Google */}
+      <BreadcrumbJsonLd
+        items={[
+          { label: "Inicio", url: "/" },
+          { label: "Productos destacados", url: "/productos" },
+          { label: producto.label, url: productoUrl },
+        ]}
+      />
+      {detalle && (
+        <ProductJsonLd
+          name={detalle.title}
+          description={detalle.description ?? detalle.tagline ?? detalle.title}
+          image={detalle.image}
+          sku={detalle.codigo}
+          url={productoUrl}
+        />
+      )}
+
       <Breadcrumb label={producto.label} />
 
       {detalle ? (
