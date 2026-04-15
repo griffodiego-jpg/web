@@ -1,15 +1,26 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type Status = "loading" | "ok" | "failed";
 
 /**
  * Imagen con fallback visual automático.
  *
- * - Si `src` carga OK, muestra la imagen a su **tamaño natural**
- *   (w-full h-auto) — sin recortes ni estiramientos.
- * - Si falla, muestra un placeholder estilizado con el aspecto
- *   especificado en `fallbackAspect` (default 4:3).
+ * Estrategia de detección de errores: pre-carga con `new Image()` en un
+ * useEffect. Es más confiable que `onError` en el <img> renderizado,
+ * porque no depende del sistema de eventos sintéticos de React ni sufre
+ * issues de hidratación.
+ *
+ * Modos:
+ *   - default: `<img>` a tamaño natural (w-full h-auto). Fallback es
+ *     un placeholder estilizado con aspecto fijo.
+ *   - `fill`:  `<img>` posicionada absoluta que llena el contenedor
+ *     padre con object-cover.
+ *   - `bare`:  sin clases default — solo usa el className del consumidor.
+ *     Útil para iconos/logos con tamaño fijo. Fallback es un rectángulo
+ *     gris que respeta el className.
  */
 export function AssetImage({
   src,
@@ -23,30 +34,42 @@ export function AssetImage({
 }: {
   src: string;
   alt: string;
-  /** Texto en el placeholder cuando falla (default = alt). */
   caption?: string;
   className?: string;
-  /** Tailwind aspect-* que aplica SOLO al placeholder. */
   fallbackAspect?: string;
   variant?: "photo" | "video";
-  /** Si true, la imagen llena todo el contenedor padre con object-cover
-   *  (útil para heros donde el layout define el tamaño). */
   fill?: boolean;
-  /** Modo "bare": sin clases default (w-full h-auto). Usa solo el className
-   *  que pase el consumidor. Útil para iconos o logos con tamaño fijo.
-   *  El placeholder en modo bare es un rectángulo gris simple. */
   bare?: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [status, setStatus] = useState<Status>("loading");
 
-  if (failed) {
+  useEffect(() => {
+    let alive = true;
+    setStatus("loading");
+    const img = new Image();
+    img.onload = () => {
+      if (alive) setStatus("ok");
+    };
+    img.onerror = () => {
+      if (alive) setStatus("failed");
+    };
+    img.src = src;
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+
+  // Si falla: placeholder
+  if (status === "failed") {
     if (bare) {
       return (
         <div
-          className={`${className} bg-gray-200 rounded`}
+          className={`${className} bg-gray-200 rounded flex items-center justify-center text-gray-400`}
           role="img"
           aria-label={caption ?? alt}
-        />
+        >
+          <IconPlaceholder />
+        </div>
       );
     }
     if (fill) {
@@ -67,15 +90,37 @@ export function AssetImage({
     );
   }
 
-  if (bare) {
+  // Mientras carga, mostrar el mismo placeholder (evita flash del alt roto).
+  if (status === "loading") {
+    if (bare) {
+      return (
+        <div
+          className={`${className} bg-gray-100 rounded`}
+          role="img"
+          aria-label="Cargando"
+          aria-busy="true"
+        />
+      );
+    }
+    if (fill) {
+      return (
+        <div
+          className={`absolute inset-0 ${className} bg-gray-100`}
+          aria-busy="true"
+        />
+      );
+    }
     return (
-      <img
-        src={src}
-        alt={alt}
-        className={className}
-        onError={() => setFailed(true)}
+      <div
+        className={`${fallbackAspect} ${className} bg-gray-100 rounded`}
+        aria-busy="true"
       />
     );
+  }
+
+  // Cargó OK: renderizar la imagen
+  if (bare) {
+    return <img src={src} alt={alt} className={className} />;
   }
 
   if (fill) {
@@ -84,18 +129,32 @@ export function AssetImage({
         src={src}
         alt={alt}
         className={`absolute inset-0 w-full h-full object-cover ${className}`}
-        onError={() => setFailed(true)}
       />
     );
   }
 
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={`w-full h-auto ${className}`}
-      onError={() => setFailed(true)}
-    />
+    <img src={src} alt={alt} className={`w-full h-auto ${className}`} />
+  );
+}
+
+/* Icono pequeño de imagen para el placeholder bare */
+function IconPlaceholder() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-6 h-6 shrink-0"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
   );
 }
 

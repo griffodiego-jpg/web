@@ -14,22 +14,20 @@ export const metadata: Metadata = {
   },
 };
 
-// 11 piezas numeradas 1.png a 11.png
-const PIEZAS = Array.from({ length: 11 }, (_, i) => i + 1);
 // 7 logos de clientes
 const CLIENTES = Array.from({ length: 7 }, (_, i) => i + 1);
 
 export default function DesarrolloAMedidaPage() {
   return (
     <>
-      {/* HERO */}
-      <section className="container mx-auto max-w-6xl px-5 py-10 lg:py-16">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
-          <div className="space-y-4">
-            <h1 className="text-3xl lg:text-4xl text-primary font-medium leading-tight">
+      {/* HERO — compacto, estilo del sitio original */}
+      <section className="container mx-auto max-w-6xl px-5 py-8 lg:py-12">
+        <div className="grid lg:grid-cols-2 gap-8 items-center">
+          <div className="space-y-3">
+            <h1 className="text-2xl lg:text-3xl text-primary font-medium leading-tight">
               Desarrollos a medida de piezas de caucho moldeado
             </h1>
-            <p className="text-lg lg:text-xl text-gray-600 leading-relaxed font-medium">
+            <p className="text-base lg:text-lg text-gray-600 leading-relaxed font-medium">
               Proveemos piezas de caucho moldeado bajo demanda a empresas de la
               industria alimenticia, de petróleo, de electrodomésticos,
               autopartistas, entre otros. Donde nos caracterizamos por entender
@@ -42,7 +40,7 @@ export default function DesarrolloAMedidaPage() {
               alt="Piezas de caucho desarrollo a medida"
               caption="Piezas header"
               bare
-              className="max-h-[350px] w-auto object-contain"
+              className="max-h-[300px] w-auto object-contain"
               fallbackAspect="aspect-[4/3]"
             />
           </div>
@@ -120,41 +118,29 @@ export default function DesarrolloAMedidaPage() {
         </div>
       </section>
 
-      {/* PIEZAS + ISO 9001 */}
-      <aside className="bg-primary/10 py-16">
-        <div className="container mx-auto max-w-6xl px-5">
-          <h2 className="text-2xl font-bold text-center text-black mb-12">
+      {/* ISO 9001 — solo el texto, sin las piezas individuales */}
+      <aside className="bg-primary/10 py-12">
+        <div className="container mx-auto max-w-4xl px-5">
+          <h2 className="text-xl lg:text-2xl font-bold text-center text-black">
             Además, desde hace más de 20 años la empresa cuenta con la
             certificación ISO 9001.
           </h2>
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-10 items-end">
-            {PIEZAS.map((n) => (
-              <div key={n} className="flex justify-center items-center p-2">
-                <AssetImage
-                  src={`/images/desarrollo-a-medida/${n}.png`}
-                  alt={`Pieza ${n}`}
-                  bare
-                  className="max-h-[100px] w-auto object-contain hover:scale-110 transition-transform duration-300"
-                />
-              </div>
-            ))}
-          </div>
         </div>
       </aside>
 
       {/* CLIENTES */}
       <aside className="py-16 container mx-auto max-w-6xl px-5">
-        <h2 className="text-3xl font-bold text-center text-primary mb-12">
+        <h2 className="text-2xl lg:text-3xl font-bold text-center text-primary mb-10">
           Algunos de nuestros clientes
         </h2>
         <ul className="flex flex-wrap justify-center gap-12 items-center grayscale hover:grayscale-0 transition-all duration-500">
           {CLIENTES.map((n) => (
-            <li key={n}>
+            <li key={n} className="min-w-[110px] flex justify-center">
               <AssetImage
                 src={`/clientes/cliente${n}.png`}
                 alt={`Cliente ${n}`}
                 bare
-                className="h-16 w-auto object-contain"
+                className="h-16 w-[110px] object-contain"
               />
             </li>
           ))}
