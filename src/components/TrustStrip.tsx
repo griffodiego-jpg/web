@@ -10,11 +10,6 @@ export function TrustStrip() {
     >
       <div className="container mx-auto max-w-6xl px-5 lg:px-10 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-gray-300">
         <Credential
-          icon={<FactoryIcon className="w-10 h-10" />}
-          title="Desde 1968"
-          subtitle="Empresa familiar argentina"
-        />
-        <Credential
           icon={<ShieldIcon className="w-10 h-10" />}
           title="2 años de garantía"
           subtitle="En todos nuestros productos"
@@ -23,6 +18,11 @@ export function TrustStrip() {
           icon={<BadgeIcon className="w-10 h-10" />}
           title="ISO 9001:2015"
           subtitle="Certificación de calidad"
+        />
+        <Credential
+          icon={<FactoryIcon className="w-10 h-10" />}
+          title="Desde 1968"
+          subtitle="Empresa familiar argentina"
         />
         <Credential
           icon={<TrophyIcon className="w-10 h-10" />}
