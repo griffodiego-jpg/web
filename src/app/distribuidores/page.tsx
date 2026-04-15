@@ -9,17 +9,39 @@ import {
 
 const TODAS = "__todas__";
 
+type SortKey = "nombre" | "telefono" | "email" | "provincia";
+type SortDir = "asc" | "desc";
+
 export default function DistribuidoresPage() {
   const [provincia, setProvincia] = useState<string>(TODAS);
+  const [sortKey, setSortKey] = useState<SortKey>("nombre");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const provincias = useMemo(() => listarProvincias(), []);
 
   const filtrados = useMemo(() => {
-    if (provincia === TODAS) return distribuidores;
-    return distribuidores.filter((d) =>
-      d.provinciasFiltro.includes(provincia)
-    );
-  }, [provincia]);
+    const base =
+      provincia === TODAS
+        ? distribuidores
+        : distribuidores.filter((d) => d.provinciasFiltro.includes(provincia));
+    // Orden estable por la columna seleccionada
+    const sorted = [...base].sort((a, b) => {
+      const va = a[sortKey].toLocaleLowerCase("es");
+      const vb = b[sortKey].toLocaleLowerCase("es");
+      return va.localeCompare(vb, "es");
+    });
+    return sortDir === "asc" ? sorted : sorted.reverse();
+  }, [provincia, sortKey, sortDir]);
+
+  /** Cambia la columna de ordenamiento. Si es la misma, alterna dirección. */
+  function onSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
 
   return (
     <section className="container mx-auto max-w-6xl px-5 pt-10 pb-16">
@@ -74,15 +96,39 @@ export default function DistribuidoresPage() {
         </div>
       ) : (
         <>
-          {/* Desktop: tabla */}
+          {/* Desktop: tabla con columnas ordenables */}
           <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
             <table className="w-full">
               <thead className="bg-primary text-white">
                 <tr>
-                  <Th>Nombre</Th>
-                  <Th>Teléfono</Th>
-                  <Th>Email</Th>
-                  <Th>Ubicación</Th>
+                  <SortableTh
+                    label="Nombre"
+                    sortKey="nombre"
+                    active={sortKey}
+                    dir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortableTh
+                    label="Teléfono"
+                    sortKey="telefono"
+                    active={sortKey}
+                    dir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortableTh
+                    label="Email"
+                    sortKey="email"
+                    active={sortKey}
+                    dir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortableTh
+                    label="Ubicación"
+                    sortKey="provincia"
+                    active={sortKey}
+                    dir={sortDir}
+                    onSort={onSort}
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -141,11 +187,72 @@ export default function DistribuidoresPage() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+/**
+ * Encabezado de columna clickeable. Muestra una flechita al lado del
+ * título indicando dirección cuando esa columna está activa.
+ */
+function SortableTh({
+  label,
+  sortKey,
+  active,
+  dir,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  active: SortKey;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+}) {
+  const isActive = active === sortKey;
   return (
     <th className="text-left px-4 py-3 text-sm font-bold uppercase tracking-wide">
-      {children}
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="flex items-center gap-1.5 hover:opacity-90 transition cursor-pointer"
+        aria-sort={
+          isActive ? (dir === "asc" ? "ascending" : "descending") : "none"
+        }
+      >
+        <span>{label}</span>
+        <SortIcon active={isActive} dir={dir} />
+      </button>
     </th>
+  );
+}
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) {
+    // Flechita doble gris tenue cuando no está activa
+    return (
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className="opacity-40"
+        aria-hidden
+      >
+        <path d="M7 10l5-5 5 5H7zm0 4l5 5 5-5H7z" />
+      </svg>
+    );
+  }
+  // Flechita única apuntando en la dirección del orden
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      {dir === "asc" ? (
+        <path d="M7 14l5-5 5 5H7z" />
+      ) : (
+        <path d="M7 10l5 5 5-5H7z" />
+      )}
+    </svg>
   );
 }
 
