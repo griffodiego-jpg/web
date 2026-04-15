@@ -88,23 +88,26 @@ function FeatureCardTile({ card }: { card: FeatureCard }) {
 
   return (
     <Wrapper>
-      <article className="relative bg-gray-800 min-h-[340px] flex flex-col">
+      <article className="relative bg-gray-700 min-h-[340px] flex flex-col items-center justify-center p-10 gap-5">
+        {/* Fondo: imagen del producto en grayscale + oscurecida (efecto 'apagado') */}
         <div
-          className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-gray-800"
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-gray-700 grayscale-[85%] brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition duration-500"
           style={{ backgroundImage: `url(${card.image})` }}
           aria-hidden
         />
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition" />
+        {/* Overlay gris/negro para reforzar el 'apagado' */}
+        <div
+          className="absolute inset-0 bg-black/55 group-hover:bg-black/30 transition duration-500"
+          aria-hidden
+        />
 
-        <div className="relative flex-1 flex items-center justify-center p-10">
-          <h3 className="text-white text-3xl lg:text-4xl font-black uppercase tracking-wide drop-shadow-md">
-            {card.title}
-          </h3>
-        </div>
-
-        <div className="relative bg-primary group-hover:bg-primary-dark transition text-white text-center py-3.5 font-bold uppercase tracking-wider text-sm">
+        {/* Contenido: título + pill button, centrados */}
+        <h3 className="relative text-white text-3xl lg:text-4xl font-black uppercase tracking-wide drop-shadow-md text-center">
+          {card.title}
+        </h3>
+        <span className="relative inline-flex items-center justify-center px-8 py-2.5 uppercase bg-black text-white text-sm font-bold rounded-full border border-black group-hover:bg-white group-hover:text-black transition duration-300">
           {card.cta}
-        </div>
+        </span>
       </article>
     </Wrapper>
   );
