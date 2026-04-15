@@ -42,6 +42,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" data-theme="light" className="h-full antialiased">
+      <head>
+        {/*
+          Montserrat — alternativa libre a Gotham. Se carga en tiempo de
+          ejecución desde Google Fonts en el navegador del usuario.
+          Si el cliente tiene licencia de Gotham, reemplazar por un
+          @font-face local en globals.css apuntando a /fonts/.
+        */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-white text-foreground">
         <Header />
         <main className="flex-1 pt-14">{children}</main>

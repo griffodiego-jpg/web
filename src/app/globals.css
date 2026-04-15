@@ -24,9 +24,15 @@
   --color-primary-dark: var(--color-primary-dark);
   --color-accent: var(--color-accent-value);
   --color-gray: var(--color-gray-value);
+  /*
+   * Familia tipográfica corporativa.
+   * Montserrat es una alternativa libre a Gotham (la que usa Griffo en
+   * su catálogo impreso). Si se compra la licencia de Gotham y se suben
+   * los archivos a /public/fonts/, se puede reemplazar esta stack.
+   */
   --font-sans:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+    "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 }
 
 html,
@@ -36,7 +42,10 @@ body {
 }
 
 body {
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "kern", "liga";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Utilidad para el header fijo (mismo comportamiento que el site original) */
