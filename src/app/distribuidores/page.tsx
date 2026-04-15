@@ -16,14 +16,19 @@ export default function DistribuidoresPage() {
 
   const filtrados = useMemo(() => {
     if (provincia === TODAS) return distribuidores;
-    return distribuidores.filter((d) => d.provincia === provincia);
+    return distribuidores.filter((d) =>
+      d.provinciasFiltro.includes(provincia)
+    );
   }, [provincia]);
 
   return (
     <section className="container mx-auto max-w-6xl px-5 pt-10 pb-16">
       {/* Selector de provincia */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-        <label htmlFor="provincia" className="font-bold text-[#0a2b3d] text-lg">
+        <label
+          htmlFor="provincia"
+          className="font-bold text-[#0a2b3d] text-lg"
+        >
           Encontrá tu distribuidor más cercano
         </label>
         <div className="relative sm:ml-auto sm:min-w-[280px]">
@@ -77,7 +82,7 @@ export default function DistribuidoresPage() {
                   <Th>Nombre</Th>
                   <Th>Teléfono</Th>
                   <Th>Email</Th>
-                  <Th>Provincia</Th>
+                  <Th>Ubicación</Th>
                 </tr>
               </thead>
               <tbody>
@@ -86,8 +91,10 @@ export default function DistribuidoresPage() {
                     key={`${d.nombre}-${i}`}
                     className="border-t border-gray-200 hover:bg-gray-50 transition"
                   >
-                    <Td className="font-bold text-[#0a2b3d]">{d.nombre}</Td>
-                    <Td>
+                    <Td className="font-bold text-[#0a2b3d] align-top">
+                      {d.nombre}
+                    </Td>
+                    <Td className="align-top">
                       <a
                         href={`tel:${d.telefono.replace(/[^0-9+]/g, "")}`}
                         className="text-primary hover:underline"
@@ -95,7 +102,7 @@ export default function DistribuidoresPage() {
                         {d.telefono}
                       </a>
                     </Td>
-                    <Td>
+                    <Td className="align-top">
                       <a
                         href={`mailto:${d.email}`}
                         className="text-primary hover:underline break-all"
@@ -103,7 +110,7 @@ export default function DistribuidoresPage() {
                         {d.email}
                       </a>
                     </Td>
-                    <Td className="text-gray-700">{d.provincia}</Td>
+                    <Td className="align-top text-gray-700">{d.provincia}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -120,11 +127,12 @@ export default function DistribuidoresPage() {
           <p className="mt-6 text-sm text-gray-500">
             {filtrados.length}{" "}
             {filtrados.length === 1 ? "distribuidor" : "distribuidores"}
-            {provincia !== TODAS && (
+            {provincia !== TODAS ? (
               <>
-                {" "}
-                en <strong>{provincia}</strong>
+                {" "}que entregan en <strong>{provincia}</strong>
               </>
+            ) : (
+              <> en total</>
             )}
           </p>
         </>
