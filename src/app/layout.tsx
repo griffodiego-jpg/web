@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { TopBar } from "@/components/TopBar";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { WhatsappFloat } from "@/components/WhatsappFloat";
@@ -61,8 +62,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-white text-foreground">
+        <TopBar />
         <Header />
-        <main className="flex-1 pt-14">{children}</main>
+        <main className="flex-1">{children}</main>
         <Footer />
         <WhatsappFloat />
         <BackToTop />

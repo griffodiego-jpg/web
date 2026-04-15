@@ -74,3 +74,13 @@ body {
 .has-dropdown:focus-within > .dropdown {
   display: block;
 }
+
+/* Marquee para la barra superior en mobile */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

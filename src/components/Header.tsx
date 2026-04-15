@@ -21,7 +21,7 @@ export function Header() {
   return (
     <header
       id="navbar-header"
-      className="fixed top-0 left-0 right-0 z-30 bg-white shadow flex items-center justify-between px-5 py-2.5"
+      className="sticky top-0 z-30 bg-white shadow flex items-center justify-between px-5 py-2.5"
     >
       <Link
         href="/"

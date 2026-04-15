@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BuscadorPatenteBanner } from "@/components/BuscadorPatenteBanner";
+import { TrustStrip } from "@/components/TrustStrip";
 import { siteConfig } from "@/lib/site-config";
 
 type FeatureCard = {
@@ -51,7 +52,7 @@ export default function HomePage() {
         <BuscadorPatenteBanner />
       </a>
 
-      <section className="py-12">
+      <section className="py-10 lg:py-12">
         <h2 className="sr-only">Destacados</h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-5 lg:px-10">
           {featureCards.map((card) => (
@@ -59,6 +60,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <TrustStrip />
     </>
   );
 }

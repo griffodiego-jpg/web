@@ -23,8 +23,8 @@ export function BuscadorPatenteBanner() {
         </g>
       </svg>
 
-      {/* Contenido full-width: el banner ocupa todo el ancho de la pantalla */}
-      <div className="relative w-full px-6 sm:px-10 lg:px-16 xl:px-24 py-10 sm:py-14 lg:py-16 xl:py-20 grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-6 md:gap-10 lg:gap-14 max-w-[1800px] mx-auto">
+      {/* Contenido full-width con altura controlada para no tapar el fold. */}
+      <div className="relative w-full px-6 sm:px-10 lg:px-16 xl:px-20 py-8 sm:py-10 lg:py-10 xl:py-12 grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-5 md:gap-8 lg:gap-12 max-w-[1800px] mx-auto">
         <Illustration />
         <TextBlock />
       </div>
@@ -34,7 +34,7 @@ export function BuscadorPatenteBanner() {
 
 function Illustration() {
   return (
-    <div className="mx-auto md:mx-0 w-[220px] sm:w-[280px] md:w-[340px] lg:w-[400px] xl:w-[460px] shrink-0">
+    <div className="mx-auto md:mx-0 w-[180px] sm:w-[230px] md:w-[270px] lg:w-[310px] xl:w-[360px] shrink-0">
       <svg
         viewBox="0 0 320 300"
         className="w-full h-auto"
@@ -139,17 +139,17 @@ function TextBlock() {
   return (
     <div className="text-center md:text-left">
       {/* "Nuevo!" — más chico, como "etiqueta" del titular */}
-      <p className="font-black text-[#111] leading-none text-2xl sm:text-3xl md:text-4xl">
+      <p className="font-black text-[#111] leading-none text-xl sm:text-2xl md:text-3xl">
         Nuevo!
       </p>
 
       {/* Titular principal */}
-      <h2 className="mt-1 font-black leading-[1.05] text-[#111] text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-6xl">
+      <h2 className="mt-1 font-black leading-[1.05] text-[#111] text-2xl sm:text-3xl md:text-4xl lg:text-[2.6rem] xl:text-5xl">
         Buscador por Patente
       </h2>
 
       {/* Caja azul con forma de flecha a la derecha */}
-      <div className="mt-4 sm:mt-5">
+      <div className="mt-3 sm:mt-4">
         <ArrowBox>
           Encontrá el repuesto exacto
           <br />
@@ -158,7 +158,7 @@ function TextBlock() {
       </div>
 
       {/* Bajada */}
-      <p className="mt-4 sm:mt-5 text-base sm:text-lg md:text-xl font-semibold text-[#0a2b3d]">
+      <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg font-semibold text-[#0a2b3d]">
         También podés buscar por vehículo,
         <br className="hidden sm:block" /> número de pieza, palabra o medidas.
       </p>
@@ -175,11 +175,11 @@ function ArrowBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="inline-block">
       <div
-        className="bg-primary text-white font-black uppercase leading-[1.1] whitespace-nowrap px-5 sm:px-6 md:px-7 py-3 sm:py-4 text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-[2.6rem] relative"
+        className="bg-primary text-white font-black uppercase leading-[1.1] whitespace-nowrap px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 text-base sm:text-xl md:text-2xl lg:text-3xl xl:text-[2.1rem] relative"
         style={{
           clipPath:
-            "polygon(0 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 0 100%)",
-          paddingRight: "44px",
+            "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)",
+          paddingRight: "38px",
         }}
       >
         {children}
