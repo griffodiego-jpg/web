@@ -86,6 +86,22 @@ export default function DistribuidoresPage() {
         </div>
       </div>
 
+      {/* Contador de resultados — debajo del filtro, antes de la tabla */}
+      {filtrados.length > 0 && (
+        <p className="mb-4 text-sm text-gray-600">
+          <strong className="text-[#0a2b3d]">{filtrados.length}</strong>{" "}
+          {filtrados.length === 1 ? "distribuidor" : "distribuidores"}
+          {provincia !== TODAS ? (
+            <>
+              {" "}
+              que entregan en <strong>{provincia}</strong>
+            </>
+          ) : (
+            <> en total</>
+          )}
+        </p>
+      )}
+
       {/* Resultados */}
       {filtrados.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
@@ -169,18 +185,6 @@ export default function DistribuidoresPage() {
               <DistribuidorCard key={`${d.nombre}-${i}`} d={d} />
             ))}
           </ul>
-
-          <p className="mt-6 text-sm text-gray-500">
-            {filtrados.length}{" "}
-            {filtrados.length === 1 ? "distribuidor" : "distribuidores"}
-            {provincia !== TODAS ? (
-              <>
-                {" "}que entregan en <strong>{provincia}</strong>
-              </>
-            ) : (
-              <> en total</>
-            )}
-          </p>
         </>
       )}
     </section>

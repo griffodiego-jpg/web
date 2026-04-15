@@ -52,6 +52,8 @@ export default function HomePage() {
         <BuscadorPatenteBanner />
       </a>
 
+      <TrustStrip />
+
       <section className="py-10 lg:py-12">
         <h2 className="sr-only">Destacados</h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-5 lg:px-10">
@@ -60,8 +62,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-
-      <TrustStrip />
     </>
   );
 }
