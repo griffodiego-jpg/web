@@ -13,7 +13,7 @@ type FeatureCard = {
 
 const featureCards: FeatureCard[] = [
   {
-    title: "Productos",
+    title: "Productos Destacados",
     image: "/products/producto-card.jpg",
     href: "/productos",
     cta: "Ver todos",
