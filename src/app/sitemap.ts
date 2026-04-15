@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { navigation } from "@/lib/site-config";
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * Sitemap dinámico. Lista todas las rutas públicas del sitio:
@@ -10,8 +11,6 @@ import { navigation } from "@/lib/site-config";
  * Se actualiza automáticamente si se agregan items al navigation.
  * Excluye las rutas externas (Catálogo) y las que no queremos indexar.
  */
-
-const SITE_URL = "https://web-omega-wheat-25.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

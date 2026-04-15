@@ -1,4 +1,5 @@
 import { siteConfig } from "@/lib/site-config";
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * Componentes server-rendered para inyectar JSON-LD estructurado
@@ -8,8 +9,6 @@ import { siteConfig } from "@/lib/site-config";
  * Cada componente renderiza un <script type="application/ld+json">
  * con los datos correspondientes. Todos son server components puros.
  */
-
-const SITE_URL = "https://web-omega-wheat-25.vercel.app";
 
 /** JSON-LD base con los datos de Griffo (Organization + LocalBusiness). */
 export function OrganizationJsonLd() {

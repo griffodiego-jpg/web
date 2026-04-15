@@ -8,8 +8,7 @@ import {
   OrganizationJsonLd,
   WebSiteJsonLd,
 } from "@/components/StructuredData";
-
-const SITE_URL = "https://web-omega-wheat-25.vercel.app";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

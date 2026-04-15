@@ -15,7 +15,14 @@ externo). El resto sí.
 
 - **Branch de desarrollo**: `claude/rebuild-web-platform-WwmFb` (todos los
   commits van acá, nunca a main).
-- **Deploy**: Vercel auto-deploya cada push → https://web-omega-wheat-25.vercel.app
+- **Deploy staging**: Vercel auto-deploya cada push → https://web-omega-wheat-25.vercel.app
+- **Dominio final**: `https://www.griffo.com.ar` (migración pendiente,
+  ver `MIGRATION.md` en la raíz del repo para el plan completo).
+- **`SITE_URL`** se controla con la env var `NEXT_PUBLIC_SITE_URL`
+  (default: staging). En el día del switch: definir la variable en Vercel
+  (Production scope) apuntando a `https://www.griffo.com.ar` y todo
+  (sitemap, robots, JSON-LD, canonicals, OpenGraph) se actualiza solo
+  sin cambios de código. Ver `src/lib/site-url.ts`.
 - **Stack**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + pnpm.
 - **Fuente**: **Montserrat** (Google Fonts, cargada vía `<link>` en
   `layout.tsx`, no `next/font/google` porque el sandbox bloquea Google Fonts
@@ -127,6 +134,26 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   por mixed content (HTTP → HTTPS).
 - **Google Fonts** sí se puede usar vía `<link>` (carga en el navegador del
   usuario, no en el build). `next/font/google` falla.
+
+## SEO / Performance / a11y (estado actual)
+
+- **Sitemap**: `app/sitemap.ts` dinámico (home + todas las institucionales
+  + los 7 productos destacados expandidos del nav).
+- **Robots**: `app/robots.ts` apunta al sitemap, bloquea /api/.
+- **JSON-LD estructurado (Schema.org)**: componentes en
+  `components/StructuredData.tsx`. Se usan así:
+  * `OrganizationJsonLd` + `WebSiteJsonLd` en layout (globales)
+  * `LocalBusinessJsonLd` en /contacto
+  * `ManufacturerJsonLd` en /empresa
+  * `ProductJsonLd` + `BreadcrumbJsonLd` en /productos/[slug]
+- **Imágenes**: las pesadas se comprimieron con sharp (mozjpeg q82 +
+  png palette + resize max 1600px). Reducción total ~11 MB. Para
+  optimizar nuevas subidas: pedirme que corra el mismo script.
+- **A11y**: skip link en layout (`#main-content`), :focus-visible con
+  outline accent, scroll-margin-top global, prefers-reduced-motion.
+- **Pendiente**: video `comercio-exterior.mp4` (9 MB) — necesita ffmpeg
+  o compresión desde HandBrake por la cliente. Forms reales (Resend),
+  Analytics, Search Console — requieren input de la cliente.
 
 ## Pendientes y decisiones abiertas
 

@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const SITE_URL = "https://web-omega-wheat-25.vercel.app";
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * robots.txt dinámico. Permite indexar todo el sitio público, excluyendo
