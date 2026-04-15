@@ -138,23 +138,27 @@ function Illustration() {
 function TextBlock() {
   return (
     <div className="text-center md:text-left">
-      {/* Titular principal */}
-      <h2 className="font-black leading-[1.05] text-[#111] text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
+      {/* "Nuevo!" — más chico, como "etiqueta" del titular */}
+      <p className="font-black text-[#111] leading-none text-2xl sm:text-3xl md:text-4xl">
         Nuevo!
-        <br />
+      </p>
+
+      {/* Titular principal */}
+      <h2 className="mt-1 font-black leading-[1.05] text-[#111] text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] xl:text-6xl">
         Buscador por Patente
       </h2>
 
       {/* Caja azul con forma de flecha a la derecha */}
-      <div className="mt-4 sm:mt-5 lg:mt-6">
+      <div className="mt-4 sm:mt-5">
         <ArrowBox>
           Encontrá el repuesto exacto
-          <br className="hidden sm:block" /> en segundos.
+          <br />
+          en segundos.
         </ArrowBox>
       </div>
 
       {/* Bajada */}
-      <p className="mt-4 sm:mt-5 lg:mt-6 text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-[#0a2b3d]">
+      <p className="mt-4 sm:mt-5 text-base sm:text-lg md:text-xl font-semibold text-[#0a2b3d]">
         También podés buscar por vehículo,
         <br className="hidden sm:block" /> número de pieza, palabra o medidas.
       </p>
@@ -163,17 +167,19 @@ function TextBlock() {
 }
 
 /**
- * Caja azul con flecha a la derecha. El triángulo se hace con clip-path.
+ * Caja azul con flecha a la derecha. Ancho automático: se adapta al
+ * texto más largo que contiene. `whitespace-nowrap` evita wraps
+ * inesperados al cambiar el tamaño de fuente.
  */
 function ArrowBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-block w-full sm:max-w-[780px]">
+    <div className="inline-block">
       <div
-        className="bg-primary text-white font-black uppercase leading-tight px-5 sm:px-7 lg:px-9 py-3 sm:py-4 lg:py-5 text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl relative"
+        className="bg-primary text-white font-black uppercase leading-[1.1] whitespace-nowrap px-5 sm:px-6 md:px-7 py-3 sm:py-4 text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-[2.6rem] relative"
         style={{
           clipPath:
-            "polygon(0 0, calc(100% - 34px) 0, 100% 50%, calc(100% - 34px) 100%, 0 100%)",
-          paddingRight: "54px",
+            "polygon(0 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 0 100%)",
+          paddingRight: "44px",
         }}
       >
         {children}
