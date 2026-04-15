@@ -19,7 +19,7 @@ export function Logo({ className = "" }: { className?: string }) {
   if (!failed) {
     return (
       <img
-        src="/iconos/header-icon.svg"
+        src="/header-icon.svg"
         alt="Griffo"
         className={className}
         onError={() => setFailed(true)}
