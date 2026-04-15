@@ -19,6 +19,7 @@ export function AssetImage({
   fallbackAspect = "aspect-[4/3]",
   variant = "photo",
   fill = false,
+  bare = false,
 }: {
   src: string;
   alt: string;
@@ -31,10 +32,23 @@ export function AssetImage({
   /** Si true, la imagen llena todo el contenedor padre con object-cover
    *  (útil para heros donde el layout define el tamaño). */
   fill?: boolean;
+  /** Modo "bare": sin clases default (w-full h-auto). Usa solo el className
+   *  que pase el consumidor. Útil para iconos o logos con tamaño fijo.
+   *  El placeholder en modo bare es un rectángulo gris simple. */
+  bare?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
+    if (bare) {
+      return (
+        <div
+          className={`${className} bg-gray-200 rounded`}
+          role="img"
+          aria-label={caption ?? alt}
+        />
+      );
+    }
     if (fill) {
       return (
         <Placeholder
@@ -49,6 +63,17 @@ export function AssetImage({
         label={caption ?? alt}
         className={`${fallbackAspect} ${className}`}
         variant={variant}
+      />
+    );
+  }
+
+  if (bare) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onError={() => setFailed(true)}
       />
     );
   }
