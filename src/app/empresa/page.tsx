@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AssetImage } from "@/components/AssetImage";
 import { AssetVideo } from "@/components/AssetVideo";
 import { MisionIcon, VisionIcon } from "@/components/MisionVisionIcons";
+import { PageHero } from "@/components/PageHero";
 import { localAssets } from "@/lib/assets";
 
 const a = localAssets.empresa;
@@ -29,16 +30,7 @@ export const metadata: Metadata = {
 export default function EmpresaPage() {
   return (
     <>
-      {/* Título dominante — sin padding desperdiciado */}
-      <div className="container mx-auto max-w-6xl px-5 pt-8 pb-4">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#0a2b3d] uppercase tracking-tight leading-none">
-          Empresa
-        </h1>
-        <div
-          aria-hidden
-          className="mt-3 h-1 w-20 bg-accent rounded-full"
-        />
-      </div>
+      <PageHero title="Empresa" />
 
       {/* Hero: 2 columnas en desktop (texto a la izquierda, foto panorámica
           a la derecha). En mobile: foto como fondo con texto superpuesto.

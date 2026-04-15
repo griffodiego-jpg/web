@@ -2,8 +2,16 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 /**
- * Hero simple usado en la cabecera de cada página interna.
- * Muestra breadcrumb + título + bajada.
+ * Cabecera estándar de página interna.
+ *
+ * Muestra:
+ *   - breadcrumb pequeño arriba (opcional)
+ *   - título dominante en negro corporativo (text-6xl font-black)
+ *   - línea accent celeste como divisor
+ *   - lead / subtítulo (opcional)
+ *
+ * Diseñado para ocupar poco espacio vertical pero ser visualmente
+ * dominante — aprovecha mejor el viewport que el patrón anterior.
  */
 export function PageHero({
   title,
@@ -15,38 +23,48 @@ export function PageHero({
   breadcrumb?: { label: string; href?: string }[];
 }) {
   return (
-    <section className="bg-primary text-white py-14 px-5">
-      <div className="container mx-auto max-w-5xl">
-        {breadcrumb.length > 0 && (
-          <nav aria-label="Breadcrumb" className="mb-3 text-sm opacity-90">
-            <ol className="flex flex-wrap items-center gap-1">
-              <li>
-                <Link href="/" className="hover:underline">
-                  Inicio
-                </Link>
+    <section className="container mx-auto max-w-6xl px-5 pt-8 pb-6">
+      {breadcrumb.length > 0 && (
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-3 text-xs uppercase tracking-wide text-gray-500 font-semibold"
+        >
+          <ol className="flex flex-wrap items-center gap-1.5">
+            <li>
+              <Link href="/" className="hover:text-primary transition">
+                Inicio
+              </Link>
+            </li>
+            {breadcrumb.map((b, i) => (
+              <li key={i} className="flex items-center gap-1.5">
+                <span className="opacity-50">/</span>
+                {b.href ? (
+                  <Link
+                    href={b.href}
+                    className="hover:text-primary transition"
+                  >
+                    {b.label}
+                  </Link>
+                ) : (
+                  <span className="text-[#0a2b3d]">{b.label}</span>
+                )}
               </li>
-              {breadcrumb.map((b, i) => (
-                <li key={i} className="flex items-center gap-1">
-                  <span>/</span>
-                  {b.href ? (
-                    <Link href={b.href} className="hover:underline">
-                      {b.label}
-                    </Link>
-                  ) : (
-                    <span>{b.label}</span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )}
-        <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tight">
-          {title}
-        </h1>
-        {lead && (
-          <p className="mt-3 text-lg lg:text-xl max-w-3xl opacity-95">{lead}</p>
-        )}
-      </div>
+            ))}
+          </ol>
+        </nav>
+      )}
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#0a2b3d] uppercase tracking-tight leading-none">
+        {title}
+      </h1>
+      <div
+        aria-hidden
+        className="mt-3 h-1 w-20 bg-accent rounded-full"
+      />
+      {lead && (
+        <p className="mt-5 text-base lg:text-lg text-gray-700 max-w-3xl">
+          {lead}
+        </p>
+      )}
     </section>
   );
 }
