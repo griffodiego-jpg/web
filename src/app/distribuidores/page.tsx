@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PageHero, ComingSoon } from "@/components/PageHero";
+import { ComingSoon } from "@/components/PageHero";
 
 export const metadata: Metadata = {
   title: "Distribuidores",
@@ -7,14 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DistribuidoresPage() {
-  return (
-    <>
-      <PageHero
-        title="Distribuidores"
-        lead="Encontrá nuestro distribuidor más cercano."
-        breadcrumb={[{ label: "Distribuidores" }]}
-      />
-      <ComingSoon title="Red de distribuidores" />
-    </>
-  );
+  return <ComingSoon title="Red de distribuidores" />;
 }

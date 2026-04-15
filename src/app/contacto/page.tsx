@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHero } from "@/components/PageHero";
 import { ContactForm } from "@/components/ContactForm";
 import { siteConfig } from "@/lib/site-config";
 
@@ -12,13 +11,7 @@ export const metadata: Metadata = {
 export default function ContactoPage() {
   return (
     <>
-      <PageHero
-        title="Contacto"
-        lead="Dejanos tu consulta y te respondemos a la brevedad."
-        breadcrumb={[{ label: "Contacto" }]}
-      />
-
-      <section className="container mx-auto max-w-6xl px-5 py-16">
+      <section className="container mx-auto max-w-6xl px-5 pt-10 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
             <h2 className="text-2xl font-bold mb-6">Datos de contacto</h2>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PageHero, ComingSoon } from "@/components/PageHero";
+import { ComingSoon } from "@/components/PageHero";
 
 export const metadata: Metadata = {
   title: "Desarrollo a medida",
@@ -8,14 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function DesarrolloAMedidaPage() {
-  return (
-    <>
-      <PageHero
-        title="Desarrollo a medida"
-        lead="Diseñamos y fabricamos piezas de caucho moldeado a pedido, para las más diversas industrias."
-        breadcrumb={[{ label: "Desarrollo a medida" }]}
-      />
-      <ComingSoon title="Proceso de desarrollo a medida" />
-    </>
-  );
+  return <ComingSoon title="Proceso de desarrollo a medida" />;
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PageHero, ComingSoon } from "@/components/PageHero";
+import { ComingSoon } from "@/components/PageHero";
 
 export const metadata: Metadata = {
   title: "Garantía",
@@ -8,14 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function GarantiaPage() {
-  return (
-    <>
-      <PageHero
-        title="Garantía"
-        lead="2 años de garantía en todos nuestros productos."
-        breadcrumb={[{ label: "Garantía" }]}
-      />
-      <ComingSoon title="Condiciones de garantía" />
-    </>
-  );
+  return <ComingSoon title="Condiciones de garantía" />;
 }

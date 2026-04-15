@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { AssetImage } from "@/components/AssetImage";
 import { AssetVideo } from "@/components/AssetVideo";
 import { MisionIcon, VisionIcon } from "@/components/MisionVisionIcons";
-import { PageHero } from "@/components/PageHero";
 import { localAssets } from "@/lib/assets";
 
 const a = localAssets.empresa;
@@ -30,8 +29,6 @@ export const metadata: Metadata = {
 export default function EmpresaPage() {
   return (
     <>
-      <PageHero title="Empresa" />
-
       {/* Hero: 2 columnas en desktop (texto a la izquierda, foto panorámica
           a la derecha). En mobile: foto como fondo con texto superpuesto.
           La foto se muestra a su tamaño natural — sin recorte forzado. */}

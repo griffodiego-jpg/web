@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PageHero, ComingSoon } from "@/components/PageHero";
+import { ComingSoon } from "@/components/PageHero";
 
 export const metadata: Metadata = {
   title: "Descargas",
@@ -7,14 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DescargasPage() {
-  return (
-    <>
-      <PageHero
-        title="Descargas"
-        lead="Catálogo y documentación técnica."
-        breadcrumb={[{ label: "Descargas" }]}
-      />
-      <ComingSoon title="Catálogos descargables" />
-    </>
-  );
+  return <ComingSoon title="Catálogos descargables" />;
 }

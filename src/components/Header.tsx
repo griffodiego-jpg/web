@@ -1,11 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { navigation } from "@/lib/site-config";
+import { navigation, type NavItem } from "@/lib/site-config";
 import { Logo } from "@/components/Logo";
 
+/**
+ * Determina si un item del nav está activo según el pathname actual.
+ * Matchea exacto, rutas anidadas (/productos/foo → Productos) y padres
+ * con children activos.
+ */
+function isItemActive(item: NavItem, pathname: string): boolean {
+  if (item.external) return false;
+  if (pathname === item.href) return true;
+  if (item.href !== "/" && pathname.startsWith(item.href + "/")) return true;
+  if (item.children) {
+    return item.children.some(
+      (c) => pathname === c.href || pathname.startsWith(c.href + "/")
+    );
+  }
+  return false;
+}
+
 export function Header() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -73,8 +92,18 @@ export function Header() {
       >
         <ul className="flex flex-col lg:flex-row gap-5 lg:gap-x-5 p-0 items-start lg:items-center text-sm w-full lg:w-auto">
           {navigation.map((item) => {
+            const active = isItemActive(item, pathname);
+            /*
+             * Estado activo: borde inferior accent + texto con peso
+             * extra black (peso 900). En mobile, donde el nav es blanco
+             * sobre primary, el indicador es accent para contrastar.
+             */
             const baseCls =
-              "lg:text-primary text-white font-bold hover:opacity-80 transition whitespace-nowrap";
+              "lg:text-primary text-white font-bold hover:opacity-80 transition whitespace-nowrap pb-1 border-b-2";
+            const stateCls = active
+              ? "border-accent font-black"
+              : "border-transparent";
+            const linkCls = `${baseCls} ${stateCls}`;
 
             if (item.children) {
               const isOpen = openDropdown === item.label;
@@ -88,10 +117,13 @@ export function Header() {
                   <button
                     type="button"
                     onClick={() =>
-                      setOpenDropdown((v) => (v === item.label ? null : item.label))
+                      setOpenDropdown((v) =>
+                        v === item.label ? null : item.label
+                      )
                     }
-                    className={`${baseCls} flex items-center gap-1`}
+                    className={`${linkCls} flex items-center gap-1`}
                     aria-expanded={isOpen}
+                    aria-current={active ? "page" : undefined}
                   >
                     {item.label}
                     <svg
@@ -155,7 +187,7 @@ export function Header() {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={baseCls}
+                    className={linkCls}
                   >
                     {item.label}
                   </a>
@@ -168,7 +200,8 @@ export function Header() {
                 <Link
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={baseCls}
+                  className={linkCls}
+                  aria-current={active ? "page" : undefined}
                 >
                   {item.label}
                 </Link>
