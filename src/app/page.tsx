@@ -51,25 +51,6 @@ export default function HomePage() {
         <BuscadorPatenteBanner />
       </a>
 
-      {/* Slogan institucional */}
-      <section
-        aria-label="Slogan Griffo"
-        className="relative bg-white py-14 lg:py-20 border-b border-gray-100"
-      >
-        <div className="container mx-auto max-w-5xl px-5 text-center">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-[0.08em] text-primary">
-            Impulsamos
-            <span className="inline-block ml-2 sm:ml-4 text-[#0a2b3d]">
-              Soluciones
-            </span>
-          </h2>
-          <div
-            aria-hidden
-            className="mx-auto mt-6 h-1 w-24 bg-accent rounded-full"
-          />
-        </div>
-      </section>
-
       <section className="py-12">
         <h2 className="sr-only">Destacados</h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-5 lg:px-10">

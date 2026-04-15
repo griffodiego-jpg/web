@@ -23,8 +23,21 @@ export function Header() {
       id="navbar-header"
       className="fixed top-0 left-0 right-0 z-30 bg-white shadow flex items-center justify-between px-5 py-2.5"
     >
-      <Link href="/" aria-label="Inicio" className="block">
-        <Logo className="h-10 w-auto" />
+      <Link
+        href="/"
+        aria-label="Inicio — Griffo, Impulsamos Soluciones"
+        className="flex items-center gap-3"
+      >
+        <Logo className="h-10 w-auto shrink-0" />
+        {/* Tagline institucional — se muestra junto al logo como una unidad */}
+        <span className="hidden md:flex flex-col border-l-2 border-primary/40 pl-3 leading-[1.05]">
+          <span className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">
+            Impulsamos
+          </span>
+          <span className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">
+            Soluciones
+          </span>
+        </span>
       </Link>
 
       {/* Hamburger */}

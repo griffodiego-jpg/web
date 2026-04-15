@@ -1,12 +1,37 @@
+"use client";
+
+/* eslint-disable @next/next/no-img-element */
+import { useState } from "react";
+
 /**
- * Logo de Griffo — reconstrucción vectorial.
+ * Logo de Griffo.
  *
- * Proporciones ajustadas al logo oficial (~1.85:1 aspecto,
- * óvalo más "alto" y redondeado, casi stadium-shape).
- * Texto "griffo" en italic extra bold blanco, bien ajustado dentro
- * del óvalo con márgenes proporcionales.
+ * Intenta cargar el SVG oficial desde /public/iconos/header-icon.svg
+ * (archivo que hay que subir al repo desde el sitio original). Si no
+ * existe todavía, cae a una reconstrucción vectorial como fallback.
+ *
+ * Cuando subas el archivo real, el componente usa ese automáticamente
+ * sin cambiar código.
  */
 export function Logo({ className = "" }: { className?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!failed) {
+    return (
+      <img
+        src="/iconos/header-icon.svg"
+        alt="Griffo"
+        className={className}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return <LogoFallback className={className} />;
+}
+
+/** SVG de reserva: aproximación del logo hasta tener el archivo real. */
+function LogoFallback({ className = "" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 370 200"
@@ -21,8 +46,6 @@ export function Logo({ className = "" }: { className?: string }) {
           <stop offset="100%" stopColor="#003d78" />
         </radialGradient>
       </defs>
-
-      {/* Óvalo inclinado ligeramente */}
       <g transform="rotate(-5 185 100)">
         <ellipse
           cx="185"
@@ -31,7 +54,6 @@ export function Logo({ className = "" }: { className?: string }) {
           ry="92"
           fill="url(#griffo-oval-gloss)"
         />
-        {/* Brillo superior muy sutil */}
         <ellipse
           cx="185"
           cy="75"
@@ -40,7 +62,6 @@ export function Logo({ className = "" }: { className?: string }) {
           fill="#ffffff"
           opacity="0.08"
         />
-        {/* Texto */}
         <text
           x="185"
           y="135"
