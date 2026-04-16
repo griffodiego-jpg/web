@@ -13,43 +13,35 @@ export function ProductCard({ product }: ProductCardProps) {
   const vehicleCount = product.vehicles?.length ?? 0;
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <Link
-        href={`/catalogo/${product.slug}`}
-        className="flex flex-1 flex-col gap-3 p-4 focus-visible:outline-none"
-      >
-        {primaryImage ? (
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-50">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+    <article className="group flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white transition hover:border-accent hover:shadow-md">
+      <Link href={`/catalogo/${product.slug}`} className="flex flex-1 flex-col">
+        <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
+          {primaryImage ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={primaryImage}
               alt={product.description || product.product}
               loading="lazy"
-              className="h-full w-full object-contain"
+              className="h-full w-full object-contain p-2 transition group-hover:scale-105"
             />
-          </div>
-        ) : (
-          <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-gray-50 text-xs text-gray-400">
-            Sin imagen
-          </div>
-        )}
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+              Sin imagen
+            </div>
+          )}
+        </div>
 
-        <div className="flex flex-1 flex-col gap-1">
-          <span className="text-lg font-black text-primary">{product.code}</span>
-          <span className="text-sm font-semibold text-[#0a2b3d] line-clamp-2">
+        <div className="flex flex-1 flex-col gap-1 p-3">
+          <span className="text-base font-black text-primary">{product.code}</span>
+          <span className="text-xs font-semibold text-[#0a2b3d] line-clamp-2 min-h-[2.5em]">
             {product.product}
           </span>
-          {product.description ? (
-            <span className="text-xs text-gray-500 line-clamp-2">{product.description}</span>
-          ) : null}
           {vehicleCount > 0 ? (
-            <span className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-accent">
-              {vehicleCount} {vehicleCount === 1 ? "vehículo" : "vehículos"} compatibles
+            <span className="mt-auto pt-1 text-[10px] font-bold uppercase tracking-wide text-accent">
+              {vehicleCount} {vehicleCount === 1 ? "vehículo" : "vehículos"}
             </span>
           ) : null}
         </div>
-
-        <span className="mt-auto text-xs font-bold text-accent">Ver detalle →</span>
       </Link>
 
       {meliUrl ? (
@@ -57,9 +49,9 @@ export function ProductCard({ product }: ProductCardProps) {
           href={meliUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block border-t border-gray-100 bg-[#FFE600] px-3 py-2 text-center text-xs font-bold text-[#333] transition hover:brightness-95"
+          className="block border-t border-gray-100 bg-[#FFE600] px-3 py-1.5 text-center text-[11px] font-bold text-[#333] transition hover:brightness-95"
         >
-          Comprar en MercadoLibre ↗
+          MercadoLibre ↗
         </a>
       ) : null}
     </article>

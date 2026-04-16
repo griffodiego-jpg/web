@@ -27,18 +27,9 @@ export default async function CatalogoPage() {
     loadError = err instanceof Error ? err.message : "Error al cargar el catálogo";
   }
 
-  return (
-    <section className="container mx-auto max-w-6xl px-5 pt-8 pb-16">
-      <header className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-accent">Catálogo</p>
-        <h1 className="mt-1 text-3xl font-black text-[#0a2b3d]">Encontrá tu producto Griffo</h1>
-        <p className="mt-2 max-w-2xl text-sm text-gray-600">
-          Más de 370 productos de suspensión, dirección y transmisión.
-          Buscá por patente, vehículo, código, palabra clave o medidas.
-        </p>
-      </header>
-
-      {loadError ? (
+  if (loadError) {
+    return (
+      <section className="mx-auto max-w-3xl px-4 py-10">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
           <p className="font-bold">No pudimos cargar el catálogo en este momento.</p>
           <p className="mt-1 text-xs">
@@ -49,9 +40,9 @@ export default async function CatalogoPage() {
             .
           </p>
         </div>
-      ) : (
-        <CatalogSearch products={products} />
-      )}
-    </section>
-  );
+      </section>
+    );
+  }
+
+  return <CatalogSearch products={products} />;
 }
