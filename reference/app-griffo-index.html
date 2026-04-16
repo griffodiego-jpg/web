@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <link rel="manifest" href="/manifest.json">
+        <meta name="theme-color" content="#1a365d">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="GRIFFO">
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+        <title>GRIFFO APP</title>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <!-- NOTA: archivo de referencia. CSS y JS completos de la app v2.11 original.
+             Ver reference/arquitectura-app-griffo.md para el resumen de reglas y endpoints.
+             Este HTML se guarda tal cual como referencia de UX (5 búsquedas, detalle, lightbox). -->
+        <style>
+            /* ... CSS original ~300 líneas — se omite para ahorrar contexto.
+               Paleta: --p #00549F, --a #00ADD0, --d #005B82, --bg #F0F4F8, --c #FFF, --t #0D1B2A, --m #4A6175 */
+        </style>
+    </head>
+    <body>
+        <!-- Pantallas (scr):
+             s-home, s-login, s-register,
+             s-plate, s-vehicle, s-code, s-keyword, s-measures,
+             s-favs, s-detail, s-admin
+             Lightbox global, modal editar PDV global -->
+
+        <!-- SCRIPT PRINCIPAL — extracto de funciones clave para el catálogo -->
+        <script>
+        // ====== GLOBALS ======
+        var P = null, RP = [], BS = '';
+        var lbImgs = [], lbIdx = 0;
+
+        // ====== NORMALIZACIÓN (accent-insensitive) ======
+        function norm(s) {
+            return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        }
+
+        // ====== ÍNDICE DE BÚSQUEDA ======
+        function buildSearchIndex() {
+            if (!P) return;
+            P.forEach(function(p) {
+                var t = (p.code||'') + ' ' + (p.description||'') + ' ' + (p.product||'') + ' ' + (p.category||'') + ' ' + (p.slug||'');
+                if (p.vehicles) p.vehicles.forEach(function(v) { t += ' ' + (v.brand||'') + ' ' + (v.master_model||'') + ' ' + (v.model||'') + ' ' + (v.version||''); });
+                if (p.attributes) p.attributes.forEach(function(a) { t += ' ' + (a.name||'') + ' ' + (a.value||'') + ' ' + (a.unit||''); });
+                if (p.components) p.components.forEach(function(c) { t += ' ' + (c.code||'') + ' ' + (c.product||''); });
+                if (p.cross) p.cross.forEach(function(c) { t += ' ' + (c.brand||'') + ' ' + (c.code||''); });
+                if (p.reference) p.reference.forEach(function(r) { t += ' ' + (r.brand||'') + ' ' + (r.code||''); });
+                if (p.ean) p.ean.forEach(function(e) { t += ' ' + e; });
+                p._searchText = norm(t);
+            });
+        }
+
+        // ====== BÚSQUEDA POR PALABRA (multi-word AND) ======
+        function searchKw() {
+            var raw = norm(document.getElementById('inp-kw').value.trim());
+            if (!raw || !P) return;
+            var words = raw.split(/\s+/).filter(function(w) { return w.length > 0; });
+            var matches = P.filter(function(p) {
+                if (!p._searchText) return false;
+                return words.every(function(w) { return p._searchText.indexOf(w) >= 0; });
+            });
+            render('kw-res', matches, 'keyword');
+        }
+
+        // ====== BÚSQUEDA POR PATENTE ======
+        async function searchPlate() {
+            var pl = document.getElementById('inp-plate').value.trim().toUpperCase(); if (!pl) return;
+            var r = await fetch('/api/plate?plate=' + encodeURIComponent(pl));
+            var v = await r.json();
+            if (v.error) { /* no se encontró vehículo */ return; }
+            // Filtrar productos en memoria que matchean con el vehículo
+            var matches = P.filter(function(p) {
+                if (!p.vehicles) return false;
+                return p.vehicles.some(function(pv) {
+                    if (pv.brand !== v.brand) return false;
+                    if (v.master_model && pv.master_model === v.master_model) return true;
+                    if (v.model && pv.model === v.model) return true;
+                    return false;
+                });
+            });
+            render('plate-res', matches, 'plate');
+        }
+
+        // ====== BÚSQUEDA POR VEHÍCULO (cascada) ======
+        // fillBrands: excluye AGRALE, IVECO, UNIVERSAL del select de marcas
+        function fillBrands() {
+            var ex = { 'AGRALE': 1, 'IVECO': 1, 'UNIVERSAL': 1 }; var br = {};
+            P.forEach(function(p) { if (p.vehicles) p.vehicles.forEach(function(v) {
+                if (v.brand && !ex[v.brand]) br[v.brand] = 1;
+            }); });
+            // popular select
+        }
+
+        function searchVehicle() {
+            var b = sel('brand'), m = sel('model'), y = sel('year');
+            var matches = P.filter(function(p) {
+                if (!p.vehicles) return false;
+                return p.vehicles.some(function(v) {
+                    if (v.brand !== b) return false;
+                    if (m && v.master_model !== m) return false;
+                    if (y) { var yr = parseInt(y); if (yr < v.sold_from_year || yr > v.sold_until_year) return false; }
+                    return true;
+                });
+            });
+            render('vehi-res', matches, 'vehicle');
+        }
+
+        // ====== BÚSQUEDA POR CÓDIGO ======
+        function searchCode() {
+            var c = document.getElementById('inp-code').value.trim(); if (!c || !P) return;
+            var matches = P.filter(function(p) {
+                return p.code && p.code.toLowerCase().indexOf(c.toLowerCase()) >= 0;
+            });
+            render('code-res', matches, 'code');
+        }
+
+        // ====== BÚSQUEDA POR MEDIDAS (3 sub-tipos) ======
+        // Dirección: FUELLE CREMALLERA
+        // Transmisión: KIT FUELLE SEMIEJE (agrupado por código base)
+        // Tope: TOPE AMORTIGUADOR (excluye fuelles)
+        function isFuelleDireccion(p) {
+            var d = ((p.product||'')+' '+(p.description||'')).toLowerCase();
+            return d.indexOf('fuelle')>=0 && d.indexOf('cremallera')>=0;
+        }
+        function isFuelleTransmision(p) {
+            var d = ((p.product||'')+' '+(p.description||'')).toLowerCase();
+            return d.indexOf('fuelle')>=0 && d.indexOf('semieje')>=0;
+        }
+        function isTope(p) {
+            var d = ((p.product||'')+' '+(p.description||'')+' '+(p.category||'')).toLowerCase();
+            return d.indexOf('tope')>=0 && d.indexOf('fuelle')<0;
+        }
+        function getBaseCode(code) {
+            var m = (code||'').match(/^(\d+)/);
+            return m ? m[1] : code;
+        }
+        function getAttrValue(p, nameContains) {
+            if (!p.attributes) return '';
+            var lc = nameContains.toLowerCase();
+            for (var i = 0; i < p.attributes.length; i++) {
+                var n = (p.attributes[i].name||'').toLowerCase();
+                if (n.indexOf(lc) >= 0) {
+                    var v = p.attributes[i].value||''; var u = p.attributes[i].unit||'';
+                    return u ? v+' '+u : v;
+                }
+            }
+            return '';
+        }
+        function getMsrData(p) {
+            var diamMayor = getAttrValue(p,'boca mayor') || getAttrValue(p,'diámetro mayor');
+            var diamMenor = getAttrValue(p,'boca menor') || getAttrValue(p,'diámetro menor');
+            var largo = getAttrValue(p,'largo');
+            return { diamMayor, diamMenor, largo, code: p.code||'', _product: p };
+        }
+
+        // ====== DETALLE DE PRODUCTO (UX) ======
+        // Galería de imágenes (click → lightbox)
+        // Header: código (grande, azul), producto, descripción, categoría (badge)
+        // Secciones: Medidas/Atributos, Contenido del Kit, Vehículos Compatibles (agrupados por marca)
+        // Botones sticky: WhatsApp + (MercadoLibre si hay link)
+
+        // ====== BOTONES DE ACCIÓN ======
+        // Sin PDV: WhatsApp genérico (wa.me/?text=...) + MercadoLibre si getMeliUrl(p)
+        // Con PDV: WhatsApp al número del PDV + botón Web (si pdv.ecommerceUrl)
+        function buildWAMsg(code, product) {
+            return 'Hola! Vi en la app GRIFFO el producto ' + code + ' (' + product + '). Tenés disponibilidad y precio?';
+        }
+        function getMeliUrl(p) {
+            var url = '';
+            if (p.links && p.links.length > 0)
+                p.links.forEach(function(l) { if (l.url || l.link) url = l.url || l.link; });
+            return url;
+        }
+
+        // ====== CARGA DE PRODUCTOS ======
+        async function loadP() {
+            var r = await fetch('/api/products');
+            var d = await r.json();
+            P = d.products;
+            buildSearchIndex();
+            fillBrands();
+            fillMeasures();
+        }
+        </script>
+    </body>
+</html>
