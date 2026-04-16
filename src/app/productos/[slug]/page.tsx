@@ -159,8 +159,8 @@ function BreadcrumbWithTitle({
 function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
   return (
     <>
-      <article className="container mx-auto max-w-6xl px-5 pt-1 pb-6">
-        <div className="mt-3 grid lg:grid-cols-2 grid-cols-1 gap-5 items-start">
+      <article className="container mx-auto max-w-6xl px-5 pt-0 pb-4">
+        <div className="mt-2 grid lg:grid-cols-[280px_1fr] grid-cols-1 gap-4 items-start">
           {/* Imagen del producto — click para agrandar */}
           <div className="flex justify-center lg:justify-start">
             <Lightbox src={detalle.image} alt={detalle.title}>
@@ -168,7 +168,7 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
                 src={detalle.image}
                 alt={detalle.title}
                 bare
-                className="max-w-[480px] max-h-[280px] w-full h-auto object-contain"
+                className="max-w-[260px] max-h-[220px] w-full h-auto object-contain"
               />
             </Lightbox>
           </div>
