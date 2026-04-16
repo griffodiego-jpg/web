@@ -331,48 +331,78 @@ function KitContieneBox({ kit }: { kit: KitContiene }) {
 }
 
 function PresentacionBox({ presentacion }: { presentacion: Presentacion }) {
+  // Si cada modelo tiene 1 sola celda → layout horizontal (side by side)
+  // Si tienen varias celdas → layout grid con medidas + kits
+  const isSimple = presentacion.modelos.every((m) => m.celdas.length === 1);
+
   return (
-    <section className="container mx-auto max-w-6xl px-5 lg:px-20 py-14">
-      <h2 className="font-bold text-2xl lg:text-3xl text-primary text-center">
+    <section className="container mx-auto max-w-6xl px-5 lg:px-10 py-8">
+      <h2 className="font-bold text-xl lg:text-2xl text-primary text-center mb-6">
         {presentacion.title}
       </h2>
 
-      <div className="mt-10 space-y-10">
-        {presentacion.modelos.map((modelo, idx) => (
-          <div key={idx}>
-            {idx > 0 && (
-              <div className="border-t border-gray-300 mb-10" aria-hidden />
-            )}
-            <div className="grid lg:grid-cols-4 grid-cols-2 gap-6 place-items-center">
-              {/* Nombre del modelo */}
-              <div className="text-center lg:text-left col-span-2 lg:col-span-1">
-                <h3 className="font-bold text-primary text-lg">
-                  {modelo.nombre}
-                </h3>
-              </div>
-              {/* Celdas */}
+      {isSimple ? (
+        /* Layout horizontal: 2 cards lado a lado */
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {presentacion.modelos.map((modelo, idx) => (
+            <div
+              key={idx}
+              className="bg-gray-50 rounded-lg p-5 text-center space-y-3"
+            >
+              <h3 className="font-bold text-primary text-base">
+                {modelo.nombre}
+              </h3>
               {modelo.celdas.map((celda, i) => (
-                <figure key={i} className="text-center">
-                  <span className="block mb-2 text-primary text-sm font-semibold">
-                    {celda.label}
-                  </span>
+                <div key={i}>
                   <AssetImage
                     src={celda.image}
-                    alt={`${modelo.nombre} — ${celda.label}`}
+                    alt={`${modelo.nombre}`}
                     bare
-                    className="w-full h-full max-w-[180px] max-h-[180px] object-contain aspect-square mx-auto"
+                    className="max-w-[250px] max-h-[180px] w-full h-auto object-contain mx-auto"
                   />
-                  {celda.codigo && (
-                    <figcaption className="font-bold mt-2 text-[#0a2b3d]">
-                      {celda.codigo}
-                    </figcaption>
-                  )}
-                </figure>
+                  <p className="mt-2 text-sm text-gray-600">{celda.label}</p>
+                </div>
               ))}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        /* Layout grid: nombre + medidas + kits (fuelle transmisión) */
+        <div className="space-y-6">
+          {presentacion.modelos.map((modelo, idx) => (
+            <div key={idx}>
+              {idx > 0 && (
+                <div className="border-t border-gray-300 mb-6" aria-hidden />
+              )}
+              <div className="grid lg:grid-cols-4 grid-cols-2 gap-4 place-items-center">
+                <div className="text-center lg:text-left col-span-2 lg:col-span-1">
+                  <h3 className="font-bold text-primary text-base">
+                    {modelo.nombre}
+                  </h3>
+                </div>
+                {modelo.celdas.map((celda, i) => (
+                  <figure key={i} className="text-center">
+                    <span className="block mb-1 text-primary text-xs font-semibold">
+                      {celda.label}
+                    </span>
+                    <AssetImage
+                      src={celda.image}
+                      alt={`${modelo.nombre} — ${celda.label}`}
+                      bare
+                      className="w-full h-full max-w-[150px] max-h-[150px] object-contain aspect-square mx-auto"
+                    />
+                    {celda.codigo && (
+                      <figcaption className="font-bold mt-1 text-sm text-[#0a2b3d]">
+                        {celda.codigo}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
