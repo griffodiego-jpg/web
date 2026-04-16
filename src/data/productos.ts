@@ -155,7 +155,7 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
       title: "Presentación",
       modelos: [
         {
-          nombre: "Fuelle Chico Universal",
+          nombre: "Fuelle Universal Chico",
           celdas: [
             {
               label: "Medidas",
