@@ -159,8 +159,8 @@ function BreadcrumbWithTitle({
 function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
   return (
     <>
-      <article className="container mx-auto max-w-6xl px-5 pt-1 pb-6">
-        <div className="mt-3 grid lg:grid-cols-2 grid-cols-1 gap-5 items-start">
+      <article className="container mx-auto max-w-6xl px-5 pt-4 pb-8">
+        <div className="mt-6 grid lg:grid-cols-2 grid-cols-1 gap-8 items-start">
           {/* Imagen del producto — click para agrandar */}
           <div className="flex justify-center lg:justify-start">
             <Lightbox src={detalle.image} alt={detalle.title}>
@@ -168,15 +168,15 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
                 src={detalle.image}
                 alt={detalle.title}
                 bare
-                className="max-w-[480px] max-h-[280px] w-full h-auto object-contain"
+                className="max-w-[550px] max-h-[380px] w-full h-auto object-contain"
               />
             </Lightbox>
           </div>
 
           {/* Texto + CTA */}
-          <div className="space-y-3">
+          <div className="lg:p-6 space-y-5">
             {detalle.tagline && (
-              <p className="font-bold text-[#0a2b3d]">
+              <p className="font-bold text-lg text-[#0a2b3d]">
                 {detalle.tagline}
               </p>
             )}
@@ -184,18 +184,18 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
             {detalle.descriptions.map((p, i) => (
               <p
                 key={i}
-                className="text-gray-800 text-sm leading-relaxed"
+                className="text-gray-800 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: p }}
               />
             ))}
 
             {/* Lista de features con flechas → */}
             {detalle.features && detalle.features.length > 0 && (
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {detalle.features.map((f, i) => (
                   <li
                     key={i}
-                    className="text-gray-800 text-sm leading-relaxed flex gap-2"
+                    className="text-gray-800 leading-relaxed flex gap-2"
                   >
                     <span className="text-primary font-bold">→</span>
                     <span
@@ -279,12 +279,12 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
 
 function BeneficiosBox({ beneficios }: { beneficios: Beneficio[] }) {
   return (
-    <dl className="bg-gray-100 p-5 lg:p-7 rounded space-y-2">
-      <dt className="font-bold text-primary text-lg lg:text-xl mb-1">
+    <dl className="bg-gray-100 p-8 lg:p-10 rounded space-y-3">
+      <dt className="font-bold text-primary text-xl lg:text-2xl mb-2">
         Beneficios principales:
       </dt>
       {beneficios.map((b, i) => (
-        <dd key={i} className="text-gray-800 text-sm leading-relaxed">
+        <dd key={i} className="text-gray-800 leading-relaxed">
           {b.label ? (
             <>
               <span className="font-bold text-[#0a2b3d]">{b.label}: </span>
