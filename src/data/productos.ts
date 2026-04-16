@@ -163,12 +163,12 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
             },
             {
               label: "Kit x2 Unidades",
-              image: "/products/presentation/kit2.png",
+              image: "/products/presentation/950_32B.jpg",
               codigo: "950-32B",
             },
             {
               label: "Kit x6 Unidades",
-              image: "/products/presentation/kit6.png",
+              image: "/products/presentation/950_32.jpg",
               codigo: "950-32",
             },
           ],
@@ -182,12 +182,12 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
             },
             {
               label: "Kit x2 Unidades",
-              image: "/products/presentation/kit2-grande.png",
+              image: "/products/presentation/951_32B.jpg",
               codigo: "951-32B",
             },
             {
               label: "Kit x6 Unidades",
-              image: "/products/presentation/kit6-grande.png",
+              image: "/products/presentation/951_32.jpg",
               codigo: "951-32",
             },
           ],
