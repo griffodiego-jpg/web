@@ -144,10 +144,14 @@ export function Header() {
                       />
                     </svg>
                   </button>
+                  {/* pt-3 en desktop: padding transparente que actúa como "puente"
+                      entre el botón y el dropdown — evita que onMouseLeave dispare
+                      al mover el mouse en el gap. El bg del dropdown empieza en
+                      los <li> de adentro, no en el <ul>. */}
                   <ul
                     className={`${
                       isOpen ? "block" : "hidden"
-                    } lg:absolute lg:top-full lg:left-0 lg:mt-2 lg:bg-primary lg:shadow-lg lg:min-w-[260px] py-2 pl-4 lg:pl-0 mt-2`}
+                    } lg:absolute lg:top-full lg:left-0 lg:pt-3 lg:min-w-[260px] pl-4 lg:pl-0 mt-2 lg:mt-0 lg:bg-primary lg:shadow-lg lg:rounded-b`}
                   >
                     <li className="lg:px-4 lg:py-2">
                       <Link

@@ -366,4 +366,58 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
       image: "/products/FuelledeSuspensionDeportiva2.webp",
     },
   },
+
+  "abrazaderas-universales": {
+    title: "Abrazaderas Universales",
+    image: "/products/abrazadera-instalada.jpg",
+    tagline: "Ajuste firme y duradero.",
+    descriptions: [
+      "Las abrazaderas universales Griffo están diseñadas para <strong>asegurar firmemente los fuelles.</strong>",
+      "Fabricadas en acero inoxidable, ofrecen un <strong>ajuste seguro y duradero</strong>, soportando condiciones extremas de temperatura, presión y vibración.",
+      "Se colocan fácilmente con nuestra <strong>Pinza Griffo para Abrazaderas</strong>, logrando una fijación pareja y sin dañar el fuelle.",
+    ],
+    beneficios: [
+      {
+        label: "Amplio rango de ajuste",
+        text: "Banda perforada con mayor número de posiciones.",
+      },
+      {
+        text: "Disponible para aplicaciones en lado copa y lado palier.",
+      },
+      {
+        text: "Por su característica, puede llegar a ser usada en otras aplicaciones de fluidos de baja presión.",
+      },
+    ],
+    cta: {
+      label: "Comprar",
+      url: "https://listado.mercadolibre.com.ar/tienda/griffo/abrazaderas_NoIndex_True?sb=storefront_url#D[A:abrazaderas]",
+      external: true,
+    },
+    youtubeId: "9eFD4AjTJc4",
+    description:
+      "Ajuste firme y duradero. Las abrazaderas universales Griffo están diseñadas para asegurar firmemente los fuelles.",
+    presentacion: {
+      title: "Presentación",
+      modelos: [
+        {
+          nombre: "AB 25-40: Abrazadera lado palier",
+          celdas: [
+            {
+              label: "Rango de Ajuste 25 a 40 mm. Pack por 6 unidades.",
+              image: "/products/AB_25_40_2.jpg",
+            },
+          ],
+        },
+        {
+          nombre: "AB 40-122: Abrazadera lado copa",
+          celdas: [
+            {
+              label: "Rango de Ajuste: 40 a 122 mm. Pack por 6 unidades.",
+              image: "/products/AB_49_122_2.jpg",
+            },
+          ],
+        },
+      ],
+    },
+  },
 };
