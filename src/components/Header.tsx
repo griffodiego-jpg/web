@@ -114,18 +114,31 @@ export function Header() {
                   onMouseEnter={() => setOpenDropdown(item.label)}
                   onMouseLeave={() => setOpenDropdown(null)}
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setOpenDropdown((v) =>
-                        v === item.label ? null : item.label
-                      )
-                    }
-                    className={`${linkCls} flex items-center gap-1`}
-                    aria-expanded={isOpen}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {item.label}
+                  {/* El texto es un link que navega a la página resumen.
+                      El dropdown se abre por hover (desktop) o por click
+                      en la flechita (mobile). */}
+                  <div className={`${linkCls} flex items-center gap-1`}>
+                    <Link
+                      href={item.href}
+                      onClick={() => {
+                        setOpen(false);
+                        setOpenDropdown(null);
+                      }}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenDropdown((v) =>
+                          v === item.label ? null : item.label
+                        )
+                      }
+                      aria-expanded={isOpen}
+                      aria-label={`Desplegar ${item.label}`}
+                      className="lg:hidden p-1 cursor-pointer"
+                    >
                     <svg
                       width="12"
                       height="12"
@@ -143,7 +156,8 @@ export function Header() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                  </button>
+                    </button>
+                  </div>
                   {/* pt-3 en desktop: padding transparente que actúa como "puente"
                       entre el botón y el dropdown — evita que onMouseLeave dispare
                       al mover el mouse en el gap. El bg del dropdown empieza en
@@ -153,18 +167,6 @@ export function Header() {
                       isOpen ? "block" : "hidden"
                     } lg:absolute lg:top-full lg:left-0 lg:pt-3 lg:min-w-[260px] pl-4 lg:pl-0 mt-2 lg:mt-0 lg:bg-primary lg:shadow-lg lg:rounded-b`}
                   >
-                    <li className="lg:px-4 lg:py-2">
-                      <Link
-                        href={item.href}
-                        onClick={() => {
-                          setOpen(false);
-                          setOpenDropdown(null);
-                        }}
-                        className="text-white font-bold hover:underline"
-                      >
-                        Ver todo
-                      </Link>
-                    </li>
                     {item.children.map((child) => (
                       <li key={child.href} className="lg:px-4 lg:py-2">
                         <Link
