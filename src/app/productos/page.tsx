@@ -16,13 +16,8 @@ export default function ProductosPage() {
     navigation.find((i) => i.label === "Productos destacados")?.children ?? [];
 
   return (
-    <section className="container mx-auto max-w-6xl px-5 pt-10 pb-16">
-      <p className="text-gray-600 text-lg max-w-2xl mb-10">
-        Nuestra línea de productos para mecánicos, distribuidores y talleres.
-        Hacé click en cualquier producto para ver el detalle completo.
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <section className="container mx-auto max-w-6xl px-5 pt-8 pb-16">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {productos.map((p) => {
           const slug = p.href.split("/").pop()!;
           const detalle = productosDetalle[slug];
@@ -30,10 +25,10 @@ export default function ProductosPage() {
             <Link
               key={p.href}
               href={p.href}
-              className="group block bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className="group block bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
-              {/* Imagen del producto */}
-              <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center p-6 overflow-hidden">
+              {/* Imagen */}
+              <div className="aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
                 {detalle?.image ? (
                   <AssetImage
                     src={detalle.image}
@@ -42,45 +37,37 @@ export default function ProductosPage() {
                     className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="text-gray-300 text-sm text-center">
-                    <svg
-                      width="48"
-                      height="48"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="mx-auto mb-2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <path d="m21 15-5-5L5 21" />
-                    </svg>
-                    Imagen próximamente
-                  </div>
+                  <svg
+                    width="40"
+                    height="40"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    className="text-gray-300"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
                 )}
               </div>
 
               {/* Info */}
-              <div className="p-5 border-t border-gray-100">
-                <h2 className="font-bold text-lg text-[#0a2b3d] group-hover:text-primary transition">
+              <div className="p-3 border-t border-gray-100">
+                <h2 className="font-bold text-sm text-[#0a2b3d] group-hover:text-primary transition leading-tight">
                   {p.label}
                 </h2>
-                {detalle?.tagline && (
-                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                    {detalle.tagline}
-                  </p>
-                )}
                 {detalle?.codigo && (
-                  <p className="mt-2 text-xs text-gray-400">
-                    Código: {detalle.codigo}
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Cód. {detalle.codigo}
                   </p>
                 )}
-                <span className="mt-3 inline-flex items-center gap-1 text-sm text-primary font-semibold group-hover:gap-2 transition-all">
+                <span className="mt-2 inline-flex items-center gap-1 text-xs text-primary font-semibold group-hover:gap-2 transition-all">
                   Ver detalle
                   <svg
-                    width="16"
-                    height="16"
+                    width="14"
+                    height="14"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"

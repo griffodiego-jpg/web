@@ -74,6 +74,7 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
   "maquina-montadora-de-fuelles": {
     title: "Máquina Montadora de Fuelles",
     image: "/products/MaquinaMontadoraFuelles.jpg",
+    codigo: "54-122-03",
     tagline: "Instalación profesional en minutos, sin esfuerzo ni riesgos.",
     descriptions: [
       "La máquina montadora de fuelles Griffo permite <strong>instalar fuelles de transmisión Griffo</strong> de forma rápida, segura y sin necesidad de desmontar la homocinética.",
