@@ -108,7 +108,7 @@ export default async function ProductoDetallePage({
         />
       )}
 
-      <Breadcrumb label={producto.label} />
+      <BreadcrumbWithTitle label={producto.label} title={detalle?.title ?? producto.label} />
 
       {detalle ? (
         <ProductoFullDetalle detalle={detalle} />
@@ -119,41 +119,48 @@ export default async function ProductoDetallePage({
   );
 }
 
-/* Breadcrumb chiquito arriba de la página */
-function Breadcrumb({ label }: { label: string }) {
+/* Breadcrumb + título en una sola línea para ganar espacio */
+function BreadcrumbWithTitle({
+  label,
+  title,
+}: {
+  label: string;
+  title: string;
+}) {
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className="container mx-auto max-w-6xl px-5 pt-6 text-xs uppercase tracking-wide text-gray-500 font-semibold"
-    >
-      <ol className="flex flex-wrap items-center gap-1.5">
-        <li>
-          <Link href="/" className="hover:text-primary transition">
-            Home
-          </Link>
-        </li>
-        <li className="opacity-50">/</li>
-        <li>
-          <Link href="/productos" className="hover:text-primary transition">
-            Productos destacados
-          </Link>
-        </li>
-        <li className="opacity-50">/</li>
-        <li className="text-[#0a2b3d]">{label}</li>
-      </ol>
-    </nav>
+    <div className="container mx-auto max-w-6xl px-5 pt-4 pb-1">
+      <nav
+        aria-label="Breadcrumb"
+        className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold mb-1"
+      >
+        <ol className="flex flex-wrap items-center gap-1">
+          <li>
+            <Link href="/" className="hover:text-primary transition">
+              Home
+            </Link>
+          </li>
+          <li className="opacity-50">/</li>
+          <li>
+            <Link href="/productos" className="hover:text-primary transition">
+              Productos
+            </Link>
+          </li>
+          <li className="opacity-50">/</li>
+          <li className="text-gray-500">{label}</li>
+        </ol>
+      </nav>
+      <h1 className="text-2xl lg:text-3xl text-primary font-bold leading-tight">
+        {title}
+      </h1>
+    </div>
   );
 }
 
 function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
   return (
     <>
-      <article className="container mx-auto max-w-6xl px-5 pt-2 pb-6">
-        <h1 className="text-2xl lg:text-3xl text-primary font-bold">
-          {detalle.title}
-        </h1>
-
-        <div className="mt-5 grid lg:grid-cols-2 grid-cols-1 gap-5 items-start">
+      <article className="container mx-auto max-w-6xl px-5 pt-1 pb-6">
+        <div className="mt-3 grid lg:grid-cols-2 grid-cols-1 gap-5 items-start">
           {/* Imagen del producto — click para agrandar */}
           <div className="flex justify-center lg:justify-start">
             <Lightbox src={detalle.image} alt={detalle.title}>
@@ -207,9 +214,9 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
               </h3>
             )}
 
-            {/* Código */}
-            {detalle.codigo && (
-              <p className="text-gray-800">
+            {/* Código — solo si NO tiene sección presentación (que ya muestra los códigos) */}
+            {detalle.codigo && !detalle.presentacion && (
+              <p className="text-gray-800 text-sm">
                 <strong>Código:</strong> {detalle.codigo}
               </p>
             )}
