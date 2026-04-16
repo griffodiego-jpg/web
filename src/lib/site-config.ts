@@ -47,11 +47,7 @@ export const navigation: NavItem[] = [
       { label: "Nuevas aplicaciones", href: "/novedades/aplicaciones" },
     ],
   },
-  {
-    label: "Catálogo",
-    href: "https://griffo.specparts.shop/",
-    external: true,
-  },
+  { label: "Catálogo", href: "/catalogo" },
   { label: "Descargas", href: "/catalogo/download" },
   {
     label: "Productos destacados",
