@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -65,9 +65,22 @@ export const metadata: Metadata = {
   alternates: {
     canonical: SITE_URL,
   },
+  manifest: "/manifest.webmanifest",
   verification: {
     // TODO: agregar verification tokens cuando se registre en Search Console
   },
+};
+
+/**
+ * Viewport config (Next 16 lo separa de metadata).
+ * - themeColor: barra del browser en mobile (azul Griffo primary)
+ * - width/initialScale: responsive correcto
+ */
+export const viewport: Viewport = {
+  themeColor: "#00549f",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

@@ -18,6 +18,13 @@ externo). El resto sí.
 - **Deploy staging**: Vercel auto-deploya cada push → https://web-omega-wheat-25.vercel.app
 - **Dominio final**: `https://www.griffo.com.ar` (migración pendiente,
   ver `MIGRATION.md` en la raíz del repo para el plan completo).
+- **Registrador del dominio**: **NIC Argentina**.
+- **Email corporativo**: **Zoho Mail** (⚠️ al cambiar DNS para la
+  migración, NO TOCAR los registros MX ni los TXT de SPF/DKIM/DMARC
+  de Zoho — solo cambiar los A/CNAME para apuntar a Vercel).
+- **Google Search Console**: la cliente tiene acceso al del sitio
+  actual — usarlo para inventariar URLs antes del switch y armar el
+  mapa de redirects 301 en `next.config.ts`.
 - **`SITE_URL`** se controla con la env var `NEXT_PUBLIC_SITE_URL`
   (default: staging). En el día del switch: definir la variable en Vercel
   (Production scope) apuntando a `https://www.griffo.com.ar` y todo
