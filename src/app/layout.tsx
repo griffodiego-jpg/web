@@ -107,6 +107,21 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
+        {/* Google Analytics 4 */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-FR8KN76LQ2"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-FR8KN76LQ2');
+            `,
+          }}
+        />
         {/* JSON-LD estructurado global (Organization + WebSite) */}
         <OrganizationJsonLd />
         <WebSiteJsonLd />

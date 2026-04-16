@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
+import { getResend } from "@/lib/resend";
 
-/**
- * Stub de suscripción a newsletter.
- * TODO: conectar con el backend / servicio de mailing real
- * (ej. Mailchimp, Brevo, o endpoint propio).
- */
 export async function POST(request: Request) {
   try {
     const { email } = (await request.json()) as { email?: string };
@@ -14,10 +10,21 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    // Acá va la integración real con el proveedor de mailing.
-    console.log("[newsletter] nueva suscripción:", email);
+
+    await getResend().emails.send({
+      from: "Griffo Web <onboarding@resend.dev>",
+      to: "contacto@griffo.com.ar",
+      subject: `Nueva suscripción al newsletter: ${email}`,
+      html: `
+        <h2>Nueva suscripción al newsletter</h2>
+        <p><strong>Email:</strong> ${email}</p>
+        <p>El usuario solicitó recibir información sobre productos, lanzamientos y promociones.</p>
+      `,
+    });
+
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Bad request" }, { status: 400 });
+  } catch (e) {
+    console.error("[newsletter] error:", e);
+    return NextResponse.json({ error: "Error al enviar" }, { status: 500 });
   }
 }

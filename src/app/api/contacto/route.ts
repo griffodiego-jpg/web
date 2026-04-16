@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
+import { getResend } from "@/lib/resend";
 
-/**
- * Stub del endpoint de contacto.
- * TODO: conectar con el backend real (envío de email, guardado en DB o CRM).
- */
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -26,9 +23,25 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("[contacto] nueva consulta:", body);
+    await getResend().emails.send({
+      from: "Griffo Web <onboarding@resend.dev>",
+      to: "contacto@griffo.com.ar",
+      replyTo: body.email,
+      subject: `Consulta web de ${body.nombre}`,
+      html: `
+        <h2>Nueva consulta desde la web</h2>
+        <p><strong>Nombre:</strong> ${body.nombre}</p>
+        <p><strong>Email:</strong> ${body.email}</p>
+        <p><strong>Teléfono:</strong> ${body.telefono || "No proporcionado"}</p>
+        <hr />
+        <p><strong>Mensaje:</strong></p>
+        <p>${body.mensaje.replace(/\n/g, "<br>")}</p>
+      `,
+    });
+
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Bad request" }, { status: 400 });
+  } catch (e) {
+    console.error("[contacto] error:", e);
+    return NextResponse.json({ error: "Error al enviar" }, { status: 500 });
   }
 }

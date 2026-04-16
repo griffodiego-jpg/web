@@ -18,7 +18,10 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
 
 export function WhatsappFloat() {
   const [open, setOpen] = useState(false);
-  const waHref = `https://wa.me/${siteConfig.whatsapp.number}`;
+  const message = encodeURIComponent(
+    "Hola, estoy visitando la web de Griffo y tengo una consulta."
+  );
+  const waHref = `https://wa.me/${siteConfig.whatsapp.number}?text=${message}`;
 
   return (
     <aside className="fixed bottom-5 right-5 z-40">
