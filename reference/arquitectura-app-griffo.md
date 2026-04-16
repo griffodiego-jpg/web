@@ -218,8 +218,8 @@ async function loadProducts() {
 - `https` nativo (NO `fetch`) para GET a SpecParts — preserva `brand[]=GRIFFO` sin re-encoding
 - `fetch` para auth (POST con body JSON) — está OK, no hay query params con brackets
 - Caché 30 min
-- Filtra `FUELLE SEMIEJE` del catálogo general
 - Pagina automáticamente
+- NOTA para la web nueva: NO se filtra `FUELLE SEMIEJE`. Todos los ~370 productos entran al catálogo.
 
 ### `/api/plate.js` — Identificación de vehículo por patente
 Usa el mismo patrón `specpartsGet`. `GET /vehicle/identification?plate=...`
@@ -312,7 +312,7 @@ Usar `https` nativo de Node.js + `zlib.gunzip`.
 - Vanilla JS sin framework para eliminar build step
 - Catálogo en memoria local: no hay relación vehículo→producto directa
 - Caché 30 min en serverless
-- `FUELLE SEMIEJE` excluido del catálogo general (87 items), solo en "Por Medidas"
+- (App mobile) `FUELLE SEMIEJE` excluido del catálogo general. **En la web nueva NO se excluye** — todos los productos entran.
 - 188 kits, 0 con componentes cargados
 
 ---
@@ -400,13 +400,12 @@ FIREBASE_APP_ID=1:710468527470:web:f673ee218ee383b763cd7f
 ## 12. REGLAS NO NEGOCIABLES
 
 1. Proxy: `https` nativo, NUNCA `fetch()` para GET a SpecParts
-2. Verificación de email obligatoria (Google y admin exentos)
-3. FUELLE SEMIEJE excluido del catálogo general (solo en "Por Medidas")
-4. Logo: no alterar colores
-5. Credenciales de SpecParts: las de este documento
-6. Proyecto Vercel `griffo-app-ar` corrupto — NO usar
-7. `griffo-v2_4.html` obsoleto — NO usar como base
-8. Nunca cambiar lo que funciona. Revertir al primer error.
+2. Verificación de email obligatoria (Google y admin exentos) — aplica al portal B2B, no al catálogo público
+3. Logo: no alterar colores
+4. Credenciales de SpecParts: las de este documento
+5. Proyecto Vercel `griffo-app-ar` corrupto — NO usar
+6. `griffo-v2_4.html` obsoleto — NO usar como base
+7. Nunca cambiar lo que funciona. Revertir al primer error.
 
 ---
 
