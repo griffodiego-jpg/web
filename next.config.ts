@@ -10,6 +10,10 @@ import type { NextConfig } from "next";
  *   (completar con el inventario del sitio viejo — ver MIGRATION.md)
  */
 const nextConfig: NextConfig = {
+  // Scroll al top cuando se navega entre páginas
+  experimental: {
+    scrollRestoration: false,
+  },
   // Optimización de imágenes por Next/Image
   images: {
     // Prioridad de formatos: AVIF (mejor compresión) → WebP → original

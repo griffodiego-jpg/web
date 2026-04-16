@@ -115,7 +115,7 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
   "kit-de-fuelles-universales-para-homocineticas": {
     title: "Fuelle Universal de Transmisión",
     image: "/products/foto-universal-transmision.jpg",
-    codigo: "Chico: 950-32B · Grande: 950-32",
+    codigo: "Chico: 950-32B / 950-32 · Grande: 951-32B / 951-32",
     tagline: "Dos Fuelles. Múltiples aplicaciones.",
     descriptions: [
       "El fuelle universal de transmisión Griffo está diseñado para adaptarse a una amplia variedad de vehículos, sin necesidad de contar con stock específico para cada marca o modelo. <strong>Es flexible, resistente y apto para instalar</strong> con máquina montadora.",
@@ -182,13 +182,13 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
             },
             {
               label: "Kit x2 Unidades",
-              image: "/products/presentation/kit2.png",
-              codigo: "950-32B",
+              image: "/products/presentation/kit2-grande.png",
+              codigo: "951-32B",
             },
             {
               label: "Kit x6 Unidades",
-              image: "/products/presentation/kit6.png",
-              codigo: "950-32",
+              image: "/products/presentation/kit6-grande.png",
+              codigo: "951-32",
             },
           ],
         },

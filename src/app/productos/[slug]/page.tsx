@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AssetImage } from "@/components/AssetImage";
+import { Lightbox } from "@/components/Lightbox";
 import { ComingSoon } from "@/components/PageHero";
 import {
   BreadcrumbJsonLd,
@@ -153,14 +154,16 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
         </h1>
 
         <div className="mt-10 grid lg:grid-cols-2 grid-cols-1 gap-8 items-start">
-          {/* Imagen del producto */}
+          {/* Imagen del producto — click para agrandar */}
           <div className="flex justify-center lg:justify-start">
-            <AssetImage
-              src={detalle.image}
-              alt={detalle.title}
-              bare
-              className="max-w-[550px] max-h-[380px] w-full h-auto object-contain"
-            />
+            <Lightbox src={detalle.image} alt={detalle.title}>
+              <AssetImage
+                src={detalle.image}
+                alt={detalle.title}
+                bare
+                className="max-w-[550px] max-h-[380px] w-full h-auto object-contain"
+              />
+            </Lightbox>
           </div>
 
           {/* Texto + CTA */}
