@@ -162,6 +162,21 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   o compresión desde HandBrake por la cliente. Forms reales (Resend),
   Analytics, Search Console — requieren input de la cliente.
 
+## Servicios conectados
+
+- **Resend** (email): API key en env var `RESEND_API_KEY`. Contacto →
+  `contacto@griffo.com.ar`, Garantía → `garantia@griffo.com.ar`,
+  Newsletter → `contacto@griffo.com.ar`. Sender: `onboarding@resend.dev`
+  (verificar dominio en Resend para enviar desde `@griffo.com.ar`).
+- **Google Analytics 4**: measurement ID `G-FR8KN76LQ2` (mismo que el
+  sitio viejo). Script en `layout.tsx`.
+- **Admin panel**: `/admin` con login por contraseña (`ADMIN_PASSWORD`
+  env var). Dashboard + tabla distribuidores + editor links productos +
+  placeholder banners. CRUD real pendiente de conectar Vercel KV
+  (Upstash Redis ya creado por la cliente).
+- **WhatsApp**: mensaje pre-cargado "Hola, estoy visitando la web de
+  Griffo y tengo una consulta." en todas las páginas.
+
 ## Pendientes y decisiones abiertas
 
 1. **🚨 Login / cuenta corriente / descarga de facturas**: en la primera
