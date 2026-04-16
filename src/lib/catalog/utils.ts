@@ -164,7 +164,7 @@ function getBaseCode(code: string): string {
   return match ? match[1] : code;
 }
 
-function getAttrValue(p: SpecPartsProduct, nameContains: string): string {
+export function getAttrValue(p: SpecPartsProduct, nameContains: string): string {
   if (!p.attributes) return "";
   const needle = nameContains.toLowerCase();
   for (const a of p.attributes) {
