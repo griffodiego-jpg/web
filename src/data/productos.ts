@@ -115,6 +115,7 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
   "kit-de-fuelles-universales-para-homocineticas": {
     title: "Fuelle Universal de Transmisión",
     image: "/products/foto-universal-transmision.jpg",
+    codigo: "950-32B (Kit x2) / 950-32 (Kit x6)",
     tagline: "Dos Fuelles. Múltiples aplicaciones.",
     descriptions: [
       "El fuelle universal de transmisión Griffo está diseñado para adaptarse a una amplia variedad de vehículos, sin necesidad de contar con stock específico para cada marca o modelo. <strong>Es flexible, resistente y apto para instalar</strong> con máquina montadora.",
@@ -371,6 +372,7 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
   "abrazaderas-universales": {
     title: "Abrazaderas Universales",
     image: "/products/abrazadera-instalada.jpg",
+    codigo: "AB 25-40 (lado palier) / AB 40-122 (lado copa)",
     tagline: "Ajuste firme y duradero.",
     descriptions: [
       "Las abrazaderas universales Griffo están diseñadas para <strong>asegurar firmemente los fuelles.</strong>",

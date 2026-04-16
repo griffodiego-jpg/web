@@ -27,6 +27,18 @@ export default function ProductosPage() {
               href={p.href}
               className="group block bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
+              {/* Título arriba — visible antes de scrollear a la imagen */}
+              <div className="px-3 pt-3 pb-1">
+                <h2 className="font-bold text-sm text-[#0a2b3d] group-hover:text-primary transition leading-tight">
+                  {p.label}
+                </h2>
+                {detalle?.codigo && (
+                  <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">
+                    Cód. {detalle.codigo}
+                  </p>
+                )}
+              </div>
+
               {/* Imagen */}
               <div className="aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
                 {detalle?.image ? (
@@ -53,17 +65,9 @@ export default function ProductosPage() {
                 )}
               </div>
 
-              {/* Info */}
-              <div className="p-3 border-t border-gray-100">
-                <h2 className="font-bold text-sm text-[#0a2b3d] group-hover:text-primary transition leading-tight">
-                  {p.label}
-                </h2>
-                {detalle?.codigo && (
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    Cód. {detalle.codigo}
-                  </p>
-                )}
-                <span className="mt-2 inline-flex items-center gap-1 text-xs text-primary font-semibold group-hover:gap-2 transition-all">
+              {/* CTA abajo */}
+              <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+                <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold group-hover:gap-2 transition-all">
                   Ver detalle
                   <svg
                     width="14"
