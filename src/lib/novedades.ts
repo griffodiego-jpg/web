@@ -33,6 +33,59 @@ const NUEVOS_KEY_PREFIX = "novedades:nuevos:"; // código → set de "BRAND:MODE
 const WINDOW_MONTHS = 12;
 
 /**
+ * Migración de datos — modelo viejo → modelo nuevo.
+ *
+ * El modelo anterior guardaba toda la novedad publicada (código + tipo +
+ * overrides + fecha) en una lista Redis `novedades:publicadas`. El
+ * modelo actual separa: `novedades:tipo:<code>` (solo el override de
+ * tipo) + `novedades:hidden` (ocultas) + `novedades:nuevos:<code>`
+ * (vehículos marcados como nuevos).
+ *
+ * Esta función lee la lista vieja, convierte cada entry al modelo
+ * nuevo (básicamente: si tipo = "lanzamiento", escribe el override),
+ * y elimina la key vieja. Es idempotente — si la key vieja no existe,
+ * no hace nada.
+ *
+ * Caché en memoria del proceso para no repetir el LRANGE en cada render.
+ */
+const OLD_PUBLICADAS_KEY = "novedades:publicadas";
+let migrationDone = false;
+
+async function migrateLegacyIfNeeded(): Promise<void> {
+  if (migrationDone) return;
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    const raw = await redis.lrange(OLD_PUBLICADAS_KEY, 0, -1);
+    if (!raw || raw.length === 0) {
+      migrationDone = true;
+      return;
+    }
+    for (const entry of raw) {
+      try {
+        const obj =
+          typeof entry === "string"
+            ? (JSON.parse(entry) as { code?: string; tipo?: TipoNovedad })
+            : (entry as { code?: string; tipo?: TipoNovedad });
+        if (obj?.code && obj?.tipo) {
+          await redis.set(TIPO_KEY_PREFIX + obj.code, obj.tipo);
+        }
+      } catch {
+        // entry mal formateado — skip
+      }
+    }
+    await redis.del(OLD_PUBLICADAS_KEY);
+    console.log(
+      `[novedades] migración completa: ${raw.length} overrides migrados del modelo viejo`
+    );
+    migrationDone = true;
+  } catch (e) {
+    console.error("[novedades] error en migración:", e);
+    // No seteamos migrationDone para reintentar en la próxima request.
+  }
+}
+
+/**
  * Normaliza un vehículo a una clave única por marca+modelo (ignora
  * versión y años). Se usa tanto para marcar como nuevo desde el admin
  * como para renderizar el badge en el público.
@@ -234,6 +287,9 @@ export async function listNovedades(): Promise<Novedad[]> {
 
 /** Igual que listNovedades pero incluye las ocultas — para el admin. */
 export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
+  // Migramos datos del modelo viejo si todavía hay (idempotente).
+  await migrateLegacyIfNeeded();
+
   let products: CatalogProduct[];
   try {
     products = await listCatalog();
@@ -281,6 +337,7 @@ export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
 
 /** Por código individual (para página de detalle pública). */
 export async function getNovedad(code: string): Promise<Novedad | null> {
+  await migrateLegacyIfNeeded();
   const product = await getProductByCode(code);
   if (!product) return null;
 
