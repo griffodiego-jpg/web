@@ -1,125 +1,204 @@
-# Bejerman — documentación de la API / middleware
+# Bejerman (ERP Griffo) — documentación de la API
 
-Carpeta para guardar toda la información del proveedor del middleware
-de Bejerman que vamos a consumir desde la web para el portal B2B
-(`/cuenta/*`).
+Fuente oficial: `reference/bejerman/Documentación API ERP Griffo v2.pdf`
+(subido por la cliente el 2026-04-17).
 
-El objetivo de esta carpeta es que cualquier sesión de Claude Code
-que arranque encuentre acá todo lo necesario para construir el
-cliente HTTP de Bejerman (`src/lib/api/bejerman.ts`) sin tener que
-preguntar nada más.
+**Proveedor del middleware:** Promotive (presumido por el email del usuario
+de ejemplo `mpinero@promotive.la`). Falta confirmar con la cliente.
 
-## Qué va en esta carpeta
+---
 
-- `README.md` — este archivo. Resumen de conexión + índice.
-- `mail-al-proveedor.md` — borrador del pedido de información
-  que la cliente le puede mandar al proveedor del middleware.
-- `samples/` — JSON de ejemplo de cada endpoint (uno por archivo).
-- Cualquier PDF / Postman collection / Swagger YAML que mande el
-  proveedor — subirlo acá directo.
+## Conexión
 
-## Plantilla de datos a completar
+- **Base URL:** `http://griffo.stidns.net:86/api`
+- ⚠️ **HTTP, no HTTPS.** El middleware no expone TLS. Implicancias:
+  - Desde el navegador (código cliente) **NO se puede llamar** por mixed
+    content (Vercel sirve HTTPS). Todas las llamadas van **server-side**
+    desde Next.js API routes.
+  - Credenciales viajan en claro en la red pública. **Pedir al proveedor
+    que habilite HTTPS** antes de ir a producción. Mientras tanto, es
+    aceptable para desarrollo.
+- **Autenticación:** JWT Bearer. Login con email + password, devuelve
+  token. 2FA opcional (`twoFactorCode` / `twoFactorRecoveryCode`).
 
-Cuando el proveedor responda, editar este README con los valores
-reales. Los campos en `TBD` son los que hoy faltan.
-
-### Proveedor del middleware
-
-- **Empresa:** TBD
-- **Contacto:** TBD
-- **Mail:** TBD
-- **Teléfono:** TBD
-- **Fecha de contratación del servicio:** TBD
-
-### Conexión
-
-- **URL base producción:** `TBD`
-- **URL base sandbox/desarrollo:** `TBD` (si no hay, aclarar acá)
-- **Autenticación:** `TBD` (API key en header / OAuth client_credentials /
-  usuario+password / token fijo / otro)
-- **Header de auth:** `TBD` (ej. `Authorization: Bearer <token>` o
-  `X-API-Key: <key>`)
-- **Rate limits:** `TBD`
-- **Paginación:** `TBD` (limit+offset / cursor / page / sin paginación)
-
-### Credenciales
-
-**No pegar credenciales reales acá.** Van a Vercel → Environment
-Variables. En el repo sólo van los placeholders en `.env.example`:
+### Login
 
 ```
-BEJERMAN_API_URL=
-BEJERMAN_API_KEY=
-BEJERMAN_API_SECRET=     # solo si la auth es OAuth client_credentials
+POST /Auth/login
+Content-Type: application/json
+
+{
+  "email": "...",
+  "password": "...",
+  "twoFactorCode": "",
+  "twoFactorRecoveryCode": ""
+}
+
+→ { "token": "eyJ..." }
 ```
 
-Cuando el proveedor mande credenciales, la cliente las carga en
-Vercel en los 3 scopes (Production, Preview, Development) y avisa a
-Claude Code que ya están. Nunca pegar credenciales en commits.
+Usar el token en `Authorization: Bearer <token>` para el resto.
 
-### Endpoints mínimos que necesitamos
+### Cambiar contraseña (del usuario API)
 
-| Función | Endpoint esperado | Necesario para |
+```
+POST /Auth/change_password
+{ "currentPassword": "...", "newPassword": "..." }
+```
+
+**Importante:** este endpoint cambia la contraseña **del usuario de la
+API de Griffo** (o sea, de la cuenta técnica que usa la web para
+consumir el ERP). **NO sirve para cambiarle la contraseña a un cliente
+B2B** — la contraseña de los clientes se maneja en nuestro Firebase.
+
+---
+
+## Endpoints disponibles
+
+### 1. `GET /ERP/Clients` — listar clientes del ERP
+
+Devuelve todos los clientes registrados en Bejerman con sus depósitos
+asociados.
+
+```json
+[
+  {
+    "client_id": "string",
+    "email": "string",
+    "name": "string",
+    "warehouses": [
+      { "warehouse_id": "string", "description": "string" }
+    ]
+  }
+]
+```
+
+**Usos en la web:**
+- Admin → `/admin/clientes`: lista completa de clientes del ERP.
+- Autoservicio: al registrarse, matchear email del formulario contra
+  este listado para vincular `user_web ↔ client_id`.
+
+### 2. `POST /ERP/prices` — precios + stock por cliente + depósito
+
+Body:
+```json
+{
+  "clientId": "string",
+  "warehouseId": "string",
+  "items": [ { "productCode": "string", "quantityRequested": 0 } ]
+}
+```
+
+Response:
+```json
+[
+  {
+    "productCode": "string",
+    "price": 0,
+    "discountedPrice": 0,
+    "discountApplied": 0,
+    "stock": 0
+  }
+]
+```
+
+**Usos:**
+- Catálogo con precios B2B: al visitar `/catalogo` logueado, batchear
+  códigos visibles y pedir precios.
+- Carrito: cotizar al momento de agregar.
+- Checkout: validar precios antes de crear el pedido.
+
+### 3. `POST /ERP/order` — crear pedido
+
+Body:
+```json
+{
+  "clientId": "string",
+  "products": [
+    { "productId": "string", "quantity": 0, "unitPrice": 0 }
+  ],
+  "platformOrderId": "string",
+  "orderStatus": "string"
+}
+```
+
+Response:
+```json
+{ "erpOrderId": "string", "success": true, "message": "string" }
+```
+
+### 4. `GET /ERP/orders/{erp_order_id}` — estado del pedido
+
+```json
+{ "ErpOrderId": "12345", "Status": "Confirmado" }
+```
+
+---
+
+## 🚨 Gaps vs lo que pidió la cliente
+
+Lo que pidió y **NO está en la API**:
+
+| Feature pedida | Endpoint necesario | Estado |
 |---|---|---|
-| Listar clientes | `GET /clientes` | Admin alta B2B (buscar por CUIT/código). |
-| Detalle cliente | `GET /clientes/{id}` | Matchear user logueado con Bejerman. |
-| Lista de precios del cliente | `GET /clientes/{id}/precios` | Catálogo con precios B2B + descarga lista privada. |
-| Cuenta corriente | `GET /clientes/{id}/cuenta-corriente` | `/cuenta/cuenta-corriente`. |
-| Saldo del cliente | `GET /clientes/{id}/saldo` (opcional) | Dashboard `/cuenta`. |
-| Listar facturas | `GET /clientes/{id}/facturas?desde=YYYY-MM-DD` | `/cuenta/facturas`. |
-| PDF de factura | `GET /facturas/{id}/pdf` | Descarga desde `/cuenta/facturas`. |
-| Crear pedido | `POST /pedidos` | Checkout B2B. |
-| Consultar pedido | `GET /pedidos/{id}` | Seguimiento desde `/cuenta/pedidos`. |
-| Listar pedidos del cliente | `GET /clientes/{id}/pedidos` | `/cuenta/pedidos`. |
-| Artículos / stock | `GET /articulos` (opcional) | Cruzar código SpecParts ↔ código Bejerman. |
+| Descarga de **facturas** | `GET /ERP/invoices` + `GET /ERP/invoices/{id}/pdf` | ❌ no existe |
+| **Cuenta corriente** (saldo + movimientos) | `GET /ERP/clients/{id}/account` | ❌ no existe |
+| **Lista de precios privada** descargable (PDF/XLSX) | `GET /ERP/clients/{id}/price-list` | ❌ no existe |
+| **Crear cliente** desde admin | `POST /ERP/clients` | ❌ no existe |
+| **Actualizar datos** de cliente | `PUT /ERP/clients/{id}` | ❌ no existe |
 
-Si el proveedor ofrece endpoints con otros nombres / estructura,
-pegar acá la lista real que mande él.
+Preguntar al proveedor si se pueden agregar. Sin esto, `/cuenta/facturas`
+y `/cuenta/cuenta-corriente` no son implementables.
 
-### Samples
+## Preguntas abiertas (para el proveedor / la cliente)
 
-Para cada endpoint que confirme el proveedor, pedirle al menos un
-ejemplo de respuesta real (con 1 ó 2 registros). Guardarlos en
-`samples/` con nombres descriptivos:
+1. **HTTPS:** ¿el middleware va a tener HTTPS antes de producción? Si no,
+   cualquier tráfico que pase por internet va en claro.
+
+2. **`productCode`:** los códigos de producto de Bejerman, ¿son los
+   mismos que los de SpecParts (ej. `076-35`, `950-32B`, `AB 25-40`)?
+   Necesitamos un ejemplo real de payload de `/ERP/prices` para confirmar.
+   Si no coinciden, hay que armar tabla de mapeo.
+
+3. **`clientId` format:** ¿qué formato tiene? ¿Es número, código
+   alfanumérico, CUIT? Hace falta un ejemplo real del `GET /ERP/Clients`.
+
+4. **Email del cliente:** ¿todos los clientes tienen email cargado en
+   Bejerman? Si un cliente no tiene email, el matcheo por email en el
+   alta autoservicio no sirve para ese cliente. Alternativa: matchear
+   por **CUIT** — pero el endpoint no devuelve CUIT. Sería valioso que
+   el proveedor lo incluya.
+
+5. **Depósito en el pedido:** `POST /ERP/order` NO pide `warehouseId`.
+   Si un cliente tiene varios depósitos, ¿cómo sabe el ERP dónde enviar?
+   ¿Agarra el depósito por default? Confirmar con proveedor.
+
+6. **`orderStatus` al crear pedido:** ¿qué valores acepta? ¿Se puede
+   mandar "Pendiente aprobación" para que quede en cola antes de pasar
+   a "En preparación"?
+
+7. **`platformOrderId`:** asumo que es un ID nuestro (UUID generado en
+   la web) para trackear el pedido. Confirmar.
+
+8. **Estados de pedido (`Status`):** ¿qué valores devuelve
+   `GET /ERP/orders/{id}`? Muestra `"Confirmado"` — lista completa?
+
+9. **Webhooks:** ¿el middleware soporta avisar cambios (estado de pedido,
+   nueva factura, nuevo pago)? Si no, vamos a hacer polling.
+
+10. **Rate limits:** ¿cuántos req/seg tolera? Esto define cuán agresivo
+    podemos ser cacheando y cuántos códigos podemos pedir en batch a
+    `/ERP/prices`.
+
+---
+
+## Env vars
 
 ```
-samples/
-├── clientes-list.json
-├── cliente-detalle.json
-├── cliente-precios.json
-├── cliente-cuenta-corriente.json
-├── facturas-list.json
-├── factura-detalle.json
-├── pedido-create-request.json
-├── pedido-create-response.json
-└── pedido-detalle.json
+BEJERMAN_API_URL=http://griffo.stidns.net:86/api
+BEJERMAN_EMAIL=           # usuario de la API de Griffo
+BEJERMAN_PASSWORD=        # contraseña del usuario de la API
 ```
 
-### Decisiones abiertas que el proveedor nos tiene que responder
-
-1. ¿La lista de precios por cliente vuelve como JSON (precio por
-   código) o como descarga de PDF/Excel?
-2. ¿Qué identificador usa Bejerman como clave primaria de cliente
-   (código interno, CUIT, email)?
-3. ¿Los códigos de producto de Bejerman son los mismos que los de
-   SpecParts (ej. `076-35`, `950-32B`)? Si no, ¿hay forma de cruzarlos?
-4. Cuando creamos un pedido vía API, ¿queda en estado "pendiente"
-   en Bejerman esperando aprobación interna de Griffo, o pasa
-   directo a "en preparación"?
-5. ¿Los estados de pedido que maneja Bejerman son los que podemos
-   mostrarle al cliente tal cual, o hay que mapearlos?
-6. ¿Hay webhooks desde Bejerman cuando cambia el estado de un
-   pedido / se emite una factura / se registra un pago? Si no,
-   vamos a hacer polling.
-
-## Próximos pasos una vez completada la info
-
-1. Completar este README con los datos reales.
-2. Subir los JSON de ejemplo a `samples/`.
-3. Avisar a Claude Code ("subí lo de Bejerman").
-4. Claude Code va a:
-   - Generar los tipos TS en `src/types/bejerman.ts` a partir de
-     los samples.
-   - Construir el cliente HTTP en `src/lib/api/bejerman.ts` con
-     auth, retry y cache.
-   - Escribir tests contra los samples (mocks).
+Las credenciales reales las carga la cliente en Vercel → Environment
+Variables (Production + Preview + Development). **No subir a git.**
