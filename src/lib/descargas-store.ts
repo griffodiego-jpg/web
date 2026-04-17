@@ -1,5 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { headers } from "next/headers";
 import { getRedis } from "@/lib/kv";
 import {
   catalogoGeneralPdf,
@@ -100,18 +99,34 @@ export function resolveSlotUrl(
 }
 
 /**
- * Chequea que un URL sea servible. URLs absolutos (Blob) asumimos OK.
- * Paths relativos (/foo.pdf) los verificamos contra public/ para no
- * renderizar un link que descargue el HTML de la 404 de Next.
+ * Chequea que un URL sea servible.
+ *
+ * - Absolutos (https://... de Vercel Blob): asumimos OK (si el admin
+ *   subió, Blob lo tiene).
+ * - Relativos (/foo.pdf): HEAD request contra el origen de la request
+ *   actual. Esto funciona tanto en dev (serve local) como en Vercel
+ *   (los archivos en /public se sirven vía CDN). No podemos usar
+ *   fs.access porque el serverless function no incluye /public.
  */
 async function urlIsServable(url: string | undefined): Promise<boolean> {
   if (!url) return false;
   if (/^https?:\/\//.test(url)) return true;
   try {
-    const full = path.join(process.cwd(), "public", url.replace(/^\//, ""));
-    await fs.access(full);
-    return true;
-  } catch {
+    const h = await headers();
+    const host = h.get("host");
+    if (!host) return false;
+    const proto =
+      h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+    const full = `${proto}://${host}${url}`;
+    const res = await fetch(full, {
+      method: "HEAD",
+      // Evitamos cache para que la página refresque cuando suben
+      // un archivo nuevo vía GitHub + redeploy.
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("[descargas-store] HEAD check falló:", e);
     return false;
   }
 }

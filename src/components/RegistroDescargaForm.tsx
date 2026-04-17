@@ -22,6 +22,7 @@ export function RegistroDescargaForm({
   fileUrl: string;
 }) {
   const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [data, setData] = useState({
     nombre: "",
     empresa: "",
@@ -33,13 +34,17 @@ export function RegistroDescargaForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/descargas/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, recursoId, recursoTitulo }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Hubo un error");
+      }
       setStatus("ok");
       // Disparar la descarga automáticamente.
       const a = document.createElement("a");
@@ -48,7 +53,8 @@ export function RegistroDescargaForm({
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Hubo un error");
       setStatus("error");
     }
   }
@@ -133,7 +139,7 @@ export function RegistroDescargaForm({
       </button>
       {status === "error" && (
         <p className="text-red-700 font-semibold text-sm">
-          Hubo un error. Probá de nuevo en unos minutos.
+          {errorMsg ?? "Hubo un error."} Revisá los datos y probá de nuevo.
         </p>
       )}
     </form>

@@ -13,9 +13,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/catalogo/download" },
 };
 
-// Se revalida cada 60s para que los cambios del admin aparezcan rápido
-// sin pegarle a Redis en cada request.
-export const revalidate = 60;
+// Dinámica: usamos headers() para chequear qué archivos existen y
+// leemos overrides de Redis. No tiene sentido prerenderizar porque
+// los archivos/URLs cambian en vivo desde el admin.
+export const dynamic = "force-dynamic";
 
 const secciones = [
   { id: "catalogo-pdf", label: "Catálogo de productos en PDF" },
