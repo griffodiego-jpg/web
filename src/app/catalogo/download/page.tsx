@@ -16,83 +16,102 @@ export const metadata: Metadata = {
   alternates: { canonical: "/catalogo/download" },
 };
 
+const secciones = [
+  { id: "catalogo-pdf", label: "Catálogo de productos en PDF" },
+  { id: "material-producto", label: "Material por producto" },
+  { id: "material-catalogar", label: "Material para catalogar" },
+];
+
 export default function DescargasPage() {
   const productos =
     navigation.find((i) => i.label === "Productos destacados")?.children ?? [];
 
   return (
-    <div className="container mx-auto max-w-6xl px-5 pt-8 pb-16 space-y-14">
-      {/* 1. Catálogo general */}
-      <section aria-labelledby="catalogo-general">
-        <SectionHeader
-          id="catalogo-general"
-          title="Catálogo general"
-          subtitle="Descargá el catálogo oficial Griffo con el listado completo de productos."
-        />
-        <div className="mt-5">
-          <CatalogoGeneralCard />
-        </div>
-      </section>
-
-      {/* 2. Material por producto */}
-      <section aria-labelledby="material-producto">
-        <SectionHeader
-          id="material-producto"
-          title="Material por producto"
-          subtitle="Flyer en PDF, video para redes sociales y video para pantalla de cada producto destacado."
-        />
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {productos.map((p) => {
-            const slug = p.href.split("/").pop()!;
-            const detalle = productosDetalle[slug];
-            const material = materialPorProducto.find((m) => m.slug === slug);
-            if (!material) return null;
-            return (
-              <MaterialCard
-                key={slug}
-                nombre={p.label}
-                imagen={detalle?.image}
-                flyer={material.flyer}
-                videoRrss={material.videoRrss}
-                videoPantalla={material.videoPantalla}
-              />
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 3 + 4. Recursos gated con form de registro */}
-      <section aria-labelledby="recursos-gated">
-        <SectionHeader
-          id="recursos-gated"
-          title="Recursos para distribuidores"
-          subtitle="Completá el formulario una vez por recurso y te damos acceso inmediato a la descarga."
-        />
-        <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {recursosGated.map((r) => (
-            <RecursoGatedCard key={r.id} recurso={r} />
+    <>
+      {/* Nav interna sticky con anchors — avisa que hay 3 bloques abajo */}
+      <nav
+        aria-label="Secciones de descargas"
+        className="bg-primary-dark py-2 sticky top-14 z-[5] overflow-x-auto shadow"
+      >
+        <ul className="container mx-auto max-w-6xl px-5 flex lg:justify-center items-center gap-6 lg:gap-10 whitespace-nowrap text-sm">
+          {secciones.map((s) => (
+            <li key={s.id}>
+              <a
+                href={`#${s.id}`}
+                className="text-white hover:text-accent transition py-2 block font-semibold"
+              >
+                {s.label}
+              </a>
+            </li>
           ))}
-        </div>
-      </section>
-    </div>
+        </ul>
+      </nav>
+
+      <div className="container mx-auto max-w-6xl px-5 pt-8 pb-16 space-y-14">
+        {/* 1. Catálogo de productos en PDF */}
+        <section id="catalogo-pdf" className="scroll-mt-32">
+          <SectionHeader
+            title="Catálogo de productos en PDF"
+            subtitle="Descargá el catálogo oficial Griffo con el listado completo de productos."
+          />
+          <div className="mt-5">
+            <CatalogoGeneralCard />
+          </div>
+        </section>
+
+        {/* 2. Material por producto */}
+        <section id="material-producto" className="scroll-mt-32">
+          <SectionHeader
+            title="Material por producto"
+            subtitle="Flyer en PDF, video para redes sociales y video para pantalla de cada producto destacado."
+          />
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {productos.map((p) => {
+              const slug = p.href.split("/").pop()!;
+              const detalle = productosDetalle[slug];
+              const material = materialPorProducto.find((m) => m.slug === slug);
+              if (!material) return null;
+              return (
+                <MaterialCard
+                  key={slug}
+                  nombre={p.label}
+                  imagen={detalle?.image}
+                  flyer={material.flyer}
+                  videoRrss={material.videoRrss}
+                  videoPantalla={material.videoPantalla}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 3. Material para catalogar — recursos gated */}
+        <section id="material-catalogar" className="scroll-mt-32">
+          <SectionHeader
+            title="Material para catalogar"
+            subtitle="Completá el formulario una vez por recurso y te damos acceso inmediato a la descarga."
+          />
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {recursosGated.map((r) => (
+              <RecursoGatedCard key={r.id} recurso={r} />
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 
 function SectionHeader({
-  id,
   title,
   subtitle,
 }: {
-  id: string;
   title: string;
   subtitle: string;
 }) {
   return (
     <div className="border-l-4 border-accent pl-4">
-      <h2
-        id={id}
-        className="text-xl lg:text-2xl font-bold text-[#0a2b3d] leading-tight"
-      >
+      <h2 className="text-xl lg:text-2xl font-bold text-[#0a2b3d] leading-tight uppercase">
         {title}
       </h2>
       <p className="mt-1 text-sm text-gray-600">{subtitle}</p>
