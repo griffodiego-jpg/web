@@ -6,11 +6,8 @@ import { ProductGallery } from "@/components/catalog/ProductGallery";
 import { BreadcrumbJsonLd, ProductJsonLd } from "@/components/StructuredData";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getProductBySlug, listCatalog } from "@/lib/api/specparts";
-import {
-  getAttrValues,
-  getMercadoLibreUrl,
-  getProductLocations,
-} from "@/lib/catalog/utils";
+import { getMercadoLibreUrl } from "@/lib/catalog/utils";
+import { getDisplayApplication } from "@/lib/catalog/display";
 import { SITE_URL } from "@/lib/site-url";
 import type { SpecPartsAttribute, SpecPartsVehicle } from "@/types/specparts";
 
@@ -71,12 +68,10 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
   const vehiclesByBrand = groupVehiclesByBrand(product.vehicles ?? []);
   const attributes = product.attributes ?? [];
 
-  // Aplicación: atributos que dicen cómo se monta (Posición / Ubicación / Lado).
-  // Consolidamos valores repetidos (ej. dos attrs 'Lado' con distintos valores).
-  const ubicaciones = getProductLocations(product);
-  const lados = getAttrValues(product, "lado").filter(
-    (v) => !ubicaciones.includes(v),
-  );
+  // Aplicación: Ubicación + Lado con las reglas de display por línea
+  // (Suspensión esconde izq/der, Dirección promueve izq/der a Ubicación,
+  // Transmisión en Ubicación sólo deja LADO CAJA / LADO RUEDA).
+  const { ubicaciones, lados } = getDisplayApplication(product);
 
   // Medidas: el resto de los atributos (diámetros, largos, pliegues, tipo, etc.).
   // Excluimos los que ya mostramos como Aplicación y los de 'Componentes'.
@@ -139,9 +134,6 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
                 {product.product}
               </p>
             </div>
-            {product.description ? (
-              <p className="mt-1 text-sm text-gray-600">{product.description}</p>
-            ) : null}
           </header>
 
           {/* 3. Aplicación: pills compactos */}
@@ -194,29 +186,37 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
         </div>
       </div>
 
-      {/* 7. Vehículos compatibles (abajo, scrolleable) */}
+      {/* 7. Vehículos compatibles — CSS columns (masonry).
+            Cada marca ocupa solo el alto que necesita, sin emparejar
+            con las demás. Se ordenan de mayor a menor cantidad para
+            balance visual. */}
       {Object.keys(vehiclesByBrand).length > 0 ? (
         <section className="mt-10">
           <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-500">
             Vehículos compatibles ({product.vehicles?.length ?? 0})
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(vehiclesByBrand).map(([brand, vehicles]) => (
-              <div key={brand} className="rounded-lg border border-gray-100 bg-white p-3">
-                <h3 className="text-xs font-black text-[#0a2b3d]">{brand}</h3>
-                <ul className="mt-1.5 space-y-0.5">
-                  {vehicles.map((v, i) => (
-                    <li key={`${v.model}-${i}`} className="text-[11px] text-gray-600">
-                      {v.master_model || v.model}
-                      {v.version ? ` ${v.version}` : ""}{" "}
-                      <span className="text-gray-400">
-                        ({v.sold_from_year}–{v.sold_until_year})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
+            {Object.entries(vehiclesByBrand)
+              .sort(([, a], [, b]) => b.length - a.length)
+              .map(([brand, vehicles]) => (
+                <div
+                  key={brand}
+                  className="mb-3 break-inside-avoid rounded-lg border border-gray-100 bg-white p-3"
+                >
+                  <h3 className="text-xs font-black text-[#0a2b3d]">{brand}</h3>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {vehicles.map((v, i) => (
+                      <li key={`${v.model}-${i}`} className="text-[11px] text-gray-600">
+                        {v.master_model || v.model}
+                        {v.version ? ` ${v.version}` : ""}{" "}
+                        <span className="text-gray-400">
+                          ({v.sold_from_year}–{v.sold_until_year})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
           </div>
         </section>
       ) : null}

@@ -5,7 +5,8 @@ import Link from "next/link";
 
 import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getFeaturedSlug } from "@/data/featured-products";
-import { getAttrValues, getMercadoLibreUrl, getProductLocations } from "@/lib/catalog/utils";
+import { getMercadoLibreUrl } from "@/lib/catalog/utils";
+import { getDisplayApplication } from "@/lib/catalog/display";
 
 import { VehiclesModal } from "./VehiclesModal";
 
@@ -19,41 +20,9 @@ export function ProductCard({ product }: ProductCardProps) {
   const primaryImage = product.pictures?.[0]?.image_url;
   const meliUrl = getMercadoLibreUrl(product);
 
-  const locations = getProductLocations(product);
-  const allSides = getAttrValues(product, "lado").filter((v) => !locations.includes(v));
-
-  // Tratamiento por línea:
-  // - Suspensión: el Lado izq/der no aporta — lo escondemos.
-  // - Dirección: izq/der ES la ubicación principal — lo movemos a Ubicación.
-  // - Transmisión: en Ubicación solo importa LADO CAJA / LADO RUEDA — el
-  //   resto (DELANTERO/TRASERO) se filtra porque ensucia la card.
-  const category = (product.category || "").toLowerCase();
-  const isSuspension = category.includes("susp");
-  const isDireccion = category.includes("direc");
-  const isTransmision = category.includes("trans");
-
-  let displayLocations: string[] = [...locations];
-  let displaySides: string[] = allSides;
-
-  if (isSuspension) {
-    displaySides = displaySides.filter((s) => !isIzqDer(s));
-  }
-  if (isDireccion) {
-    const izqDer = displaySides.filter(isIzqDer);
-    displaySides = displaySides.filter((s) => !isIzqDer(s));
-    for (const s of izqDer) {
-      if (!displayLocations.includes(s)) displayLocations.push(s);
-    }
-  }
-  if (isTransmision) {
-    displayLocations = displayLocations.filter((loc) => {
-      const upper = loc.toUpperCase();
-      return upper.includes("CAJA") || upper.includes("RUEDA");
-    });
-  }
-
-  const locationText = displayLocations.join(", ");
-  const sideText = displaySides.join(displaySides.length === 2 ? " y " : ", ");
+  const { ubicaciones, lados } = getDisplayApplication(product);
+  const locationText = ubicaciones.join(", ");
+  const sideText = lados.join(lados.length === 2 ? " y " : ", ");
 
   const vehicles = product.vehicles ?? [];
   const vehicleSummary = useMemo(() => buildVehicleSummary(vehicles), [vehicles]);
@@ -162,15 +131,6 @@ export function ProductCard({ product }: ProductCardProps) {
       />
     </>
   );
-}
-
-function isIzqDer(value: string): boolean {
-  const norm = value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-  return /^(izquier|derech|izq\b|der\b)/.test(norm);
 }
 
 type BrandSummary = { brand: string; models: string[] };

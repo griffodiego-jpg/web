@@ -1,0 +1,67 @@
+/**
+ * Reglas de presentación de atributos por línea (categoría).
+ * Se aplica tanto en ProductCard (grilla del catálogo) como en la page
+ * de detalle. Un único punto de verdad.
+ *
+ * Reglas:
+ *  - Suspensión: no mostrar 'Lado' cuando el valor es izquierdo/derecho.
+ *    El lado DELANTERO/TRASERO sí queda como 'Ubicación'.
+ *  - Dirección:  'Lado' izquierdo/derecho se promociona a 'Ubicación'
+ *    (ahí es el dato principal de la aplicación).
+ *  - Transmisión: en 'Ubicación' sólo interesa LADO CAJA / LADO RUEDA;
+ *    el DELANTERO/TRASERO no aporta y se filtra.
+ *  - Resto de líneas: sin transformación.
+ */
+
+import type { SpecPartsProduct } from "@/types/specparts";
+import { getAttrValues, getProductLocations } from "./utils";
+
+export type DisplayApplication = {
+  ubicaciones: string[];
+  lados: string[];
+};
+
+export function isIzqDer(value: string): boolean {
+  const norm = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  return /^(izquier|derech|izq\b|der\b)/.test(norm);
+}
+
+export function getDisplayApplication(product: SpecPartsProduct): DisplayApplication {
+  const category = (product.category || "").toLowerCase();
+  const isSuspension = category.includes("susp");
+  const isDireccion = category.includes("direc");
+  const isTransmision = category.includes("trans");
+
+  const rawLocations = getProductLocations(product);
+  const rawSides = getAttrValues(product, "lado").filter(
+    (v) => !rawLocations.includes(v),
+  );
+
+  let ubicaciones: string[] = [...rawLocations];
+  let lados: string[] = [...rawSides];
+
+  if (isSuspension) {
+    lados = lados.filter((s) => !isIzqDer(s));
+  }
+
+  if (isDireccion) {
+    const izqDer = lados.filter(isIzqDer);
+    lados = lados.filter((s) => !isIzqDer(s));
+    for (const s of izqDer) {
+      if (!ubicaciones.includes(s)) ubicaciones.push(s);
+    }
+  }
+
+  if (isTransmision) {
+    ubicaciones = ubicaciones.filter((loc) => {
+      const upper = loc.toUpperCase();
+      return upper.includes("CAJA") || upper.includes("RUEDA");
+    });
+  }
+
+  return { ubicaciones, lados };
+}
