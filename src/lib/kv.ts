@@ -26,7 +26,12 @@ export function getRedis(): Redis | null {
     return null;
   }
 
-  _redis = new Redis({ url, token });
+  try {
+    _redis = new Redis({ url, token });
+  } catch (e) {
+    console.error("[kv] error inicializando Redis:", e);
+    _redis = null;
+  }
   return _redis;
 }
 

@@ -1,3 +1,5 @@
+import { promises as fs } from "fs";
+import path from "path";
 import { getRedis } from "@/lib/kv";
 import {
   catalogoGeneralPdf,
@@ -98,39 +100,75 @@ export function resolveSlotUrl(
 }
 
 /**
+ * Chequea que un URL sea servible. URLs absolutos (Blob) asumimos OK.
+ * Paths relativos (/foo.pdf) los verificamos contra public/ para no
+ * renderizar un link que descargue el HTML de la 404 de Next.
+ */
+async function urlIsServable(url: string | undefined): Promise<boolean> {
+  if (!url) return false;
+  if (/^https?:\/\//.test(url)) return true;
+  try {
+    const full = path.join(process.cwd(), "public", url.replace(/^\//, ""));
+    await fs.access(full);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Resuelve las estructuras completas del descargas.ts con overrides
  * aplicados. Esto es lo que usa la página /catalogo/download.
+ *
+ * URLs que no existen físicamente (ni subidos a Blob, ni presentes en
+ * /public) se devuelven como undefined para que la página no renderice
+ * download links rotos.
  */
 export async function resolveDescargas(): Promise<{
-  catalogoGeneralPdf: string;
-  materialPorProducto: MaterialProducto[];
-  recursosGated: RecursoGated[];
+  catalogoGeneralPdf: string | undefined;
+  materialPorProducto: (MaterialProducto & { available: boolean })[];
+  recursosGated: (RecursoGated & { available: boolean })[];
 }> {
   const overrides = await readOverrides();
 
-  const catalogo =
+  const rawCatalogo =
     resolveSlotUrl({ kind: "catalogo-general" }, overrides) ??
     catalogoGeneralPdf;
+  const catalogoAvailable = await urlIsServable(rawCatalogo);
 
-  const material = materialPorProducto.map((m) => ({
-    slug: m.slug,
-    flyer: resolveSlotUrl(
-      { kind: "material", slug: m.slug, type: "flyer" },
-      overrides
-    ),
-    videoRrss: resolveSlotUrl(
-      { kind: "material", slug: m.slug, type: "videoRrss" },
-      overrides
-    ),
-  }));
+  const material = await Promise.all(
+    materialPorProducto.map(async (m) => {
+      const flyer = resolveSlotUrl(
+        { kind: "material", slug: m.slug, type: "flyer" },
+        overrides
+      );
+      const videoRrss = resolveSlotUrl(
+        { kind: "material", slug: m.slug, type: "videoRrss" },
+        overrides
+      );
+      const [flyerOk, videoOk] = await Promise.all([
+        urlIsServable(flyer),
+        urlIsServable(videoRrss),
+      ]);
+      return {
+        slug: m.slug,
+        flyer: flyerOk ? flyer : undefined,
+        videoRrss: videoOk ? videoRrss : undefined,
+        available: flyerOk || videoOk,
+      };
+    })
+  );
 
-  const gated = recursosGated.map((r) => ({
-    ...r,
-    fileUrl: resolveSlotUrl({ kind: "gated", id: r.id }, overrides) ?? r.fileUrl,
-  }));
+  const gated = await Promise.all(
+    recursosGated.map(async (r) => {
+      const url = resolveSlotUrl({ kind: "gated", id: r.id }, overrides);
+      const available = await urlIsServable(url);
+      return { ...r, fileUrl: url ?? r.fileUrl, available };
+    })
+  );
 
   return {
-    catalogoGeneralPdf: catalogo,
+    catalogoGeneralPdf: catalogoAvailable ? rawCatalogo : undefined,
     materialPorProducto: material,
     recursosGated: gated,
   };

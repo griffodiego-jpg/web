@@ -45,13 +45,14 @@ function keyFor(kind: LeadKind): string {
   return `${KEY_PREFIX}${kind}`;
 }
 
-/** Guarda un lead. No-op si Redis no está disponible. */
+/** Guarda un lead. No-op si Redis no está disponible o falla. */
 export async function saveLead(lead: Lead): Promise<void> {
-  const redis = getRedis();
-  if (!redis) return;
   try {
+    const redis = getRedis();
+    if (!redis) return;
     await redis.lpush(keyFor(lead.kind), JSON.stringify(lead));
   } catch (e) {
+    // Nunca romper el flujo del form si Redis falla — el email sale igual.
     console.error("[leads] error guardando en Redis:", e);
   }
 }
