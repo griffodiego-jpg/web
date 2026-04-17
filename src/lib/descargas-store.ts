@@ -1,26 +1,27 @@
-import { headers } from "next/headers";
+import { readdirSync } from "fs";
+import path from "path";
 import { getRedis } from "@/lib/kv";
 import {
-  catalogoGeneralPdf,
-  materialPorProducto,
-  recursosGated,
+  materialPorProducto as materialConfig,
+  recursosGated as recursosConfig,
   type MaterialProducto,
   type RecursoGated,
 } from "@/data/descargas";
 
 /**
- * Storage de URLs de descarga en Upstash Redis.
+ * Storage de URLs de descarga.
  *
- * El admin sube archivos a Vercel Blob → las URLs se guardan en un
- * hash Redis con una clave por slot. El sitio público lee de Redis
- * y cae al path estático de `src/data/descargas.ts` si no hay
- * override.
+ * Fuentes de verdad (en orden de precedencia):
+ *   1. Override en Redis (hash `downloads:urls`) — subidos por el admin
+ *      a Vercel Blob.
+ *   2. Archivo físico en /public/downloads o /public/pdfs — subidos
+ *      directo al repo vía GitHub web UI. Escaneamos el directorio con
+ *      fs.readdirSync para encontrar el archivo sin importar el nombre
+ *      (ej. "Folleto Montadora Azul.pdf" sirve igual que "flyer.pdf").
  *
- * Claves del hash `downloads:urls`:
- *   - "catalogo-general"
- *   - "material:<slug>:flyer"
- *   - "material:<slug>:videoRrss"
- *   - "gated:<recursoId>"
+ * Para que fs.readdirSync funcione en runtime de Vercel, next.config.ts
+ * incluye explícitamente `public/downloads` y `public/pdfs` en el
+ * bundle (outputFileTracingIncludes).
  */
 
 const HASH_KEY = "downloads:urls";
@@ -75,8 +76,49 @@ export async function clearOverride(slot: DescargaSlot): Promise<void> {
 }
 
 /**
- * Devuelve el URL efectivo para un slot: override de Redis si existe,
- * fallback al default de src/data/descargas.ts.
+ * Lista archivos dentro de un directorio de /public que matchean una
+ * extensión. Devuelve los nombres ordenados alfabéticamente y excluye
+ * archivos ocultos (.gitkeep, .DS_Store).
+ */
+function listFiles(publicSubdir: string, extensions: string[]): string[] {
+  try {
+    const dir = path.join(process.cwd(), "public", publicSubdir);
+    const entries = readdirSync(dir);
+    return entries
+      .filter((e) => !e.startsWith("."))
+      .filter((e) =>
+        extensions.some((ext) => e.toLowerCase().endsWith(ext.toLowerCase()))
+      )
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/** Convierte "downloads/productos/slug" + "archivo.pdf" → URL absoluta path. */
+function toPublicUrl(publicSubdir: string, filename: string): string {
+  // URL-encode partes individuales pero mantener los slashes del path
+  const parts = publicSubdir.split("/").filter(Boolean).map(encodeURIComponent);
+  return "/" + parts.join("/") + "/" + encodeURIComponent(filename);
+}
+
+/** Primer PDF en un subdir de public, URL-encoded. */
+function findPdf(publicSubdir: string): string | undefined {
+  const file = listFiles(publicSubdir, [".pdf"])[0];
+  return file ? toPublicUrl(publicSubdir, file) : undefined;
+}
+
+/** Primer MP4/WebM en un subdir de public, URL-encoded. */
+function findVideo(publicSubdir: string): string | undefined {
+  const file = listFiles(publicSubdir, [".mp4", ".webm", ".mov"])[0];
+  return file ? toPublicUrl(publicSubdir, file) : undefined;
+}
+
+/**
+ * Resuelve el URL efectivo para un slot:
+ *   1. Override de Redis (Blob) si existe.
+ *   2. Archivo físico en /public/ si existe.
+ *   3. undefined (no se muestra el link).
  */
 export function resolveSlotUrl(
   slot: DescargaSlot,
@@ -84,60 +126,31 @@ export function resolveSlotUrl(
 ): string | undefined {
   const override = overrides[slotKey(slot)];
   if (override) return override;
+
   switch (slot.kind) {
-    case "catalogo-general":
-      return catalogoGeneralPdf;
+    case "catalogo-general": {
+      // En /public/pdfs/ hay garantia.pdf (usado en otra página).
+      // El catálogo general es cualquier otro PDF en esa carpeta.
+      const pdfs = listFiles("pdfs", [".pdf"]).filter(
+        (f) => f.toLowerCase() !== "garantia.pdf"
+      );
+      return pdfs[0] ? toPublicUrl("pdfs", pdfs[0]) : undefined;
+    }
     case "material": {
-      const m = materialPorProducto.find((x) => x.slug === slot.slug);
-      return slot.type === "flyer" ? m?.flyer : m?.videoRrss;
+      const dir = `downloads/productos/${slot.slug}`;
+      return slot.type === "flyer" ? findPdf(dir) : findVideo(dir);
     }
     case "gated": {
-      const r = recursosGated.find((x) => x.id === slot.id);
-      return r?.fileUrl;
+      const ext = slot.id === "banco-imagenes" ? [".zip"] : [".xlsx", ".xls"];
+      const file = listFiles("downloads", ext)[0];
+      return file ? toPublicUrl("downloads", file) : undefined;
     }
-  }
-}
-
-/**
- * Chequea que un URL sea servible.
- *
- * - Absolutos (https://... de Vercel Blob): asumimos OK (si el admin
- *   subió, Blob lo tiene).
- * - Relativos (/foo.pdf): HEAD request contra el origen de la request
- *   actual. Esto funciona tanto en dev (serve local) como en Vercel
- *   (los archivos en /public se sirven vía CDN). No podemos usar
- *   fs.access porque el serverless function no incluye /public.
- */
-async function urlIsServable(url: string | undefined): Promise<boolean> {
-  if (!url) return false;
-  if (/^https?:\/\//.test(url)) return true;
-  try {
-    const h = await headers();
-    const host = h.get("host");
-    if (!host) return false;
-    const proto =
-      h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-    const full = `${proto}://${host}${url}`;
-    const res = await fetch(full, {
-      method: "HEAD",
-      // Evitamos cache para que la página refresque cuando suben
-      // un archivo nuevo vía GitHub + redeploy.
-      cache: "no-store",
-    });
-    return res.ok;
-  } catch (e) {
-    console.error("[descargas-store] HEAD check falló:", e);
-    return false;
   }
 }
 
 /**
  * Resuelve las estructuras completas del descargas.ts con overrides
- * aplicados. Esto es lo que usa la página /catalogo/download.
- *
- * URLs que no existen físicamente (ni subidos a Blob, ni presentes en
- * /public) se devuelven como undefined para que la página no renderice
- * download links rotos.
+ * y escaneo de /public aplicados. Usado por /catalogo/download.
  */
 export async function resolveDescargas(): Promise<{
   catalogoGeneralPdf: string | undefined;
@@ -146,44 +159,35 @@ export async function resolveDescargas(): Promise<{
 }> {
   const overrides = await readOverrides();
 
-  const rawCatalogo =
-    resolveSlotUrl({ kind: "catalogo-general" }, overrides) ??
-    catalogoGeneralPdf;
-  const catalogoAvailable = await urlIsServable(rawCatalogo);
-
-  const material = await Promise.all(
-    materialPorProducto.map(async (m) => {
-      const flyer = resolveSlotUrl(
-        { kind: "material", slug: m.slug, type: "flyer" },
-        overrides
-      );
-      const videoRrss = resolveSlotUrl(
-        { kind: "material", slug: m.slug, type: "videoRrss" },
-        overrides
-      );
-      const [flyerOk, videoOk] = await Promise.all([
-        urlIsServable(flyer),
-        urlIsServable(videoRrss),
-      ]);
-      return {
-        slug: m.slug,
-        flyer: flyerOk ? flyer : undefined,
-        videoRrss: videoOk ? videoRrss : undefined,
-        available: flyerOk || videoOk,
-      };
-    })
+  const catalogoGeneralPdf = resolveSlotUrl(
+    { kind: "catalogo-general" },
+    overrides
   );
 
-  const gated = await Promise.all(
-    recursosGated.map(async (r) => {
-      const url = resolveSlotUrl({ kind: "gated", id: r.id }, overrides);
-      const available = await urlIsServable(url);
-      return { ...r, fileUrl: url ?? r.fileUrl, available };
-    })
-  );
+  const material = materialConfig.map((m) => {
+    const flyer = resolveSlotUrl(
+      { kind: "material", slug: m.slug, type: "flyer" },
+      overrides
+    );
+    const videoRrss = resolveSlotUrl(
+      { kind: "material", slug: m.slug, type: "videoRrss" },
+      overrides
+    );
+    return {
+      slug: m.slug,
+      flyer,
+      videoRrss,
+      available: !!(flyer || videoRrss),
+    };
+  });
+
+  const gated = recursosConfig.map((r) => {
+    const url = resolveSlotUrl({ kind: "gated", id: r.id }, overrides);
+    return { ...r, fileUrl: url ?? r.fileUrl, available: !!url };
+  });
 
   return {
-    catalogoGeneralPdf: catalogoAvailable ? rawCatalogo : undefined,
+    catalogoGeneralPdf,
     materialPorProducto: material,
     recursosGated: gated,
   };

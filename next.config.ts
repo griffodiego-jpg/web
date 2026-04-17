@@ -10,6 +10,20 @@ import type { NextConfig } from "next";
  *   (completar con el inventario del sitio viejo — ver MIGRATION.md)
  */
 const nextConfig: NextConfig = {
+  // Incluir /public/downloads y /public/pdfs en el bundle de las
+  // serverless functions para poder leer los directorios con
+  // fs.readdirSync en runtime. Sin esto, /catalogo/download no puede
+  // detectar qué archivos están realmente subidos vía GitHub.
+  outputFileTracingIncludes: {
+    "/catalogo/download": [
+      "./public/downloads/**/*",
+      "./public/pdfs/**/*",
+    ],
+    "/admin/descargas": [
+      "./public/downloads/**/*",
+      "./public/pdfs/**/*",
+    ],
+  },
   // Scroll al top cuando se navega entre páginas
   experimental: {
     scrollRestoration: false,
