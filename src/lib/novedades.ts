@@ -6,35 +6,30 @@ import { getRedis } from "@/lib/kv";
 import type { CatalogProduct } from "@/types/specparts";
 
 /**
- * Novedades (lanzamientos / nuevas aplicaciones).
+ * Novedades — auto-detectadas desde SpecParts por `updated_at`.
  *
- * Fuente de verdad: lista en Redis bajo la key `novedades:publicadas`.
- * Guardamos SOLO el código SKU + tipo + metadata mínima — los datos
- * del producto (vehículos, imagen, descripción) los leemos de SpecParts
- * al momento de renderizar. Así la novedad se mantiene sincronizada
- * con el catálogo sin duplicar data.
+ * Modelo:
+ *   - La "fuente de verdad" es SpecParts: cualquier producto con
+ *     `updated_at` en los últimos 12 meses aparece como novedad.
+ *   - Por defecto, todas se clasifican como "Nueva aplicación" (es lo
+ *     que mejor aproxima el caso común: sumar vehículos a un producto
+ *     existente).
+ *   - El admin puede overridear por código:
+ *       - Cambiar el tipo a "Lanzamiento" (key: `novedades:tipo:<code>`)
+ *       - Ocultar del feed público (key: `novedades:hidden`, set)
+ *   - Si no hay Redis, se muestra todo como "aplicación" sin overrides.
  *
- * Claves:
- *   - Lista `novedades:publicadas` con JSON de NovedadPublicada.
- *     LPUSH al publicar (más reciente primero).
+ * Ventaja: la cliente no tiene que publicar nada. Cuando se actualiza
+ * el catálogo en SpecParts, la novedad aparece sola en /novedades.
  */
 
-const REDIS_KEY = "novedades:publicadas";
+const TIPO_KEY_PREFIX = "novedades:tipo:"; // código → "lanzamiento" (si override)
+const HIDDEN_KEY = "novedades:hidden"; // set de códigos ocultos
+
+/** Ventana de tiempo para considerar una novedad. */
+const WINDOW_MONTHS = 12;
 
 export type TipoNovedad = "lanzamiento" | "aplicacion";
-
-/** Lo que se guarda en Redis — mínima metadata sobre el código SKU. */
-export type NovedadPublicada = {
-  code: string;                  // SKU de SpecParts, ej. "238-32"
-  tipo: TipoNovedad;
-  publishedAt: number;           // timestamp ms
-  /** Override opcional del título (sino se usa `product.product` de SpecParts). */
-  tituloOverride?: string;
-  /** Override opcional de la descripción (sino se usa `product.description`). */
-  descripcionOverride?: string;
-  /** Override opcional de la fecha visible (sino usa publishedAt). */
-  fechaVisibleOverride?: string; // ISO date (YYYY-MM-DD)
-};
 
 /** Novedad enriquecida con datos reales de SpecParts — lo que renderiza la página. */
 export type Novedad = {
@@ -42,14 +37,16 @@ export type Novedad = {
   tipo: TipoNovedad;
   titulo: string;
   descripcion: string;
-  fecha: Date;                   // para mostrar
-  linea: string | null;          // product.category
+  fecha: Date; // fecha de actualización en SpecParts
+  linea: string | null; // product.category
   imagen: string | null;
   vehiculos: VehiculoNovedad[];
   /** Slug del producto destacado si corresponde (para linkear a /productos), sino null. */
   destacadoSlug: string | null;
   /** Slug del producto en el catálogo — para linkear a /catalogo/[slug]. */
   catalogoSlug: string;
+  /** Si el admin ocultó esta novedad del feed público (solo visible en admin). */
+  hidden: boolean;
 };
 
 export type VehiculoNovedad = {
@@ -61,91 +58,95 @@ export type VehiculoNovedad = {
   sold_until_year?: number;
 };
 
-/** Lee la lista completa de novedades publicadas desde Redis. */
-export async function readPublicadas(): Promise<NovedadPublicada[]> {
+function windowStart(): Date {
+  const d = new Date();
+  d.setMonth(d.getMonth() - WINDOW_MONTHS);
+  return d;
+}
+
+/** Lee los overrides de tipo: mapa de código → "lanzamiento". */
+async function readTipoOverrides(): Promise<Map<string, TipoNovedad>> {
   const redis = getRedis();
-  if (!redis) return [];
+  if (!redis) return new Map();
   try {
-    const raw = await redis.lrange(REDIS_KEY, 0, -1);
-    return raw
-      .map((entry) => {
-        if (typeof entry === "string") {
-          try {
-            return JSON.parse(entry) as NovedadPublicada;
-          } catch {
-            return null;
-          }
-        }
-        return entry as NovedadPublicada;
-      })
-      .filter((x): x is NovedadPublicada => x !== null);
+    // Usamos un scan de keys con prefijo — más simple que mantener
+    // un índice paralelo. Como son pocos overrides (decenas max), es
+    // barato.
+    const keys = await redis.keys(`${TIPO_KEY_PREFIX}*`);
+    if (keys.length === 0) return new Map();
+    const values = await redis.mget<(TipoNovedad | null)[]>(...keys);
+    const map = new Map<string, TipoNovedad>();
+    keys.forEach((k, i) => {
+      const code = k.slice(TIPO_KEY_PREFIX.length);
+      const v = values[i];
+      if (v === "lanzamiento" || v === "aplicacion") map.set(code, v);
+    });
+    return map;
   } catch (e) {
-    console.error("[novedades] error leyendo Redis:", e);
-    return [];
+    console.error("[novedades] error leyendo overrides:", e);
+    return new Map();
   }
 }
 
-/** Publica una novedad (LPUSH, más reciente arriba). Si ya existe ese código, la reemplaza. */
-export async function publicarNovedad(n: NovedadPublicada): Promise<void> {
+/** Lee el set de códigos ocultos. */
+async function readHidden(): Promise<Set<string>> {
+  const redis = getRedis();
+  if (!redis) return new Set();
+  try {
+    const raw = (await redis.smembers(HIDDEN_KEY)) as string[] | null;
+    return new Set(raw ?? []);
+  } catch (e) {
+    console.error("[novedades] error leyendo hidden:", e);
+    return new Set();
+  }
+}
+
+/** Override manual del tipo de una novedad. */
+export async function setTipo(code: string, tipo: TipoNovedad): Promise<void> {
   const redis = getRedis();
   if (!redis) throw new Error("Redis no configurado");
-  const existing = await readPublicadas();
-  const filtered = existing.filter((x) => x.code !== n.code);
-  // Reescribimos la lista entera (más simple que multi-commands).
-  await redis.del(REDIS_KEY);
-  const all = [n, ...filtered];
-  if (all.length > 0) {
-    await redis.rpush(
-      REDIS_KEY,
-      ...all.map((x) => JSON.stringify(x))
-    );
-  }
+  await redis.set(TIPO_KEY_PREFIX + code, tipo);
 }
 
-/** Despublica una novedad por código. No-op si no existe. */
-export async function despublicarNovedad(code: string): Promise<void> {
+/** Borra el override de tipo (vuelve al default "aplicacion"). */
+export async function clearTipoOverride(code: string): Promise<void> {
   const redis = getRedis();
   if (!redis) throw new Error("Redis no configurado");
-  const existing = await readPublicadas();
-  const filtered = existing.filter((x) => x.code !== code);
-  await redis.del(REDIS_KEY);
-  if (filtered.length > 0) {
-    await redis.rpush(
-      REDIS_KEY,
-      ...filtered.map((x) => JSON.stringify(x))
-    );
-  }
+  await redis.del(TIPO_KEY_PREFIX + code);
 }
 
-/**
- * Enriquece una NovedadPublicada con datos reales de SpecParts.
- * Si el producto no existe en el catálogo actual, devuelve null
- * (probablemente código mal o producto discontinuado).
- */
-async function enrichOne(
-  publicada: NovedadPublicada,
+/** Oculta una novedad del feed público. */
+export async function hideNovedad(code: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) throw new Error("Redis no configurado");
+  await redis.sadd(HIDDEN_KEY, code);
+}
+
+/** Restaura una novedad al feed público. */
+export async function unhideNovedad(code: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) throw new Error("Redis no configurado");
+  await redis.srem(HIDDEN_KEY, code);
+}
+
+function firstPictureUrl(p: CatalogProduct): string | null {
+  const ordered = p.pictures.slice().sort((a, b) => a.sort_order - b.sort_order);
+  const nonBlueprint = ordered.find((x) => !x.is_blueprint);
+  return nonBlueprint?.image_url ?? ordered[0]?.image_url ?? null;
+}
+
+function enrichProduct(
+  product: CatalogProduct,
+  tipo: TipoNovedad,
+  hidden: boolean,
   getSlug: (code: string) => string | null
-): Promise<Novedad | null> {
-  const product = await getProductByCode(publicada.code);
-  if (!product) return null;
-
-  const fecha = publicada.fechaVisibleOverride
-    ? new Date(publicada.fechaVisibleOverride)
-    : new Date(publicada.publishedAt);
-
+): Novedad {
   return {
     code: product.code,
-    tipo: publicada.tipo,
-    titulo:
-      publicada.tituloOverride?.trim() ||
-      product.product ||
-      product.description ||
-      product.code,
-    descripcion:
-      publicada.descripcionOverride?.trim() ||
-      product.description ||
-      "",
-    fecha,
+    tipo,
+    titulo: product.product || product.description || product.code,
+    descripcion: product.description || "",
+    fecha: new Date(product.updated_at),
     linea: product.category ?? null,
     imagen: firstPictureUrl(product),
     vehiculos: product.vehicles.map((v) => ({
@@ -158,54 +159,77 @@ async function enrichOne(
     })),
     destacadoSlug: getSlug(product.code),
     catalogoSlug: product.slug,
+    hidden,
   };
 }
 
-function firstPictureUrl(p: CatalogProduct): string | null {
-  const ordered = p.pictures.slice().sort((a, b) => a.sort_order - b.sort_order);
-  const nonBlueprint = ordered.find((x) => !x.is_blueprint);
-  return nonBlueprint?.image_url ?? ordered[0]?.image_url ?? null;
-}
-
 /**
- * Lee novedades publicadas y las enriquece con datos del catálogo.
- * Ordena por fecha descendente.
+ * Lista las novedades visibles en /novedades: productos de SpecParts
+ * con `updated_at` en los últimos 12 meses, excluyendo los que el
+ * admin haya ocultado. Ordenado por fecha descendente.
  */
 export async function listNovedades(): Promise<Novedad[]> {
-  const publicadas = await readPublicadas();
-  if (publicadas.length === 0) return [];
-
-  const { getFeaturedSlug } = await import("@/data/featured-products");
-
-  const enriched = await Promise.all(
-    publicadas.map((p) => enrichOne(p, getFeaturedSlug))
-  );
-  const valid = enriched.filter((x): x is Novedad => x !== null);
-  return valid.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+  const all = await listNovedadesIncludingHidden();
+  return all.filter((n) => !n.hidden);
 }
 
-/** Por código individual (para página de detalle). */
+/** Igual que listNovedades pero incluye las ocultas — para el admin. */
+export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
+  let products: CatalogProduct[];
+  try {
+    products = await listCatalog();
+  } catch {
+    return [];
+  }
+
+  const cutoff = windowStart().getTime();
+  const candidates = products.filter((p) => {
+    if (!p.enabled || p.discontinued) return false;
+    if (!p.updated_at) return false;
+    return new Date(p.updated_at).getTime() >= cutoff;
+  });
+
+  const [tipoOverrides, hiddenSet, { getFeaturedSlug }] = await Promise.all([
+    readTipoOverrides(),
+    readHidden(),
+    import("@/data/featured-products"),
+  ]);
+
+  const enriched = candidates.map((p) =>
+    enrichProduct(
+      p,
+      tipoOverrides.get(p.code) ?? "aplicacion",
+      hiddenSet.has(p.code),
+      getFeaturedSlug
+    )
+  );
+
+  return enriched.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+}
+
+/** Por código individual (para página de detalle pública). */
 export async function getNovedad(code: string): Promise<Novedad | null> {
-  const novedades = await listNovedades();
-  return (
-    novedades.find(
-      (n) =>
-        n.code.toUpperCase().replace(/\s+/g, "") ===
-        code.toUpperCase().replace(/\s+/g, "")
-    ) ?? null
-  );
-}
+  const product = await getProductByCode(code);
+  if (!product) return null;
 
-/**
- * Lista los últimos N productos actualizados en SpecParts, ordenados
- * por `updated_at` desc. Se usa en /admin/novedades como "feed de
- * candidatos" para publicar con un click.
- */
-export async function listCandidatosRecientes(limit = 20): Promise<CatalogProduct[]> {
-  const products = await listCatalog();
-  return products
-    .filter((p) => p.enabled && !p.discontinued && p.updated_at)
-    .slice()
-    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-    .slice(0, limit);
+  // Verificar que esté en la ventana de 12 meses y enabled.
+  if (!product.enabled || product.discontinued) return null;
+  const updated = new Date(product.updated_at).getTime();
+  if (updated < windowStart().getTime()) return null;
+
+  const [tipoOverrides, hiddenSet, { getFeaturedSlug }] = await Promise.all([
+    readTipoOverrides(),
+    readHidden(),
+    import("@/data/featured-products"),
+  ]);
+
+  // Si está oculta, no la mostramos en la página pública.
+  if (hiddenSet.has(product.code)) return null;
+
+  return enrichProduct(
+    product,
+    tipoOverrides.get(product.code) ?? "aplicacion",
+    false,
+    getFeaturedSlug
+  );
 }

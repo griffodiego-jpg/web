@@ -28,6 +28,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/banners", label: "Banners", icon: "image" },
       { href: "/admin/distribuidores", label: "Distribuidores", icon: "users" },
       { href: "/admin/descargas", label: "Descargas", icon: "download" },
+      { href: "/admin/novedades", label: "Novedades", icon: "spark" },
     ],
   },
   {
@@ -37,10 +38,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/cobertura", label: "Cobertura", icon: "grid" },
       { href: "/admin/cache", label: "Cache de imágenes", icon: "zap" },
     ],
-  },
-  {
-    label: "Novedades",
-    items: [{ href: "/admin/novedades", label: "Novedades", icon: "spark" }],
   },
   {
     label: "Formularios",

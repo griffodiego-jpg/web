@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
-import { publicarNovedad, type TipoNovedad } from "@/lib/novedades";
 import { getProductByCode } from "@/lib/api/specparts";
+import { setTipo, type TipoNovedad } from "@/lib/novedades";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Publica una novedad por código SKU.
- * Verifica contra SpecParts que el código exista antes de escribir
- * en Redis — evita que se publiquen códigos inventados.
+ * Override de tipo para una novedad. Se usa principalmente para marcar
+ * algunos códigos como "Lanzamiento" — el resto queda como "Nueva
+ * aplicación" por default sin necesidad de tocar nada.
  */
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       code?: string;
       tipo?: TipoNovedad;
-      tituloOverride?: string;
-      descripcionOverride?: string;
-      fechaVisibleOverride?: string;
     };
 
     if (!body.code || !body.tipo) {
@@ -37,28 +34,16 @@ export async function POST(request: Request) {
     const product = await getProductByCode(body.code);
     if (!product) {
       return NextResponse.json(
-        { error: `No existe un producto con código "${body.code}" en SpecParts` },
+        { error: `No existe el código "${body.code}" en SpecParts` },
         { status: 404 }
       );
     }
 
-    await publicarNovedad({
-      code: product.code,
-      tipo: body.tipo,
-      publishedAt: Date.now(),
-      tituloOverride: body.tituloOverride?.trim() || undefined,
-      descripcionOverride: body.descripcionOverride?.trim() || undefined,
-      fechaVisibleOverride: body.fechaVisibleOverride?.trim() || undefined,
-    });
-
-    return NextResponse.json({
-      ok: true,
-      code: product.code,
-      titulo: product.product,
-    });
+    await setTipo(product.code, body.tipo);
+    return NextResponse.json({ ok: true, code: product.code });
   } catch (e) {
     console.error("[admin/novedades/publicar] error:", e);
-    const msg = e instanceof Error ? e.message : "Error al publicar";
+    const msg = e instanceof Error ? e.message : "Error";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
