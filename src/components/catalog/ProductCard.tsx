@@ -22,13 +22,17 @@ export function ProductCard({ product }: ProductCardProps) {
   const locations = getProductLocations(product);
   const allSides = getAttrValues(product, "lado").filter((v) => !locations.includes(v));
 
-  // Tratamiento por línea: en Suspensión el Lado izq/der no aporta, lo escondemos.
-  // En Dirección, izq/der ES la ubicación principal — lo movemos a Ubicación.
+  // Tratamiento por línea:
+  // - Suspensión: el Lado izq/der no aporta — lo escondemos.
+  // - Dirección: izq/der ES la ubicación principal — lo movemos a Ubicación.
+  // - Transmisión: en Ubicación solo importa LADO CAJA / LADO RUEDA — el
+  //   resto (DELANTERO/TRASERO) se filtra porque ensucia la card.
   const category = (product.category || "").toLowerCase();
   const isSuspension = category.includes("susp");
   const isDireccion = category.includes("direc");
+  const isTransmision = category.includes("trans");
 
-  const displayLocations: string[] = [...locations];
+  let displayLocations: string[] = [...locations];
   let displaySides: string[] = allSides;
 
   if (isSuspension) {
@@ -40,6 +44,12 @@ export function ProductCard({ product }: ProductCardProps) {
     for (const s of izqDer) {
       if (!displayLocations.includes(s)) displayLocations.push(s);
     }
+  }
+  if (isTransmision) {
+    displayLocations = displayLocations.filter((loc) => {
+      const upper = loc.toUpperCase();
+      return upper.includes("CAJA") || upper.includes("RUEDA");
+    });
   }
 
   const locationText = displayLocations.join(", ");
