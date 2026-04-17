@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 import type { SpecPartsPicture } from "@/types/specparts";
 
@@ -32,11 +33,13 @@ export function ProductGallery({ pictures, alt }: Props) {
           className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label="Ampliar imagen"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={current.image_url}
             alt={alt}
-            className="h-full w-full object-contain"
+            fill
+            sizes="(min-width: 1024px) 40vw, (min-width: 640px) 50vw, 90vw"
+            className="object-contain"
+            priority
           />
         </button>
         {pictures.length > 1 ? (
@@ -52,8 +55,13 @@ export function ProductGallery({ pictures, alt }: Props) {
                 ].join(" ")}
                 aria-label={`Imagen ${i + 1}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={pic.image_url} alt="" className="h-full w-full object-contain" />
+                <Image
+                  src={pic.image_url}
+                  alt=""
+                  fill
+                  sizes="64px"
+                  className="object-contain"
+                />
               </button>
             ))}
           </div>
@@ -74,13 +82,20 @@ export function ProductGallery({ pictures, alt }: Props) {
               e.stopPropagation();
               setZoom(false);
             }}
-            className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl text-white hover:bg-white/25"
+            className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl text-white hover:bg-white/25"
             aria-label="Cerrar"
           >
             ×
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={current.image_url} alt={alt} className="max-h-[85vh] max-w-[92vw] object-contain" />
+          <div className="relative h-[85vh] w-[92vw]">
+            <Image
+              src={current.image_url}
+              alt={alt}
+              fill
+              sizes="92vw"
+              className="object-contain"
+            />
+          </div>
         </div>
       ) : null}
     </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -63,12 +64,12 @@ export function ProductCard({ product }: ProductCardProps) {
             </span>
           ) : null}
           {primaryImage ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
+            <Image
               src={primaryImage}
               alt={product.description || product.product}
-              loading="lazy"
-              className="h-full w-full object-contain p-3 transition group-hover:scale-105"
+              fill
+              sizes="(min-width: 1536px) 18vw, (min-width: 1280px) 22vw, (min-width: 1024px) 28vw, (min-width: 640px) 33vw, 50vw"
+              className="object-contain p-3 transition group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">

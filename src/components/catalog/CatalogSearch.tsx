@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -802,11 +803,11 @@ function MeasureRowView({
             aria-label={`Ampliar foto del producto ${row.code}`}
             className="inline-block overflow-hidden rounded border border-gray-200 bg-white p-1 transition hover:border-accent hover:shadow-sm"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={row.imageUrl}
               alt={row.productName || row.code}
-              loading="lazy"
+              width={40}
+              height={40}
               className="h-10 w-10 object-contain"
             />
           </button>

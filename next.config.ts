@@ -37,6 +37,22 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     // Cache de 30 días para imágenes optimizadas
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // Hosts externos permitidos (Next/Image las optimiza on-the-fly y cachea)
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "production-specparts-search-api-images-bucket.s3.amazonaws.com",
+      },
+      // Otros buckets de SpecParts — por si cambian la infra.
+      {
+        protocol: "https",
+        hostname: "*.s3.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "specparts-*.s3.*.amazonaws.com",
+      },
+    ],
   },
 
   // Compression (Vercel ya usa Brotli/gzip, esto es redundante pero explícito)

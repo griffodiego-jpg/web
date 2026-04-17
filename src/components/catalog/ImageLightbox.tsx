@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 
 type Props = {
   src: string;
@@ -41,13 +42,12 @@ export function ImageLightbox({ src, alt, onClose }: Props) {
       >
         ×
       </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="max-h-[90vh] max-w-[92vw] object-contain"
+      <div
+        className="relative h-[90vh] w-[92vw]"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <Image src={src} alt={alt} fill sizes="92vw" className="object-contain" />
+      </div>
     </div>
   );
 }
