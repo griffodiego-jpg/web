@@ -133,10 +133,15 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   rica con video/beneficios/presentación/CTA. Contenido en
   `src/data/productos.ts`.
 - `/catalogo`: **funcional y completo**. Ver sección "Catálogo de productos".
-- `/catalogo/download`: **funcional**. Descargas con scan de
-  `/public/downloads` + override por Redis (subidas desde admin via
-  Vercel Blob). Forms de Material para catalogar (banco imágenes,
-  base de datos) capturan lead antes de dar URL.
+- `/catalogo/download`: **funcional**. Ver sección "Descargas".
+- `/presentacion`: **hub moderno para QR de packaging**. Hero + 3
+  acciones rápidas (Catálogo online, Catálogo PDF, WhatsApp) + grid
+  de productos destacados (mismo card que `/productos`, linkea a
+  `/productos/[slug]` — video y detalle viven ahí, no se duplica) +
+  cards "Explorá el sitio" + CTA de contacto. Todo se sincroniza solo
+  con `site-config.ts` y `productos.ts`. La URL `griffo.com.ar/presentacion`
+  está impresa en packaging — los QRs viejos van a hitear esta página
+  al migrar el dominio.
 - `/garantia`, `/novedades/*`: **stubs** con ComingSoon. Esperan HTML
   del sitio viejo.
 
@@ -313,9 +318,40 @@ URLs indexables en Google (cada producto tiene una sola URL canónica).
 
 ## Admin (`/admin`)
 
-Protegido por middleware (`src/middleware.ts`) con auth de cookie
-`griffo-admin-token` + env var `ADMIN_PASSWORD`. El middleware corre
-en Edge (Web Crypto), la auth de API corre en Node (`src/lib/admin-auth.ts`).
+### Auth — sesiones reales con revocación
+
+Diseño actual (`src/lib/admin-auth.ts`):
+
+- **Cookie**: `griffo-admin-session`, httpOnly, secure, sameSite=lax,
+  TTL 7 días. Contiene un **session ID random de 32 bytes hex** — no
+  deriva del password.
+- **Store**: key `admin:session:<id>` en Upstash Redis con TTL.
+  Metadata: `createdAt`, `userAgent`, `ip`. Logout borra la entry →
+  el cookie queda inútil aunque se lo roben.
+- **Verificación de password**: `timingSafeEqual` de `node:crypto`
+  (no `===`) para evitar side-channels.
+- **Rate limit en `/api/admin/login`**: 5 intentos por IP por minuto
+  (counter Redis con TTL). Al 6º → `429`. Fail-open si Redis está
+  abajo (prefiero que funcione el login a lockear al admin).
+- **Sin salt hardcodeado**: ADMIN_SALT del diseño anterior desaparece
+  — los session IDs son random puros, no hay hash que saltear.
+
+Middleware (`src/middleware.ts`, corre en **Edge**):
+
+- Lista blanca de paths exentos: `/admin/login`, `/api/admin/login`,
+  `/api/admin/descargas/upload` (último recibe webhooks firmados de
+  Blob sin cookie — handleUpload verifica signature).
+- Para todo lo demás: lookup del session ID en Redis. Si no existe o
+  Redis no responde → reject.
+- Rechazo diferenciado: páginas HTML → 307 redirect a `/admin/login`;
+  APIs (`/api/*`) → 401 JSON (para que clients no parseen HTML como
+  JSON silenciosamente).
+- **Bug histórico corregido**: antes la condición
+  `if (!pathname.startsWith("/admin"))` dejaba `/api/admin/*` sin
+  auth (empieza con `/api`). Ahora está con whitelist explícita.
+
+Si se sospecha de sesión comprometida: borrar las keys `admin:session:*`
+desde el dashboard de Upstash → invalida todos los logins activos.
 
 ### Sidebar agrupado (`src/app/admin/layout.tsx`)
 
@@ -324,6 +360,8 @@ Grupos:
 - **Administración de catálogo**: Productos destacados, Cobertura, Cache de imágenes
 - **Formularios**: Leads capturados
 - **Vista pública**: link externo a `/catalogo`
+- Footer: `<LogoutButton />` (`components/admin/LogoutButton.tsx`) que
+  hace POST a `/api/admin/logout` y redirige a `/admin/login`.
 
 ### Páginas
 
@@ -336,58 +374,113 @@ Grupos:
   serverless functions); URL se guarda en Redis (`downloads:urls`).
   Ver `src/lib/descargas-store.ts`.
 - `/admin/leads` — Lista de leads capturados por los forms públicos
-  (contacto, newsletter, descargas). Persistencia en Redis
-  (`src/lib/leads.ts`). Export CSV disponible.
+  (contacto, newsletter, descargas). 3 tabs con contadores, buscador
+  in-memory, export CSV por tab. Persistencia en Redis
+  (`src/lib/leads.ts`).
 - `/admin/cobertura` — Matriz vehículo × tipo de producto (18 columnas
   agrupadas en Dirección/Suspensión/Transmisión). Detecta huecos del
   catálogo. Filter + sort + sticky headers. Export CSV **respeta el
   filtro activo** (ver `src/components/admin/CoverageTable.tsx`).
   Lógica en `src/lib/catalog/coverage.ts`.
-- `/admin/cache` — Pre-warming del CDN de imágenes. Dispara N
-  requests a `/_next/image?url=...&w=...&q=75` para que Vercel procese
-  y cachee todas las fotos antes que las vean usuarios reales.
+- `/admin/cache` — Pre-warming del CDN de imágenes.
 
 ### API admin (`/api/admin/*`)
 
-Protegido por el mismo middleware.
+Protegido por middleware (excepto la whitelist descrita arriba).
 
-- `login/route.ts`, `logout/route.ts` — auth.
-- `descargas/upload/route.ts` — firma de URL de upload a Vercel Blob.
-- `leads/*` — listado y export.
+- `login/route.ts` — valida password (timingSafeEqual), rate-limit por
+  IP, `createSession()` → setea cookie.
+- `logout/route.ts` — `destroySession()` → borra key Redis + cookie.
+- `descargas/upload/route.ts` — flow handleUpload de `@vercel/blob/client`
+  (client upload). Verifica sesión manualmente en `onBeforeGenerateToken`
+  y guarda URL en Redis vía `onUploadCompleted` (webhook firmado).
+- `descargas/save/route.ts` — fallback idempotente: el cliente también
+  hace POST acá tras el upload por si el webhook de Blob no alcanza
+  (previews con protección de Vercel).
+- `descargas/clear/route.ts` — borra un override (vuelve al default
+  escaneado de `/public`).
+- `leads/export/route.ts` — CSV por kind (descarga/contacto/newsletter)
+  con BOM para que Excel abra con encoding UTF-8 correcto.
+- `cobertura/export/route.ts` — CSV de la matriz.
 
 ## Descargas (`/catalogo/download`)
 
-Cuatro secciones:
+Tres secciones:
 
-1. **Catálogo general PDF** — `/pdfs/catalogo-griffo.pdf`.
-2. **Material por producto** — flyer + video redes por destacado.
-   Config en `src/data/descargas.ts` (`materialPorProducto`).
-3. **Banco de imágenes** — detrás de form de registro (lead va a Redis).
-4. **Base de datos de productos** — detrás de form de registro.
+1. **Catálogo de productos en PDF** — primer PDF en `/public/pdfs/`
+   distinto de `garantia.pdf`.
+2. **Material por producto** — por cada slug de destacado, escanea
+   `/public/downloads/productos/<slug>/` y toma el primer PDF como
+   "Flyer" y el primer MP4 como "Video para redes". El slug
+   `abrazaderas-universales` y `kit-de-proteccion-para-suspension-deportiva`
+   fueron removidos a pedido de la cliente.
+3. **Material para catalogar** — **Banco de imágenes** (.zip) +
+   **Base de datos de productos** (.xlsx) en `/public/downloads/`.
+   Ambas detrás de un form de registro (nombre, empresa, email,
+   teléfono, "a quién le compra Griffo"). **Los forms se muestran
+   siempre** (aunque el archivo no esté subido) para capturar leads;
+   si hay archivo se dispara la descarga, si no, muestra "te lo
+   mandamos por email cuando esté listo".
 
-Resolución de URLs (ver `src/lib/descargas-store.ts`):
-1. Si hay override en Redis (`downloads:urls`) → usa esa URL (Blob).
-2. Sino, escanea `/public/downloads` y `/public/pdfs` con
-   `fs.readdirSync` y usa el primer archivo que matchea.
-3. `next.config.ts` incluye esos directorios en
-   `outputFileTracingIncludes` para que fs funcione en Vercel.
+Sticky anchor nav arriba (`bg-primary-dark`) con 3 anclas — avisa que
+hay 3 bloques abajo sin obligar a scrollear.
 
-Si un archivo no existe, el link se oculta (no da 404 al usuario).
+### Resolución de URLs (`src/lib/descargas-store.ts`)
+
+Por slot (`DescargaSlot`):
+1. Si hay override en hash Redis `downloads:urls` → usa esa URL
+   (típicamente Blob público, https://).
+2. Sino, escanea el directorio de `/public/` con `fs.readdirSync` y
+   devuelve el primer archivo que matchea la extensión (URL-encoded).
+3. Si no hay nada → `undefined` (la página oculta el link).
+
+**Por qué scan y no nombres fijos**: la cliente sube vía GitHub web UI
+con nombres libres (ej. `Folleto Montadora Azul.pdf`, `8 Maquina
+montadora.mp4`). Hardcodear `flyer.pdf` / `video-rrss.mp4` llevaba a
+links 404.
+
+**Next config** (`next.config.ts`): `outputFileTracingIncludes` incluye
+`public/downloads/**/*` y `public/pdfs/**/*` en el bundle de
+`/catalogo/download` y `/admin/descargas` — sin esto, la serverless
+function no puede leer `/public/`.
+
+### Admin de descargas (`/admin/descargas`)
+
+UI con todos los slots (1 catálogo + 5×2 productos + 2 gated). Por
+cada uno muestra el URL actual ("En Blob" vs "Default del código") +
+botones **Subir/Reemplazar** y **Borrar** (borrar vuelve al default
+escaneado).
+
+Upload directo **cliente → Vercel Blob** usando `@vercel/blob/client`
+(`upload()` + endpoint `/api/admin/descargas/upload` que corre
+`handleUpload`). Evita el límite de 4.5 MB de serverless functions.
+Fallback idempotente a `/api/admin/descargas/save` del cliente por si
+el webhook de Blob no alcanza en previews con protección.
 
 ## Leads y forms
 
 `src/lib/leads.ts` — guarda cada submit en una lista Redis (LPUSH).
-Tipos: `contacto`, `newsletter`, `descarga`.
+Tipos: `contacto`, `newsletter`, `descarga`. `saveLead()` envuelve todo
+en try/catch para no afectar la respuesta del form aunque Redis falle.
 
 Cada form tiene su endpoint en `/api/*/route.ts`:
 - `/api/contacto` → email con Resend + lead Redis.
-- `/api/newsletter` → lead Redis.
+- `/api/newsletter` → lead Redis + email.
 - `/api/garantia` → email Resend.
 - `/api/desarrollo` → email + lead.
 - `/api/descargas/registro` → captura registro antes de dar link.
 
-**Si Resend o Redis falla, el lead se guarda en el otro canal** (no
-se pierde). Si ambos fallan, devuelve 500 al front.
+**Tolerancia a fallos**: los tres endpoints de leads públicos
+(`contacto`, `newsletter`, `descargas/registro`) envuelven la llamada
+a Resend en try/catch separado. Si el email falla (API key mal
+configurada, sender no verificado, etc.) el lead igual quedó en
+Redis, el endpoint devuelve `ok: true` y el usuario ve verde. El
+admin ve el lead en `/admin/leads` aunque no haya recibido el email.
+
+**Errores de validación** (ej. email sin punto) devuelven 400 con
+`{ error: "Email inválido" }`. Los forms del front muestran el mensaje
+exacto del servidor (no un genérico "Hubo un error") — ver
+`ContactForm.tsx` y `RegistroDescargaForm.tsx`.
 
 ## Assets subidos al repo (situación actual)
 
@@ -416,9 +509,20 @@ se pierde). Si ambos fallan, devuelve 500 al front.
 
 ## SEO / Performance / a11y (estado actual)
 
-- **Sitemap**: `app/sitemap.ts` dinámico (home + todas las institucionales
-  + los 7 productos destacados expandidos del nav).
+- **Sitemap**: `app/sitemap.ts` dinámico (home + institucionales +
+  7 destacados + todos los slugs del catálogo excepto destacados +
+  `/presentacion` + `/catalogo/download`).
 - **Robots**: `app/robots.ts` apunta al sitemap, bloquea /api/.
+- **Redirects 301** (`next.config.ts` → `redirects()`): slugs
+  impresos en packaging (QRs físicos) apuntan a las landings sin
+  prefix `/productos/`. Hoy:
+  * `/maquina-montadora-de-fuelles` → `/productos/maquina-montadora-de-fuelles`
+  * `/kit-de-fuelles-universales-para-homocineticas` → `/productos/...`
+  * `/kit-de-proteccion-para-suspension-deportiva` → `/productos/...`
+  * `/garantia` y `/presentacion` ya son rutas directas (sin redirect).
+
+  ⚠️ Estos slugs están impresos en cajas — no cambiar nunca.
+  Si llega un QR roto, agregar acá.
 - **JSON-LD estructurado (Schema.org)**: componentes en
   `components/StructuredData.tsx`. Se usan así:
   * `OrganizationJsonLd` + `WebSiteJsonLd` en layout (globales)
@@ -430,6 +534,10 @@ se pierde). Si ambos fallan, devuelve 500 al front.
   optimizar nuevas subidas: pedirme que corra el mismo script.
 - **A11y**: skip link en layout (`#main-content`), :focus-visible con
   outline accent, scroll-margin-top global, prefers-reduced-motion.
+- **Header active state**: `isItemActive` prefiere el match más
+  específico del nav cuando las rutas están anidadas. Ej. en
+  `/catalogo/download` se prende "Descargas" y NO "Catálogo" (aunque
+  `startsWith("/catalogo/")` match también).
 - **Pendiente**: video `comercio-exterior.mp4` (9 MB) — necesita ffmpeg
   o compresión desde HandBrake por la cliente. Forms reales (Resend),
   Analytics, Search Console — requieren input de la cliente.
@@ -441,13 +549,17 @@ se pierde). Si ambos fallan, devuelve 500 al front.
   Los handlers toleran fallos (leads se siguen guardando en Redis).
 - **Upstash Redis** (KV): conectado via `KV_REST_API_URL/TOKEN` o
   `UPSTASH_REDIS_REST_URL/TOKEN` (ambos soportados — ver
-  `src/lib/kv.ts`). Se usa para leads y overrides de descargas.
-- **Vercel Blob**: `BLOB_READ_WRITE_TOKEN`. Usado por
+  `src/lib/kv.ts`). Usado para: sesiones admin, rate-limit del login,
+  leads (listas `leads:<kind>`), overrides de descargas (hash
+  `downloads:urls`).
+- **Vercel Blob**: `BLOB_READ_WRITE_TOKEN`. Public store. Usado por
   `/admin/descargas` para subir archivos grandes (> 4.5 MB) desde
   cliente evitando el límite de serverless functions.
 - **SpecParts API**: `SPECPARTS_CLIENT_ID/SECRET`. Cliente del catálogo.
 - **Google Analytics 4**: `G-FR8KN76LQ2` (mismo que el sitio viejo).
-- **Admin**: login con `ADMIN_PASSWORD`.
+- **Admin**: login con `ADMIN_PASSWORD` (la env var es la contraseña
+  en claro — Redis guarda las sesiones, no hay salt ni hash del
+  password en el filesystem).
 - **WhatsApp**: mensaje pre-cargado en todas las páginas.
 
 ## Pendientes y decisiones abiertas
