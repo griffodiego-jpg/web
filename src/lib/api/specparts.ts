@@ -163,6 +163,17 @@ export async function getProductBySlug(slug: string): Promise<CatalogProduct | n
   return products.find((p) => p.slug === slug) ?? null;
 }
 
+/** Busca un producto por código SKU (case-insensitive, sin espacios). */
+export async function getProductByCode(code: string): Promise<CatalogProduct | null> {
+  const normalized = code.trim().toUpperCase().replace(/\s+/g, "");
+  const products = await listCatalog();
+  return (
+    products.find(
+      (p) => p.code.toUpperCase().replace(/\s+/g, "") === normalized
+    ) ?? null
+  );
+}
+
 export async function identifyPlate(plate: string): Promise<SpecPartsPlateResponse> {
   const token = await getAccessToken();
   const path = `/vehicle/identification?plate=${encodeURIComponent(plate)}`;
