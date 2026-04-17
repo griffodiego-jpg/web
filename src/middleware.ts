@@ -23,11 +23,14 @@ async function hashToken(password: string): Promise<string> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Solo proteger /admin/* (excepto /admin/login y /api/admin/login)
+  // Solo proteger /admin/* (excepto /admin/login, /api/admin/login y
+  // el endpoint de uploads a Blob, que recibe webhooks firmados desde
+  // Vercel Blob sin cookie y se auto-verifica con handleUpload).
   if (
     !pathname.startsWith("/admin") ||
     pathname === "/admin/login" ||
-    pathname.startsWith("/api/admin/login")
+    pathname.startsWith("/api/admin/login") ||
+    pathname.startsWith("/api/admin/descargas/upload")
   ) {
     return NextResponse.next();
   }

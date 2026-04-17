@@ -1,5 +1,6 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { useState } from "react";
 import type { DescargaSlot } from "@/lib/descargas-store";
 
@@ -57,16 +58,24 @@ function SlotCard({ row }: { row: SlotRow }) {
     setStatus("uploading");
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("slot", JSON.stringify(row.slot));
-      const res = await fetch("/api/admin/descargas/upload", {
-        method: "POST",
-        body: formData,
+      // Upload directo cliente → Blob, evita el límite de 4.5 MB de
+      // las serverless functions. Nuestra API genera el token y, al
+      // completarse la subida, guarda la URL en Redis.
+      const pathname = pathnameFor(row.slot, file.name);
+      const blob = await upload(pathname, file, {
+        access: "public",
+        handleUploadUrl: "/api/admin/descargas/upload",
+        clientPayload: JSON.stringify(row.slot),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al subir");
-      setCurrentUrl(data.url);
+      // Fallback por si el webhook onUploadCompleted no alcanza al
+      // server (en previews con protección). Es idempotente con
+      // la escritura del webhook.
+      await fetch("/api/admin/descargas/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot: row.slot, url: blob.url }),
+      });
+      setCurrentUrl(blob.url);
       setIsDefault(false);
       setStatus("ok");
     } catch (err) {
@@ -168,6 +177,15 @@ function SlotCard({ row }: { row: SlotRow }) {
       )}
     </div>
   );
+}
+
+/** Pathname descriptivo dentro del blob — no afecta la URL pública. */
+function pathnameFor(slot: DescargaSlot, filename: string): string {
+  const safe = filename.replace(/[^\w.\-]+/g, "-");
+  if (slot.kind === "catalogo-general") return `descargas/catalogo/${safe}`;
+  if (slot.kind === "material")
+    return `descargas/productos/${slot.slug}/${slot.type}/${safe}`;
+  return `descargas/gated/${slot.id}/${safe}`;
 }
 
 function UploadIcon() {
