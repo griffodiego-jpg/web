@@ -15,7 +15,6 @@
  *   - /pdfs/catalogo-griffo.pdf
  *   - /downloads/productos/<slug>/flyer.pdf
  *   - /downloads/productos/<slug>/video-rrss.mp4
- *   - /downloads/productos/<slug>/video-pantalla.mp4
  *   - /downloads/banco-de-imagenes.zip
  *   - /downloads/base-de-datos-productos.xlsx
  *
@@ -27,7 +26,6 @@ export type MaterialProducto = {
   slug: string;
   flyer?: string;
   videoRrss?: string;
-  videoPantalla?: string;
 };
 
 export type RecursoGated = {
@@ -60,25 +58,17 @@ export const materialPorProducto: MaterialProducto[] = [
   {
     slug: "extractor-de-juntas-homocineticas",
     flyer: "/downloads/productos/extractor-de-juntas-homocineticas/flyer.pdf",
-    videoRrss:
-      "/downloads/productos/extractor-de-juntas-homocineticas/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/extractor-de-juntas-homocineticas/video-pantalla.mp4",
   },
   {
     slug: "pinza-para-abrazaderas",
     flyer: "/downloads/productos/pinza-para-abrazaderas/flyer.pdf",
     videoRrss: "/downloads/productos/pinza-para-abrazaderas/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/pinza-para-abrazaderas/video-pantalla.mp4",
   },
   {
     slug: "fuelle-universal-de-direccion",
     flyer: "/downloads/productos/fuelle-universal-de-direccion/flyer.pdf",
     videoRrss:
       "/downloads/productos/fuelle-universal-de-direccion/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/fuelle-universal-de-direccion/video-pantalla.mp4",
   },
 ];
 

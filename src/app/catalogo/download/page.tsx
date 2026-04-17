@@ -78,7 +78,6 @@ export default function DescargasPage() {
                   imagen={detalle?.image}
                   flyer={material.flyer}
                   videoRrss={material.videoRrss}
-                  videoPantalla={material.videoPantalla}
                 />
               );
             })}
@@ -153,13 +152,11 @@ function MaterialCard({
   imagen,
   flyer,
   videoRrss,
-  videoPantalla,
 }: {
   nombre: string;
   imagen?: string;
   flyer?: string;
   videoRrss?: string;
-  videoPantalla?: string;
 }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -182,8 +179,7 @@ function MaterialCard({
       </div>
       <ul className="border-t border-gray-100 divide-y divide-gray-100">
         <DownloadRow href={flyer} label="Flyer" sub="PDF" />
-        <DownloadRow href={videoRrss} label="Video redes sociales" sub="MP4" />
-        <DownloadRow href={videoPantalla} label="Video pantalla" sub="MP4" />
+        <DownloadRow href={videoRrss} label="Video" sub="MP4" />
       </ul>
     </div>
   );
@@ -198,17 +194,7 @@ function DownloadRow({
   label: string;
   sub: string;
 }) {
-  if (!href) {
-    return (
-      <li className="flex items-center justify-between px-3 py-2.5 text-sm text-gray-400">
-        <span>
-          {label}
-          <span className="ml-2 text-[10px] uppercase">{sub}</span>
-        </span>
-        <span className="text-[10px] uppercase">Próximamente</span>
-      </li>
-    );
-  }
+  if (!href) return null;
   return (
     <li>
       <a
