@@ -1,32 +1,29 @@
+import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * Middleware que protege las rutas /admin/* (excepto /admin/login).
- * Si no hay cookie de sesión válido, redirige a /admin/login.
+ * Guard de /admin/* y /api/admin/*.
  *
- * Usa Web Crypto API (crypto.subtle) en vez de Node.js crypto,
- * porque middleware corre en Edge Runtime.
+ * Valida la cookie contra Redis (sesiones reales, revocables). Si no
+ * hay cookie válida:
+ *   - Para páginas HTML: redirect a /admin/login?from=...
+ *   - Para APIs: 401 JSON (un cliente esperando JSON parseando el HTML
+ *     del login rompe todo silenciosamente).
+ *
+ * Corre en Edge Runtime — por eso usamos @upstash/redis (HTTP REST),
+ * no `crypto` de Node.
  */
 
-const SALT = "griffo-admin-2026-salt";
-const COOKIE_NAME = "griffo-admin-token";
-
-async function hashToken(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(`${SALT}:${password}`);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+const COOKIE_NAME = "griffo-admin-session";
+const SESSION_KEY_PREFIX = "admin:session:";
 
 /**
- * Rutas exentas del guard de admin.
+ * Rutas exentas del guard.
  *
- * - /admin/login: la pantalla de login, obvio.
- * - /api/admin/login: el endpoint que valida password y setea cookie.
+ * - /admin/login y /api/admin/login: la pantalla y endpoint de login.
  * - /api/admin/descargas/upload: recibe webhooks firmados desde Vercel
- *   Blob sin cookie — se auto-verifica por signature dentro del route.
+ *   Blob sin cookie. handleUpload verifica la signature internamente.
  */
 const EXEMPT_PATHS = [
   "/admin/login",
@@ -40,46 +37,49 @@ function isExempt(pathname: string): boolean {
   );
 }
 
+function getRedisEdge(): Redis | null {
+  const url =
+    process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const token =
+    process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  try {
+    return new Redis({ url, token });
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // El matcher ya restringe este middleware a /admin/:path* y
-  // /api/admin/:path*, así que asumimos que cualquier path que llega
-  // acá es protegido salvo los exentos.
   if (isExempt(pathname)) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(COOKIE_NAME)?.value;
-  const password = process.env.ADMIN_PASSWORD;
+  const sessionId = request.cookies.get(COOKIE_NAME)?.value;
+  if (!sessionId) return rejectRequest(request, pathname);
 
-  if (!password || !token) {
+  const redis = getRedisEdge();
+  if (!redis) {
+    // Sin Redis no hay forma de validar. Cortamos sí o sí.
     return rejectRequest(request, pathname);
   }
 
-  const expected = await hashToken(password);
-  if (token !== expected) {
+  try {
+    const session = await redis.get(SESSION_KEY_PREFIX + sessionId);
+    if (!session) return rejectRequest(request, pathname);
+  } catch {
     return rejectRequest(request, pathname);
   }
 
   return NextResponse.next();
 }
 
-/**
- * Rechaza la request sin admin auth:
- * - Páginas HTML (/admin/*): redirect a /admin/login con `from=` del origen.
- * - APIs (/api/admin/*): devuelve 401 JSON — no redirigir APIs silenciosamente,
- *   un client esperando JSON parseando HTML de login rompe todo (y peor:
- *   permite mistakes de interpretación si el caller ignora el status).
- */
 function rejectRequest(request: NextRequest, from: string) {
   if (from.startsWith("/api/")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
-  return redirectToLogin(request, from);
-}
-
-function redirectToLogin(request: NextRequest, from: string) {
   const loginUrl = new URL("/admin/login", request.url);
   loginUrl.searchParams.set("from", from);
   return NextResponse.redirect(loginUrl);

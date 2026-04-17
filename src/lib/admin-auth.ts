@@ -1,49 +1,100 @@
 import { cookies } from "next/headers";
+import { getRedis } from "@/lib/kv";
 
 /**
- * Auth simple para el admin. Usa una contraseña única en env var
- * (ADMIN_PASSWORD) y un cookie httpOnly con un token hasheado.
+ * Auth del admin con sesiones reales en Redis.
  *
- * Usa Node.js `crypto` (compatible con API routes que corren en Node).
- * El middleware usa Web Crypto API (Edge). Ambos producen el mismo hash.
+ * Modelo:
+ *   - Cookie `griffo-admin-session`: contiene un session ID aleatorio
+ *     de 32 bytes hex (no deriva del password).
+ *   - Redis key `admin:session:<id>`: metadata de la sesión con TTL.
+ *   - Logout: borra la entry en Redis → el cookie queda inútil aunque
+ *     se lo roben.
+ *
+ * Ventajas sobre el esquema anterior (hash(SALT + password) en cookie):
+ *   - Cookie robada se puede revocar sin cambiar el password.
+ *   - Cada sesión tiene su propio ID, trazable.
+ *   - Sin salt hardcodeado en el código.
  */
 
-const SALT = "griffo-admin-2026-salt";
-const COOKIE_NAME = "griffo-admin-token";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 días
+export const ADMIN_COOKIE_NAME = "griffo-admin-session";
 
-async function hashToken(password: string): Promise<string> {
-  // Usar createHash de Node.js (disponible en API routes / server actions)
-  const { createHash } = await import("crypto");
-  return createHash("sha256")
-    .update(`${SALT}:${password}`)
-    .digest("hex");
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 días
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+export const SESSION_KEY_PREFIX = "admin:session:";
+
+/**
+ * Compara el password ingresado con la env var en tiempo constante
+ * para evitar side-channels de timing. Si las longitudes difieren,
+ * hacemos igual una comparación dummy de la misma duración.
+ */
+export async function verifyPasswordSafe(password: string): Promise<boolean> {
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!expected) return false;
+  const { timingSafeEqual } = await import("crypto");
+  const a = Buffer.from(password, "utf-8");
+  const b = Buffer.from(expected, "utf-8");
+  if (a.length !== b.length) {
+    // Dummy compare para no leakear la longitud del password esperado.
+    timingSafeEqual(Buffer.alloc(32), Buffer.alloc(32));
+    return false;
+  }
+  return timingSafeEqual(a, b);
 }
 
-/** Setea el cookie de sesión del admin. */
-export async function setAdminCookie(): Promise<void> {
-  const password = process.env.ADMIN_PASSWORD;
-  if (!password) throw new Error("ADMIN_PASSWORD env var no definida");
-  const token = await hashToken(password);
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
+/**
+ * Crea una nueva sesión: genera un session ID random, lo persiste
+ * en Redis con TTL, y setea el cookie httpOnly.
+ */
+export async function createSession(meta?: {
+  userAgent?: string;
+  ip?: string;
+}): Promise<string> {
+  const redis = getRedis();
+  if (!redis) {
+    throw new Error(
+      "Upstash Redis no configurado — imposible crear sesión de admin."
+    );
+  }
+
+  const { randomBytes } = await import("crypto");
+  const sessionId = randomBytes(32).toString("hex");
+
+  await redis.set(
+    SESSION_KEY_PREFIX + sessionId,
+    JSON.stringify({
+      createdAt: Date.now(),
+      userAgent: meta?.userAgent,
+      ip: meta?.ip,
+    }),
+    { ex: SESSION_TTL_SECONDS }
+  );
+
+  const store = await cookies();
+  store.set(ADMIN_COOKIE_NAME, sessionId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
+
+  return sessionId;
 }
 
-/** Borra el cookie de sesión del admin. */
-export async function clearAdminCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
-}
-
-/** Verifica la contraseña contra la env var. */
-export function verifyPassword(password: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) return false;
-  return password === expected;
+/** Borra la sesión actual (Redis + cookie). No-op si no hay sesión. */
+export async function destroySession(): Promise<void> {
+  const store = await cookies();
+  const sessionId = store.get(ADMIN_COOKIE_NAME)?.value;
+  if (sessionId) {
+    const redis = getRedis();
+    if (redis) {
+      try {
+        await redis.del(SESSION_KEY_PREFIX + sessionId);
+      } catch (e) {
+        console.error("[admin-auth] error borrando sesión en Redis:", e);
+      }
+    }
+  }
+  store.delete(ADMIN_COOKIE_NAME);
 }
