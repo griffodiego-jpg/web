@@ -10,11 +10,25 @@ import { Logo } from "@/components/Logo";
  * Determina si un item del nav está activo según el pathname actual.
  * Matchea exacto, rutas anidadas (/productos/foo → Productos) y padres
  * con children activos.
+ *
+ * Ante rutas anidadas entre items del nav (ej. /catalogo/download cae
+ * bajo /catalogo), el más específico gana: un item solo se considera
+ * activo por startsWith si ningún otro item del nav tiene un href más
+ * largo que matchee el pathname.
  */
 function isItemActive(item: NavItem, pathname: string): boolean {
   if (item.external) return false;
   if (pathname === item.href) return true;
-  if (item.href !== "/" && pathname.startsWith(item.href + "/")) return true;
+  if (item.href !== "/" && pathname.startsWith(item.href + "/")) {
+    const hasMoreSpecific = navigation.some(
+      (other) =>
+        other !== item &&
+        !other.external &&
+        other.href.length > item.href.length &&
+        (pathname === other.href || pathname.startsWith(other.href + "/"))
+    );
+    if (!hasMoreSpecific) return true;
+  }
   if (item.children) {
     return item.children.some(
       (c) => pathname === c.href || pathname.startsWith(c.href + "/")
