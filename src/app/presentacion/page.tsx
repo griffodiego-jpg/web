@@ -1,20 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { YouTubeEmbed } from "@/components/YouTubeEmbed";
+import { AssetImage } from "@/components/AssetImage";
 import { productosDetalle } from "@/data/productos";
 import { resolveDescargas } from "@/lib/descargas-store";
-import { siteConfig } from "@/lib/site-config";
+import { navigation, siteConfig } from "@/lib/site-config";
 
 /**
- * Página hub para el QR de packaging — reemplaza el Blazor viejo en
- * presentaciongriffo.azurewebsites.net. Pensada para mobile primero
+ * Página hub para el QR de packaging. Pensada para mobile primero
  * (la gran mayoría llega escaneando un QR con el celular).
  *
+ * Single source of truth: todo lo que aparece acá se sincroniza solo
+ * con el resto del sitio.
+ *   - Productos destacados: vienen del nav (site-config.ts) + datos
+ *     completos en productosDetalle (productos.ts). El usuario clickea
+ *     un producto y cae en /productos/[slug] con video, descripción,
+ *     código, beneficios, etc.
+ *   - Año fundación: siteConfig.foundedYear.
+ *   - WhatsApp + teléfono: siteConfig.
+ *   - Catálogo PDF: resolveDescargas() (overrides de Blob + fallback
+ *     a /public).
+ *
  * Estructura:
- *   1. Hero compacto con logo + tagline.
+ *   1. Hero compacto con tagline + año fundación.
  *   2. 3 acciones rápidas (ver catálogo, PDF, WhatsApp).
- *   3. Grid de videos (los productos destacados que tienen youtubeId).
- *   4. Grid de accesos al sitio (institucional + productos + contacto).
+ *   3. Grid de productos destacados — cada card → landing del producto.
+ *   4. Cards "Explorá el sitio" (institucional).
+ *   5. CTA de contacto.
  */
 
 export const metadata: Metadata = {
@@ -33,22 +44,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-type VideoCard = {
-  slug: string;
-  title: string;
-  youtubeId: string;
-};
-
 export default async function PresentacionPage() {
   const { catalogoGeneralPdf } = await resolveDescargas();
 
-  const videos: VideoCard[] = Object.entries(productosDetalle)
-    .filter(([, p]) => !!p.youtubeId)
-    .map(([slug, p]) => ({
-      slug,
-      title: p.title,
-      youtubeId: p.youtubeId!,
-    }));
+  // Productos destacados vienen del nav — mismo orden que en el header
+  // y en /productos. Cambiar site-config.ts y acá se actualiza solo.
+  const productosDestacados =
+    navigation.find((i) => i.label === "Productos destacados")?.children ?? [];
 
   const whatsappUrl = `https://wa.me/${siteConfig.whatsapp.number}?text=${encodeURIComponent(
     "Hola, estoy escaneando el QR de Griffo y tengo una consulta."
@@ -74,7 +76,7 @@ export default async function PresentacionPage() {
             <div className="inline-flex items-center gap-3 rounded-full bg-white/10 backdrop-blur border border-white/20 px-4 py-1.5">
               <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-wider">
-                Desde 1968
+                Desde {siteConfig.foundedYear}
               </span>
             </div>
             <h1 className="text-3xl lg:text-5xl font-black leading-tight">
@@ -116,46 +118,67 @@ export default async function PresentacionPage() {
         </div>
       </section>
 
-      {/* VIDEOS */}
+      {/* PRODUCTOS DESTACADOS — mismo patrón que /productos, cada card
+          linkea a /productos/[slug] (donde viven video, descripción,
+          código, beneficios, etc.) */}
       <section
-        aria-labelledby="presentacion-videos"
+        aria-labelledby="presentacion-productos"
         className="container mx-auto max-w-5xl px-5 py-14"
       >
         <div className="border-l-4 border-accent pl-4 mb-6">
           <h2
-            id="presentacion-videos"
+            id="presentacion-productos"
             className="text-xl lg:text-2xl font-bold text-[#0a2b3d] leading-tight uppercase"
           >
-            Videos de producto
+            Productos destacados
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Instalación, demos y aplicaciones de los productos destacados.
+            Tocá un producto para ver el detalle, video de instalación y cómo
+            comprarlo.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {videos.map((v) => (
-            <article
-              key={v.slug}
-              className="group bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition"
-            >
-              <div className="aspect-video bg-black overflow-hidden">
-                <YouTubeEmbed videoId={v.youtubeId} title={v.title} />
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-sm text-[#0a2b3d] leading-tight">
-                  {v.title}
-                </h3>
-                <Link
-                  href={`/productos/${v.slug}`}
-                  className="mt-2 inline-flex items-center gap-1 text-xs text-primary font-semibold group-hover:gap-2 transition-all"
-                >
-                  Ver ficha completa
-                  <ArrowIcon />
-                </Link>
-              </div>
-            </article>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {productosDestacados.map((p) => {
+            const slug = p.href.split("/").pop()!;
+            const detalle = productosDetalle[slug];
+            return (
+              <Link
+                key={p.href}
+                href={p.href}
+                className="group block bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="px-3 pt-3 pb-1">
+                  <h3 className="font-bold text-sm text-[#0a2b3d] group-hover:text-primary transition leading-tight uppercase">
+                    {p.label}
+                  </h3>
+                  {detalle?.codigo && (
+                    <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">
+                      Cód. {detalle.codigo}
+                    </p>
+                  )}
+                </div>
+                <div className="aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
+                  {detalle?.image ? (
+                    <AssetImage
+                      src={detalle.image}
+                      alt={p.label}
+                      bare
+                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <PlaceholderIcon />
+                  )}
+                </div>
+                <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+                  <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold group-hover:gap-2 transition-all">
+                    Ver detalle
+                    <ArrowIcon />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -345,6 +368,25 @@ function WhatsAppIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12 2a10 10 0 0 0-8.66 15l-1.32 4.82 4.94-1.3A10 10 0 1 0 12 2Zm5.92 14.34c-.25.7-1.47 1.33-2 1.4-.55.07-1.17.1-1.87-.11-.43-.13-.99-.31-1.71-.62-3.01-1.3-4.98-4.33-5.13-4.53-.15-.2-1.24-1.65-1.24-3.15S6.79 7 7.07 6.7c.28-.3.62-.38.82-.38h.59c.19 0 .45-.07.7.53.26.62.86 2.13.94 2.28.08.16.13.34.03.55-.1.2-.16.33-.31.5-.15.18-.32.4-.46.53-.15.15-.31.3-.13.6.17.3.78 1.28 1.67 2.07 1.15 1.02 2.12 1.33 2.42 1.48.3.15.48.13.66-.08.18-.21.76-.88.96-1.19.2-.3.4-.25.68-.15.27.1 1.76.83 2.05.98.3.15.5.23.57.35.07.13.07.73-.18 1.43Z" />
+    </svg>
+  );
+}
+
+function PlaceholderIcon() {
+  return (
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="text-gray-300"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
     </svg>
   );
 }
