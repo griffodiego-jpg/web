@@ -6,6 +6,7 @@ import {
   listLeads,
   type ContactoLead,
   type DescargaLead,
+  type GarantiaLead,
   type NewsletterLead,
 } from "@/lib/leads";
 
@@ -20,13 +21,24 @@ export const runtime = "nodejs";
 export default async function LeadsPage() {
   const redisAvailable = getRedis() !== null;
 
-  const [descarga, contacto, newsletter, cntD, cntC, cntN] = await Promise.all([
+  const [
+    descarga,
+    contacto,
+    newsletter,
+    garantia,
+    cntD,
+    cntC,
+    cntN,
+    cntG,
+  ] = await Promise.all([
     listLeads<DescargaLead>("descarga"),
     listLeads<ContactoLead>("contacto"),
     listLeads<NewsletterLead>("newsletter"),
+    listLeads<GarantiaLead>("garantia"),
     countLeads("descarga"),
     countLeads("contacto"),
     countLeads("newsletter"),
+    countLeads("garantia"),
   ]);
 
   return (
@@ -53,8 +65,13 @@ export default async function LeadsPage() {
       <div className="mt-8">
         <LeadsTabs
           initialTab="descarga"
-          leads={{ descarga, contacto, newsletter }}
-          counts={{ descarga: cntD, contacto: cntC, newsletter: cntN }}
+          leads={{ descarga, contacto, newsletter, garantia }}
+          counts={{
+            descarga: cntD,
+            contacto: cntC,
+            newsletter: cntN,
+            garantia: cntG,
+          }}
         />
       </div>
     </div>

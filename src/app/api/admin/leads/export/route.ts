@@ -3,6 +3,7 @@ import {
   listLeads,
   type ContactoLead,
   type DescargaLead,
+  type GarantiaLead,
   type Lead,
   type LeadKind,
   type NewsletterLead,
@@ -11,11 +12,13 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const VALID_KINDS: LeadKind[] = ["descarga", "contacto", "newsletter", "garantia"];
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const kindParam = url.searchParams.get("kind") as LeadKind | null;
   const kind: LeadKind =
-    kindParam === "contacto" || kindParam === "newsletter" ? kindParam : "descarga";
+    kindParam && VALID_KINDS.includes(kindParam) ? kindParam : "descarga";
 
   const leads = await listLeads(kind);
   const csv = toCsv(kind, leads);
@@ -35,7 +38,23 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
       ? ["Fecha", "Recurso", "Nombre", "Empresa", "Email", "Teléfono", "Compra a"]
       : kind === "contacto"
         ? ["Fecha", "Nombre", "Email", "Teléfono", "Mensaje"]
-        : ["Fecha", "Email"];
+        : kind === "garantia"
+          ? [
+              "Fecha",
+              "N° serie",
+              "Fecha compra",
+              "Lugar compra",
+              "Nombre",
+              "Empresa",
+              "Email",
+              "Teléfono",
+              "Domicilio",
+              "Ciudad",
+              "Provincia",
+              "País",
+              "Newsletter",
+            ]
+          : ["Fecha", "Email"];
 
   const rows = leads.map((l) => {
     const fecha = new Date(l.ts).toLocaleString("es-AR");
@@ -46,6 +65,24 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
     if (kind === "contacto") {
       const c = l as ContactoLead;
       return [fecha, c.nombre, c.email, c.telefono ?? "", c.mensaje];
+    }
+    if (kind === "garantia") {
+      const g = l as GarantiaLead;
+      return [
+        fecha,
+        g.serial,
+        g.buyingDate,
+        g.buyingPlace,
+        g.nombre,
+        g.empresa,
+        g.email,
+        g.telefono,
+        g.domicilio,
+        g.ciudad,
+        g.provincia,
+        g.pais,
+        g.subscribe ? "Sí" : "No",
+      ];
     }
     const n = l as NewsletterLead;
     return [fecha, n.email];

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type {
   ContactoLead,
   DescargaLead,
+  GarantiaLead,
   Lead,
   LeadKind,
   NewsletterLead,
@@ -11,12 +12,23 @@ import type {
 
 type Props = {
   initialTab: LeadKind;
-  leads: { contacto: Lead[]; newsletter: Lead[]; descarga: Lead[] };
-  counts: { contacto: number; newsletter: number; descarga: number };
+  leads: {
+    contacto: Lead[];
+    newsletter: Lead[];
+    descarga: Lead[];
+    garantia: Lead[];
+  };
+  counts: {
+    contacto: number;
+    newsletter: number;
+    descarga: number;
+    garantia: number;
+  };
 };
 
 const TABS: { id: LeadKind; label: string }[] = [
   { id: "descarga", label: "Descargas" },
+  { id: "garantia", label: "Garantía" },
   { id: "contacto", label: "Contacto" },
   { id: "newsletter", label: "Newsletter" },
 ];
@@ -88,6 +100,9 @@ export function LeadsTabs({ initialTab, leads, counts }: Props) {
           {tab === "descarga" && (
             <DescargasTable items={filtered as DescargaLead[]} />
           )}
+          {tab === "garantia" && (
+            <GarantiaTable items={filtered as GarantiaLead[]} />
+          )}
           {tab === "contacto" && (
             <ContactoTable items={filtered as ContactoLead[]} />
           )}
@@ -131,6 +146,54 @@ function DescargasTable({ items }: { items: DescargaLead[] }) {
             </Td>
             <Td>{l.telefono}</Td>
             <Td>{l.compraA}</Td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function GarantiaTable({ items }: { items: GarantiaLead[] }) {
+  return (
+    <table className="min-w-full text-sm">
+      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+        <tr>
+          <Th>Fecha</Th>
+          <Th>Serie</Th>
+          <Th>Compra</Th>
+          <Th>Lugar compra</Th>
+          <Th>Nombre</Th>
+          <Th>Empresa</Th>
+          <Th>Email</Th>
+          <Th>Teléfono</Th>
+          <Th>Ciudad / Provincia / País</Th>
+          <Th>Newsletter</Th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {items.map((l) => (
+          <tr key={`${l.ts}-${l.serial}`} className="hover:bg-gray-50">
+            <Td>{formatDate(l.ts)}</Td>
+            <Td>
+              <span className="font-mono text-xs">{l.serial}</span>
+            </Td>
+            <Td>{l.buyingDate}</Td>
+            <Td>{l.buyingPlace}</Td>
+            <Td>{l.nombre}</Td>
+            <Td>{l.empresa}</Td>
+            <Td>
+              <a
+                href={`mailto:${l.email}`}
+                className="text-primary hover:underline"
+              >
+                {l.email}
+              </a>
+            </Td>
+            <Td>{l.telefono}</Td>
+            <Td>
+              {l.ciudad}, {l.provincia}, {l.pais}
+            </Td>
+            <Td>{l.subscribe ? "Sí" : "—"}</Td>
           </tr>
         ))}
       </tbody>

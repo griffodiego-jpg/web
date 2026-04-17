@@ -9,7 +9,7 @@ import { getRedis } from "@/lib/kv";
  * siguen funcionando (mandan email) aunque no persistan.
  */
 
-export type LeadKind = "contacto" | "newsletter" | "descarga";
+export type LeadKind = "contacto" | "newsletter" | "descarga" | "garantia";
 
 export type ContactoLead = {
   kind: "contacto";
@@ -37,7 +37,24 @@ export type DescargaLead = {
   recurso: string;
 };
 
-export type Lead = ContactoLead | NewsletterLead | DescargaLead;
+export type GarantiaLead = {
+  kind: "garantia";
+  ts: number;
+  serial: string;
+  buyingDate: string;
+  buyingPlace: string;
+  nombre: string;
+  empresa: string;
+  domicilio: string;
+  pais: string;
+  provincia: string;
+  ciudad: string;
+  email: string;
+  telefono: string;
+  subscribe: boolean;
+};
+
+export type Lead = ContactoLead | NewsletterLead | DescargaLead | GarantiaLead;
 
 const KEY_PREFIX = "leads:";
 
