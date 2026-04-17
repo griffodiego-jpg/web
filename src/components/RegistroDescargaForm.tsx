@@ -16,10 +16,15 @@ export function RegistroDescargaForm({
   recursoId,
   recursoTitulo,
   fileUrl,
+  available,
 }: {
   recursoId: string;
   recursoTitulo: string;
   fileUrl: string;
+  /** Si no hay archivo todavía, el form igual captura el lead y
+   *  mostramos un mensaje de "te lo mandamos por email" en vez de
+   *  auto-disparar una descarga rota. */
+  available: boolean;
 }) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -46,13 +51,16 @@ export function RegistroDescargaForm({
         throw new Error(body.error ?? "Hubo un error");
       }
       setStatus("ok");
-      // Disparar la descarga automáticamente.
-      const a = document.createElement("a");
-      a.href = fileUrl;
-      a.download = "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      // Solo disparamos la descarga si hay un archivo real. Si no,
+      // la confirmación avisa que se lo mandamos por email.
+      if (available) {
+        const a = document.createElement("a");
+        a.href = fileUrl;
+        a.download = "";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Hubo un error");
       setStatus("error");
@@ -60,6 +68,17 @@ export function RegistroDescargaForm({
   }
 
   if (status === "ok") {
+    if (!available) {
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-2">
+          <p className="font-bold text-green-800">¡Gracias por registrarte!</p>
+          <p className="text-sm text-gray-800">
+            Te vamos a enviar <strong>{recursoTitulo}</strong> al mail que
+            dejaste en cuanto esté disponible.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-3">
         <p className="font-bold text-green-800">
@@ -133,7 +152,7 @@ export function RegistroDescargaForm({
         ) : (
           <>
             <DownloadIcon />
-            Registrarme y descargar
+            {available ? "Registrarme y descargar" : "Registrarme"}
           </>
         )}
       </button>

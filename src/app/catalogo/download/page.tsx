@@ -101,25 +101,19 @@ export default async function DescargasPage() {
           )}
         </section>
 
-        {/* 3. Material para catalogar — recursos gated */}
+        {/* 3. Material para catalogar — recursos gated. Siempre se
+            muestran los forms (capturan leads aunque el archivo no esté
+            todavía disponible). */}
         <section id="material-catalogar" className="scroll-mt-32">
           <SectionHeader
             title="Material para catalogar"
             subtitle="Completá el formulario una vez por recurso y te damos acceso inmediato a la descarga."
           />
-          {recursosGated.some((r) => r.available) ? (
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {recursosGated.map((r) =>
-                r.available ? (
-                  <RecursoGatedCard key={r.id} recurso={r} />
-                ) : null
-              )}
-            </div>
-          ) : (
-            <div className="mt-5">
-              <EmptyState text="Todavía no hay material disponible." />
-            </div>
-          )}
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {recursosGated.map((r) => (
+              <RecursoGatedCard key={r.id} recurso={r} />
+            ))}
+          </div>
         </section>
       </div>
     </>
@@ -249,7 +243,11 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-function RecursoGatedCard({ recurso }: { recurso: RecursoGated }) {
+function RecursoGatedCard({
+  recurso,
+}: {
+  recurso: RecursoGated & { available: boolean };
+}) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
       <div className="bg-primary/5 border-b border-gray-200 p-5">
@@ -273,6 +271,7 @@ function RecursoGatedCard({ recurso }: { recurso: RecursoGated }) {
           recursoId={recurso.id}
           recursoTitulo={recurso.titulo}
           fileUrl={recurso.fileUrl}
+          available={recurso.available}
         />
       </div>
     </div>
