@@ -25,11 +25,11 @@ export default async function AdminNovedadesPage() {
     <div>
       <h1 className="text-3xl font-black text-[#0a2b3d]">Novedades</h1>
       <p className="mt-2 text-sm text-gray-500 max-w-3xl">
-        Todos los productos actualizados en <strong>SpecParts</strong> en los
-        últimos 12 meses aparecen automáticamente como novedades.
-        Por defecto se muestran como <em>Nueva aplicación</em> — podés
-        marcar las que sean lanzamientos nuevos, o ocultar las que no querés
-        que aparezcan.
+        Los productos actualizados en <strong>SpecParts</strong> en los
+        últimos 12 meses aparecen acá como candidatos. Ninguno se publica
+        por defecto — elegís uno por uno si es <em>Lanzamiento</em> (producto
+        nuevo) o <em>Nueva aplicación</em> (se suma a productos existentes)
+        y recién ahí aparece en /novedades.
       </p>
 
       {!redisAvailable && (

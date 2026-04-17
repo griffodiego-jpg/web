@@ -106,6 +106,12 @@ export type TipoNovedad = "lanzamiento" | "aplicacion";
 export type Novedad = {
   code: string;
   tipo: TipoNovedad;
+  /**
+   * Si el admin publicó explícitamente esta novedad (marcándola como
+   * Lanzamiento o Nueva aplicación). Solo las publicadas aparecen en
+   * /novedades. El admin ve todas las candidatas (con published=false).
+   */
+  published: boolean;
   titulo: string;
   descripcion: string;
   fecha: Date; // fecha de actualización en SpecParts (es lo único que expone la API)
@@ -245,6 +251,7 @@ function firstPictureUrl(p: CatalogProduct): string | null {
 function enrichProduct(
   product: CatalogProduct,
   tipo: TipoNovedad,
+  published: boolean,
   hidden: boolean,
   nuevosVehiculos: string[],
   getSlug: (code: string) => string | null
@@ -253,6 +260,7 @@ function enrichProduct(
   return {
     code: product.code,
     tipo,
+    published,
     titulo: product.product || product.description || product.code,
     descripcion: product.description || "",
     fecha: new Date(product.updated_at),
@@ -276,13 +284,13 @@ function enrichProduct(
 }
 
 /**
- * Lista las novedades visibles en /novedades: productos de SpecParts
- * con `updated_at` en los últimos 12 meses, excluyendo los que el
- * admin haya ocultado. Ordenado por fecha descendente.
+ * Lista las novedades visibles en /novedades: SOLO las que el admin
+ * publicó explícitamente (marcó como Lanzamiento o Nueva aplicación)
+ * y que no estén ocultas. Ordenado por fecha descendente.
  */
 export async function listNovedades(): Promise<Novedad[]> {
   const all = await listNovedadesIncludingHidden();
-  return all.filter((n) => !n.hidden);
+  return all.filter((n) => n.published && !n.hidden);
 }
 
 /** Igual que listNovedades pero incluye las ocultas — para el admin. */
@@ -322,15 +330,17 @@ export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
     })
   );
 
-  const enriched = candidates.map((p) =>
-    enrichProduct(
+  const enriched = candidates.map((p) => {
+    const override = tipoOverrides.get(p.code);
+    return enrichProduct(
       p,
-      tipoOverrides.get(p.code) ?? "aplicacion",
+      override ?? "aplicacion",
+      override !== undefined, // published = tiene override
       hiddenSet.has(p.code),
       nuevosPorCodigo.get(p.code) ?? [],
       getFeaturedSlug
-    )
-  );
+    );
+  });
 
   return enriched.sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
 }
@@ -354,12 +364,15 @@ export async function getNovedad(code: string): Promise<Novedad | null> {
       import("@/data/featured-products"),
     ]);
 
-  // Si está oculta, no la mostramos en la página pública.
+  // Si está oculta o no está publicada, no la mostramos en la página pública.
   if (hiddenSet.has(product.code)) return null;
+  const override = tipoOverrides.get(product.code);
+  if (override === undefined) return null; // no publicada → 404
 
   return enrichProduct(
     product,
-    tipoOverrides.get(product.code) ?? "aplicacion",
+    override,
+    true,
     false,
     nuevos,
     getFeaturedSlug

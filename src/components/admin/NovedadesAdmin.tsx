@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { vehicleKey, type Novedad, type TipoNovedad } from "@/lib/novedades";
 
-type Filtro = "todas" | TipoNovedad | "ocultas";
+type Filtro = "sin-publicar" | "publicadas" | TipoNovedad | "ocultas";
 
 /**
  * UI de admin para novedades auto-detectadas desde SpecParts.
@@ -18,7 +18,7 @@ type Filtro = "todas" | TipoNovedad | "ocultas";
  */
 export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
   const router = useRouter();
-  const [filtro, setFiltro] = useState<Filtro>("todas");
+  const [filtro, setFiltro] = useState<Filtro>("sin-publicar");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +34,13 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
 
   const counts = useMemo(
     () => ({
-      todas: novedades.filter((n) => !n.hidden).length,
+      sinPublicar: novedades.filter((n) => !n.published && !n.hidden).length,
+      publicadas: novedades.filter((n) => n.published && !n.hidden).length,
       lanzamiento: novedades.filter(
-        (n) => !n.hidden && n.tipo === "lanzamiento"
+        (n) => n.published && !n.hidden && n.tipo === "lanzamiento"
       ).length,
       aplicacion: novedades.filter(
-        (n) => !n.hidden && n.tipo === "aplicacion"
+        (n) => n.published && !n.hidden && n.tipo === "aplicacion"
       ).length,
       ocultas: novedades.filter((n) => n.hidden).length,
     }),
@@ -48,10 +49,15 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
 
   const filtered = useMemo(() => {
     let list = novedades;
-    if (filtro === "ocultas") list = list.filter((n) => n.hidden);
-    else list = list.filter((n) => !n.hidden);
-    if (filtro === "lanzamiento" || filtro === "aplicacion") {
-      list = list.filter((n) => n.tipo === filtro);
+    if (filtro === "ocultas") {
+      list = list.filter((n) => n.hidden);
+    } else if (filtro === "sin-publicar") {
+      list = list.filter((n) => !n.published && !n.hidden);
+    } else if (filtro === "publicadas") {
+      list = list.filter((n) => n.published && !n.hidden);
+    } else {
+      // tipo específico: solo publicadas con ese tipo
+      list = list.filter((n) => n.published && !n.hidden && n.tipo === filtro);
     }
     if (query.trim()) {
       const q = query.toLowerCase();
@@ -113,6 +119,26 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
     });
   }
 
+  async function unpublish(code: string) {
+    if (!confirm(`¿Despublicar la novedad del código ${code}?`)) return;
+    setBusy(code);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/novedades/despublicar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, action: "unpublish" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function toggleHidden(code: string, hide: boolean) {
     if (hide && !confirm(`¿Ocultar la novedad del código ${code}?`)) return;
     setBusy(code);
@@ -147,22 +173,30 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
         <Tab
-          active={filtro === "todas"}
-          onClick={() => setFiltro("todas")}
-          label="Todas visibles"
-          count={counts.todas}
+          active={filtro === "sin-publicar"}
+          onClick={() => setFiltro("sin-publicar")}
+          label="Sin publicar"
+          count={counts.sinPublicar}
+        />
+        <Tab
+          active={filtro === "publicadas"}
+          onClick={() => setFiltro("publicadas")}
+          label="Publicadas"
+          count={counts.publicadas}
         />
         <Tab
           active={filtro === "lanzamiento"}
           onClick={() => setFiltro("lanzamiento")}
           label="Lanzamientos"
           count={counts.lanzamiento}
+          subtle
         />
         <Tab
           active={filtro === "aplicacion"}
           onClick={() => setFiltro("aplicacion")}
           label="Nuevas aplicaciones"
           count={counts.aplicacion}
+          subtle
         />
         <Tab
           active={filtro === "ocultas"}
@@ -216,15 +250,21 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white ${
-                      n.tipo === "lanzamiento" ? "bg-primary" : "bg-accent"
-                    }`}
-                  >
-                    {n.tipo === "lanzamiento"
-                      ? "Lanzamiento"
-                      : "Nueva aplicación"}
-                  </span>
+                  {n.published ? (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white ${
+                        n.tipo === "lanzamiento" ? "bg-primary" : "bg-accent"
+                      }`}
+                    >
+                      {n.tipo === "lanzamiento"
+                        ? "Lanzamiento"
+                        : "Nueva aplicación"}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-gray-300 bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                      Sin publicar
+                    </span>
+                  )}
                   <span className="font-mono font-black text-primary text-sm">
                     {n.code}
                   </span>
@@ -250,29 +290,61 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {/* Cambiar tipo */}
-                {n.tipo === "aplicacion" ? (
-                  <button
-                    type="button"
-                    onClick={() => setTipo(n.code, "lanzamiento")}
-                    disabled={busy === n.code}
-                    className="rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-bold hover:bg-primary-dark transition cursor-pointer disabled:opacity-50"
-                  >
-                    Marcar como Lanzamiento
-                  </button>
+                {!n.published ? (
+                  // SIN PUBLICAR: 2 botones para elegir tipo y publicar
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setTipo(n.code, "lanzamiento")}
+                      disabled={busy === n.code}
+                      className="rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-bold hover:bg-primary-dark transition cursor-pointer disabled:opacity-50"
+                    >
+                      Publicar Lanzamiento
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTipo(n.code, "aplicacion")}
+                      disabled={busy === n.code}
+                      className="rounded-lg bg-accent text-white px-3 py-1.5 text-xs font-bold hover:bg-primary transition cursor-pointer disabled:opacity-50"
+                    >
+                      Publicar Nueva aplicación
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setTipo(n.code, "aplicacion")}
-                    disabled={busy === n.code}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
-                  >
-                    Volver a default
-                  </button>
+                  // PUBLICADA: cambiar tipo + despublicar
+                  <>
+                    {n.tipo === "aplicacion" ? (
+                      <button
+                        type="button"
+                        onClick={() => setTipo(n.code, "lanzamiento")}
+                        disabled={busy === n.code}
+                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                      >
+                        Cambiar a Lanzamiento
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setTipo(n.code, "aplicacion")}
+                        disabled={busy === n.code}
+                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                      >
+                        Cambiar a Aplicación
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => unpublish(n.code)}
+                      disabled={busy === n.code}
+                      className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-100 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Despublicar
+                    </button>
+                  </>
                 )}
 
-                {/* Marcar vehículos nuevos (solo para aplicaciones) */}
-                {n.tipo === "aplicacion" && n.vehiculos.length > 0 && (
+                {/* Marcar vehículos nuevos (solo para aplicaciones publicadas) */}
+                {n.published && n.tipo === "aplicacion" && n.vehiculos.length > 0 && (
                   <button
                     type="button"
                     onClick={() =>
