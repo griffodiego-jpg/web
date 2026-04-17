@@ -7,20 +7,26 @@ export function Newsletter() {
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">(
     "idle"
   );
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Hubo un error");
+      }
       setStatus("ok");
       setEmail("");
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Hubo un error");
       setStatus("error");
     }
   }
@@ -61,11 +67,13 @@ export function Newsletter() {
             {status === "loading" ? "Enviando..." : "Suscribirme"}
           </button>
           {status === "ok" && (
-            <p className="w-full text-white text-sm">¡Gracias por suscribirte!</p>
+            <p className="w-full text-white text-sm">
+              ¡Gracias por suscribirte!
+            </p>
           )}
           {status === "error" && (
             <p className="w-full text-white text-sm">
-              Hubo un error. Probá de nuevo.
+              {errorMsg ?? "Hubo un error."} Revisá el email y probá de nuevo.
             </p>
           )}
         </form>
