@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { navigation, type NavItem } from "@/lib/site-config";
 import { Logo } from "@/components/Logo";
 import { CartIndicator } from "@/components/cart/CartIndicator";
+import { useMockSession } from "@/lib/mock-session";
+import { mockCurrentClient } from "@/data/mock-b2b";
 
 /**
  * Determina si un item del nav está activo según el pathname actual.
@@ -42,6 +44,7 @@ export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const { isLoggedIn, ready } = useMockSession();
 
   // Cierra el menú mobile al cambiar a desktop.
   useEffect(() => {
@@ -242,21 +245,43 @@ export function Header() {
               </li>
             );
           })}
-          {/* CTAs de B2B: acceso clientes + carrito. Se renderizan en su
-              propia fila (items-center) para que el baseline quede parejo
-              con los items de texto del nav principal. */}
+          {/* CTAs de B2B: si está logueado muestra nombre del cliente
+              linkeado al portal; sino, botón 'Acceso clientes'. Carrito
+              siempre al lado. */}
           <li className="lg:ml-3 flex items-center gap-2">
-            <Link
-              href="/cuenta/login"
-              onClick={() => setOpen(false)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border-2 border-accent bg-accent lg:bg-transparent lg:hover:bg-accent text-primary hover:text-white font-black text-sm uppercase tracking-wide transition whitespace-nowrap"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              Acceso clientes
-            </Link>
+            {ready && isLoggedIn ? (
+              <Link
+                href="/cuenta"
+                onClick={() => setOpen(false)}
+                title="Entrar al portal"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 border-2 border-emerald-500 text-emerald-800 hover:bg-emerald-500 hover:text-white font-black text-sm transition whitespace-nowrap max-w-[220px]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span className="flex flex-col items-start leading-none gap-0.5">
+                  <span className="text-[9px] uppercase tracking-wider font-bold opacity-80">
+                    Entrar al portal
+                  </span>
+                  <span className="text-xs font-black truncate max-w-[160px]">
+                    {mockCurrentClient.name}
+                  </span>
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/cuenta/login"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border-2 border-accent bg-accent lg:bg-transparent lg:hover:bg-accent text-primary hover:text-white font-black text-sm uppercase tracking-wide transition whitespace-nowrap"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Acceso clientes
+              </Link>
+            )}
             <CartIndicator onClick={() => setOpen(false)} />
           </li>
         </ul>

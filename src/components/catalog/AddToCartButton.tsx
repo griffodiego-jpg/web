@@ -42,36 +42,62 @@ export function AddToCartButton({
     fn();
   };
 
-  // Si ya tiene cantidad → mostrar controles siempre
+  // Si ya tiene cantidad → estado "Agregado" con controles verdes
   if (currentQty > 0) {
     return (
       <div
         onClick={(e) => e.stopPropagation()}
-        className="inline-flex items-center gap-1 rounded-md border border-primary bg-white text-primary"
+        className="inline-flex items-center gap-1.5"
       >
-        <button
-          type="button"
-          aria-label="Disminuir cantidad"
-          onClick={stop(() => setQuantity(productCode, currentQty - 1))}
-          className="w-7 h-7 flex items-center justify-center hover:bg-primary hover:text-white rounded-l-md font-bold text-sm"
-        >
-          −
-        </button>
-        <span
-          className={`min-w-[28px] text-center font-bold ${
-            compact ? "text-xs" : "text-sm"
-          }`}
-        >
-          {currentQty}
-        </span>
-        <button
-          type="button"
-          aria-label="Aumentar cantidad"
-          onClick={stop(() => setQuantity(productCode, currentQty + 1))}
-          className="w-7 h-7 flex items-center justify-center hover:bg-primary hover:text-white rounded-r-md font-bold text-sm"
-        >
-          +
-        </button>
+        {/* Badge 'Agregado' — texto completo sólo en modo no-compact. En
+            compact (dentro de la card del catálogo) mostramos sólo un
+            ✓ que ya da el feedback sin ocupar espacio. */}
+        {compact ? (
+          <span
+            aria-label="Agregado al carrito"
+            title="Agregado al carrito"
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        ) : (
+          <span
+            aria-label="Agregado al carrito"
+            className="inline-flex items-center gap-1 rounded-md bg-emerald-500 text-white font-bold whitespace-nowrap px-2 py-1.5 text-xs"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Agregado
+          </span>
+        )}
+        <div className="inline-flex items-center rounded-md border border-emerald-500 bg-white text-emerald-700">
+          <button
+            type="button"
+            aria-label="Disminuir cantidad"
+            onClick={stop(() => setQuantity(productCode, currentQty - 1))}
+            className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500 hover:text-white rounded-l-md font-bold text-sm"
+          >
+            −
+          </button>
+          <span
+            className={`min-w-[28px] text-center font-black ${
+              compact ? "text-xs" : "text-sm"
+            }`}
+          >
+            {currentQty}
+          </span>
+          <button
+            type="button"
+            aria-label="Aumentar cantidad"
+            onClick={stop(() => setQuantity(productCode, currentQty + 1))}
+            className="w-7 h-7 flex items-center justify-center hover:bg-emerald-500 hover:text-white rounded-r-md font-bold text-sm"
+          >
+            +
+          </button>
+        </div>
       </div>
     );
   }

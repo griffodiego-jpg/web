@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
 import { useMockSession } from "@/lib/mock-session";
+import { useB2BPreferences } from "@/lib/b2b-preferences";
+import { formatARS, formatARSNeto, getMockCompraPrice } from "@/lib/mock-prices";
 
 export function CartContent() {
   const { items, ready, setQuantity, removeItem, clear, count } = useCart();
   const { isLoggedIn } = useMockSession();
+  const { prefs, ready: prefsReady } = useB2BPreferences();
 
   if (!ready) {
     return (
@@ -30,9 +33,7 @@ export function CartContent() {
           Tu carrito está vacío
         </h2>
         <p className="text-sm text-gray-600 mt-1">
-          {isLoggedIn
-            ? "Entrá al catálogo y agregá productos para armar tu pedido."
-            : "Ingresá como cliente B2B para armar pedidos desde el catálogo."}
+          Entrá al catálogo y agregá productos para armar tu pedido.
         </p>
         <div className="mt-5 flex items-center justify-center gap-2">
           <Link
@@ -54,6 +55,20 @@ export function CartContent() {
     );
   }
 
+  // Precios por item según preferencias del usuario.
+  const priced = items.map((it) => {
+    const compra = getMockCompraPrice(it.productCode);
+    const unitPrice =
+      prefsReady && prefs.priceMode === "pvp"
+        ? compra * (1 + prefs.marginPct / 100)
+        : compra;
+    return { ...it, unitPrice, subtotal: unitPrice * it.quantity };
+  });
+  const total = priced.reduce((a, it) => a + it.subtotal, 0);
+
+  const priceLabel =
+    prefsReady && prefs.priceMode === "pvp" ? "PVP sugerido" : "Precio de compra";
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -70,12 +85,25 @@ export function CartContent() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {/* Cabecera de la tabla — sólo desktop. */}
+        <div className="hidden md:grid md:grid-cols-[80px_1fr_140px_140px_140px_40px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-[10px] uppercase tracking-wider font-bold text-gray-500">
+          <span></span>
+          <span>Producto</span>
+          <span className="text-right">{priceLabel}</span>
+          <span className="text-center">Cantidad</span>
+          <span className="text-right">Subtotal</span>
+          <span></span>
+        </div>
+
         <ul className="divide-y divide-gray-100">
-          {items.map((it) => (
-            <li key={it.productCode} className="p-4 flex items-center gap-4">
-              <div className="w-16 h-16 shrink-0 rounded-md bg-gray-50 border border-gray-200 overflow-hidden flex items-center justify-center">
+          {priced.map((it) => (
+            <li
+              key={it.productCode}
+              className="p-4 md:grid md:grid-cols-[80px_1fr_140px_140px_140px_40px] md:gap-4 md:items-center flex flex-wrap gap-3"
+            >
+              <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-md bg-gray-50 border border-gray-200 overflow-hidden flex items-center justify-center">
                 {it.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={it.image}
                     alt={it.name}
@@ -96,7 +124,17 @@ export function CartContent() {
                   {it.name}
                 </p>
               </div>
-              <div className="shrink-0 flex items-center gap-2">
+              {/* Precio unitario */}
+              <div className="md:text-right">
+                <p className="md:hidden text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">
+                  {priceLabel}
+                </p>
+                <p className="text-sm font-bold text-[#0a2b3d] whitespace-nowrap">
+                  {formatARSNeto(it.unitPrice)}
+                </p>
+              </div>
+              {/* Cantidad */}
+              <div className="md:justify-self-center">
                 <div className="inline-flex items-center rounded-md border border-gray-300">
                   <button
                     type="button"
@@ -125,28 +163,54 @@ export function CartContent() {
                     +
                   </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Quitar del carrito"
-                  onClick={() => removeItem(it.productCode)}
-                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition"
-                  title="Quitar"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                  </svg>
-                </button>
               </div>
+              {/* Subtotal */}
+              <div className="md:text-right">
+                <p className="md:hidden text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">
+                  Subtotal
+                </p>
+                <p className="text-sm font-black text-[#0a2b3d] whitespace-nowrap">
+                  {formatARSNeto(it.subtotal)}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Quitar del carrito"
+                onClick={() => removeItem(it.productCode)}
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition md:justify-self-end"
+                title="Quitar"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                </svg>
+              </button>
             </li>
           ))}
         </ul>
+
+        {/* Total */}
+        <div className="px-4 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-600">
+            Total estimado
+          </span>
+          <div className="text-right">
+            <p className="text-xl font-black text-[#0a2b3d] leading-none">
+              {formatARS(total)}
+              <span className="text-xs text-gray-500 font-bold ml-2">+ IVA</span>
+            </p>
+            <p className="text-[10px] text-gray-500 mt-1">
+              {count} {count === 1 ? "unidad" : "unidades"} ·{" "}
+              {priceLabel.toLowerCase()}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
-          Los precios finales y el total se calculan cuando confirmás el pedido.
+          El total definitivo se confirma cuando Griffo procesa el pedido.
         </p>
         <div className="flex items-center gap-2">
           <Link
@@ -176,10 +240,10 @@ export function CartContent() {
       </div>
 
       <p className="text-xs text-gray-500">
-        🚧 El carrito todavía no se envía al ERP. Cuando la integración esté
-        activa, el botón "Confirmar pedido" dispara{" "}
-        <code className="px-1 py-0.5 bg-gray-100 rounded">POST /ERP/order</code>
-        .
+        🚧 Los precios son referenciales hasta que la integración con el ERP
+        esté activa. Cuando se confirme el pedido, el botón dispara{" "}
+        <code className="px-1 py-0.5 bg-gray-100 rounded">POST /ERP/order</code>{" "}
+        con los precios reales del cliente.
       </p>
     </div>
   );
