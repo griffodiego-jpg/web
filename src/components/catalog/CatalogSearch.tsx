@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 
 import type { CatalogProduct, SpecPartsPlateResponse } from "@/types/specparts";
@@ -14,14 +14,22 @@ import {
   type MeasureRow,
   type MeasureType,
 } from "@/lib/catalog/utils";
+import {
+  applyFilters,
+  countActiveFilters,
+  emptyFilters,
+  hasActiveFilters,
+  toggleFilter,
+  type CatalogFilters,
+  type FilterGroup,
+} from "@/lib/catalog/filters";
 
+import { FiltersSidebar } from "./FiltersSidebar";
 import { ProductCard } from "./ProductCard";
 
 type TabKey = "palabra" | "patente" | "vehiculo" | "codigo" | "medidas";
 
-type Props = {
-  products: CatalogProduct[];
-};
+type Props = { products: CatalogProduct[] };
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "palabra", label: "Palabra" },
@@ -31,12 +39,12 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "medidas", label: "Medidas" },
 ];
 
-// Altura aprox del Header sticky del sitio (py-2.5 + logo h-10 ≈ 60px)
 const STICKY_TOP = "top-[60px]";
 
 export function CatalogSearch({ products }: Props) {
   const [tab, setTab] = useState<TabKey>("palabra");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<CatalogFilters>(() => emptyFilters());
 
   const [keyword, setKeyword] = useState("");
   const [plate, setPlate] = useState("");
@@ -50,6 +58,11 @@ export function CatalogSearch({ products }: Props) {
   const [measureType, setMeasureType] = useState<MeasureType>("direccion");
 
   const vehicleTree = useMemo(() => buildVehicleTree(products), [products]);
+
+  const onToggleFilter = useCallback((group: FilterGroup, value: string) => {
+    setFilters((f) => toggleFilter(f, group, value));
+  }, []);
+  const onClearFilters = useCallback(() => setFilters(emptyFilters()), []);
 
   const searchPlate = (plateValue: string) => {
     const q = plateValue.trim().toUpperCase();
@@ -71,12 +84,60 @@ export function CatalogSearch({ products }: Props) {
     });
   };
 
+  /* --- Base results por tab (antes de aplicar filtros del sidebar) --- */
+  const tabState = useMemo(() => {
+    if (tab === "palabra") {
+      if (keyword.trim().length < 2) {
+        return { kind: "empty" as const, message: "Escribí al menos 2 letras para buscar." };
+      }
+      return { kind: "results" as const, products: searchByKeyword(products, keyword) };
+    }
+    if (tab === "patente") {
+      if (plateError) return { kind: "error" as const, message: plateError };
+      if (!plateVehicle) {
+        return { kind: "empty" as const, message: "Ingresá una patente para buscar." };
+      }
+      return {
+        kind: "results" as const,
+        products: filterByPlateVehicle(products, plateVehicle),
+        plateVehicle,
+      };
+    }
+    if (tab === "vehiculo") {
+      if (!brand) {
+        return { kind: "empty" as const, message: "Elegí una marca para empezar." };
+      }
+      return {
+        kind: "results" as const,
+        products: searchByVehicle(products, {
+          brand,
+          model: model || undefined,
+          year: year ? parseInt(year, 10) : undefined,
+        }),
+      };
+    }
+    if (tab === "codigo") {
+      if (code.trim().length < 2) {
+        return { kind: "empty" as const, message: "Escribí al menos 2 caracteres del código." };
+      }
+      return { kind: "results" as const, products: searchByCode(products, code) };
+    }
+    return { kind: "measures" as const };
+  }, [tab, products, keyword, plateError, plateVehicle, brand, model, year, code]);
+
+  const baseResults = tabState.kind === "results" ? tabState.products : [];
+  const filteredResults = useMemo(
+    () => applyFilters(baseResults, filters),
+    [baseResults, filters],
+  );
+
+  const showSidebar = tab !== "medidas";
+  const activeFilters = countActiveFilters(filters);
+
   return (
     <>
-      {/* ---------- STICKY: eyebrow + tabs + form del tab activo ---------- */}
-      <div
-        className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}
-      >
+      {/* ---------------- Sticky header con tabs + form ---------------- */}
+      <div className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}>
         <div className="px-4 py-3 lg:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -88,13 +149,20 @@ export function CatalogSearch({ products }: Props) {
                 o medidas
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary lg:hidden"
-            >
-              <FilterIcon /> Filtros
-            </button>
+            {showSidebar ? (
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary lg:hidden"
+              >
+                <FilterIcon /> Filtros
+                {activeFilters > 0 ? (
+                  <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
+                    {activeFilters}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
           </div>
 
           <nav
@@ -125,9 +193,7 @@ export function CatalogSearch({ products }: Props) {
           </nav>
 
           <div className="mt-3">
-            {tab === "palabra" ? (
-              <KeywordForm value={keyword} onChange={setKeyword} />
-            ) : null}
+            {tab === "palabra" ? <KeywordForm value={keyword} onChange={setKeyword} /> : null}
             {tab === "patente" ? (
               <PlateForm
                 value={plate}
@@ -162,26 +228,49 @@ export function CatalogSearch({ products }: Props) {
         </div>
       </div>
 
-      {/* ---------- LAYOUT: sidebar + results ---------- */}
-      <div className="grid gap-6 px-4 py-6 lg:grid-cols-[240px_1fr] lg:px-6">
-        <FiltersSidebar open={filtersOpen} onClose={() => setFiltersOpen(false)} />
-
-        <div>
-          {tab === "palabra" ? (
-            <KeywordResults products={products} query={keyword} />
-          ) : null}
-          {tab === "patente" ? (
-            <PlateResults products={products} vehicle={plateVehicle} error={plateError} />
-          ) : null}
-          {tab === "vehiculo" ? (
-            <VehicleResults products={products} brand={brand} model={model} year={year} />
-          ) : null}
-          {tab === "codigo" ? <CodeResults products={products} query={code} /> : null}
-          {tab === "medidas" ? (
-            <MeasuresResults products={products} type={measureType} />
-          ) : null}
+      {/* ---------------- Área de resultados ---------------- */}
+      {tab === "medidas" ? (
+        <div className="px-4 py-6 lg:px-6">
+          <MeasuresTable products={products} type={measureType} />
         </div>
-      </div>
+      ) : (
+        <div
+          className={
+            showSidebar
+              ? "grid gap-6 px-4 py-6 lg:grid-cols-[240px_1fr] lg:px-6"
+              : "px-4 py-6 lg:px-6"
+          }
+        >
+          {showSidebar ? (
+            <FiltersSidebar
+              baseProducts={baseResults}
+              filters={filters}
+              onToggle={onToggleFilter}
+              onClear={onClearFilters}
+              open={filtersOpen}
+              onClose={() => setFiltersOpen(false)}
+            />
+          ) : null}
+
+          <div>
+            {tab === "patente" && tabState.kind === "results" && tabState.plateVehicle ? (
+              <PlateVehicleHeader vehicle={tabState.plateVehicle} />
+            ) : null}
+            {tabState.kind === "empty" ? <EmptyState message={tabState.message} /> : null}
+            {tabState.kind === "error" ? (
+              <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{tabState.message}</p>
+            ) : null}
+            {tabState.kind === "results" ? (
+              <ResultsGrid
+                results={filteredResults}
+                total={baseResults.length}
+                filtersActive={hasActiveFilters(filters)}
+                onClearFilters={onClearFilters}
+              />
+            ) : null}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -190,13 +279,7 @@ export function CatalogSearch({ products }: Props) {
 /*  FORMS                                                                      */
 /* ========================================================================== */
 
-function KeywordForm({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function KeywordForm({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative">
       <SearchIcon />
@@ -308,13 +391,7 @@ function VehicleForm({
   );
 }
 
-function CodeForm({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function CodeForm({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative">
       <HashIcon />
@@ -366,119 +443,91 @@ function MeasuresSelector({
 }
 
 /* ========================================================================== */
-/*  RESULTS                                                                    */
+/*  RESULT VIEWS                                                               */
 /* ========================================================================== */
 
-function KeywordResults({
-  products,
-  query,
-}: {
-  products: CatalogProduct[];
-  query: string;
-}) {
-  const results = useMemo(
-    () => (query.trim().length >= 2 ? searchByKeyword(products, query) : []),
-    [products, query],
-  );
-  if (query.trim().length < 2) {
-    return <EmptyState message="Escribí al menos 2 letras para buscar." />;
-  }
-  return <ResultsGrid results={results} />;
-}
-
-function PlateResults({
-  products,
-  vehicle,
-  error,
-}: {
-  products: CatalogProduct[];
-  vehicle: SpecPartsPlateResponse | null;
-  error: string | null;
-}) {
-  const results = useMemo(
-    () => (vehicle ? filterByPlateVehicle(products, vehicle) : []),
-    [products, vehicle],
-  );
-
-  if (error) {
-    return <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>;
-  }
-  if (!vehicle) {
-    return <EmptyState message="Ingresá una patente para buscar los productos compatibles." />;
-  }
+function PlateVehicleHeader({ vehicle }: { vehicle: SpecPartsPlateResponse }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-          Vehículo identificado
+    <div className="mb-4 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+        Vehículo identificado
+      </p>
+      <p className="text-sm font-bold text-[#0a2b3d]">
+        {vehicle.brand} {vehicle.master_model ?? vehicle.model}
+      </p>
+      {vehicle.version || vehicle.sold_from_year ? (
+        <p className="text-xs text-gray-600">
+          {vehicle.version ?? ""}{" "}
+          {vehicle.sold_from_year ? `(${vehicle.sold_from_year})` : ""}
         </p>
-        <p className="text-sm font-bold text-[#0a2b3d]">
-          {vehicle.brand} {vehicle.master_model ?? vehicle.model}
-        </p>
-        {vehicle.version || vehicle.sold_from_year ? (
-          <p className="text-xs text-gray-600">
-            {vehicle.version ?? ""}{" "}
-            {vehicle.sold_from_year ? `(${vehicle.sold_from_year})` : ""}
-          </p>
-        ) : null}
-      </div>
-      <ResultsGrid results={results} />
+      ) : null}
     </div>
   );
 }
 
-function VehicleResults({
-  products,
-  brand,
-  model,
-  year,
+function ResultsGrid({
+  results,
+  total,
+  filtersActive,
+  onClearFilters,
 }: {
-  products: CatalogProduct[];
-  brand: string;
-  model: string;
-  year: string;
+  results: CatalogProduct[];
+  total: number;
+  filtersActive: boolean;
+  onClearFilters: () => void;
 }) {
-  const results = useMemo(
-    () =>
-      brand
-        ? searchByVehicle(products, {
-            brand,
-            model: model || undefined,
-            year: year ? parseInt(year, 10) : undefined,
-          })
-        : [],
-    [products, brand, model, year],
+  if (total === 0) {
+    return <EmptyState message="No se encontraron productos." />;
+  }
+  if (results.length === 0) {
+    return (
+      <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-gray-200 p-6">
+        <p className="text-sm text-gray-500">Ningún producto cumple todos los filtros activos.</p>
+        {filtersActive ? (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="text-xs font-bold text-accent hover:text-primary-dark"
+          >
+            Limpiar filtros →
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs text-gray-500">
+        <span className="font-bold text-[#0a2b3d]">{results.length}</span>
+        {results.length !== total ? (
+          <span className="text-gray-400"> de {total}</span>
+        ) : null}{" "}
+        {results.length === 1 ? "producto" : "productos"}
+      </p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        {results.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
+    </div>
   );
-  if (!brand) return <EmptyState message="Elegí una marca para empezar." />;
-  return <ResultsGrid results={results} />;
 }
 
-function CodeResults({
-  products,
-  query,
-}: {
-  products: CatalogProduct[];
-  query: string;
-}) {
-  const results = useMemo(
-    () => (query.trim().length >= 2 ? searchByCode(products, query) : []),
-    [products, query],
+function EmptyState({ message }: { message: string }) {
+  return (
+    <p className="rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
+      {message}
+    </p>
   );
-  if (query.trim().length < 2) {
-    return <EmptyState message="Escribí al menos 2 caracteres del código." />;
-  }
-  return <ResultsGrid results={results} />;
 }
+
+/* ========================================================================== */
+/*  MEASURES TABLE                                                             */
+/* ========================================================================== */
 
 type SortCol = "diamMenor" | "diamMayor" | "largo" | "code";
 
-function MeasuresResults({
-  products,
-  type,
-}: {
-  products: CatalogProduct[];
-  type: MeasureType;
-}) {
+function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: MeasureType }) {
   const [sortCol, setSortCol] = useState<SortCol>("diamMenor");
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -536,27 +585,30 @@ function MeasuresResults({
           </thead>
           <tbody>
             {sorted.map((row) => (
-              <tr
-                key={`${type}-${row.code}`}
-                className="border-b border-gray-50 transition hover:bg-primary/5"
-              >
-                <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMenor || "—"}</td>
-                <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMayor || "—"}</td>
-                <td className="px-3 py-2 text-[#0a2b3d]">{row.largo || "—"}</td>
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/catalogo/${row.productSlug}`}
-                    className="font-black text-primary hover:text-primary-dark"
-                  >
-                    {row.code}
-                  </Link>
-                </td>
-              </tr>
+              <MeasureRowView key={`${type}-${row.code}`} row={row} />
             ))}
           </tbody>
         </table>
       </div>
     </div>
+  );
+}
+
+function MeasureRowView({ row }: { row: MeasureRow }) {
+  return (
+    <tr className="border-b border-gray-50 transition hover:bg-primary/5">
+      <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMenor || "—"}</td>
+      <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMayor || "—"}</td>
+      <td className="px-3 py-2 text-[#0a2b3d]">{row.largo || "—"}</td>
+      <td className="px-3 py-2">
+        <Link
+          href={`/catalogo/${row.productSlug}`}
+          className="font-black text-primary hover:text-primary-dark"
+        >
+          {row.code}
+        </Link>
+      </td>
+    </tr>
   );
 }
 
@@ -581,97 +633,6 @@ function Th({
         <span className={active ? "opacity-100" : "opacity-40"}>{active && !asc ? "▼" : "▲"}</span>
       </span>
     </th>
-  );
-}
-
-/* ========================================================================== */
-/*  FILTERS SIDEBAR (placeholder)                                              */
-/* ========================================================================== */
-
-function FiltersSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const content = (
-    <div className="flex flex-col gap-5 p-4">
-      <div>
-        <h2 className="text-sm font-black text-[#0a2b3d]">Filtros</h2>
-        <p className="mt-0.5 text-[11px] text-gray-500">
-          Próximamente: filtrar por categoría, tipo de producto y compatibilidad.
-        </p>
-      </div>
-      <FilterGroup label="Categoría">
-        <FilterStub items={["Suspensión", "Dirección", "Transmisión"]} />
-      </FilterGroup>
-      <FilterGroup label="Tipo de producto">
-        <FilterStub
-          items={["Fuelle Suspensión", "Fuelle Cremallera", "Tope Amortiguador", "Kit Fuelle Semieje"]}
-        />
-      </FilterGroup>
-      <FilterGroup label="Marca vehículo">
-        <FilterStub items={["Ford", "Chevrolet", "Fiat", "Volkswagen", "Toyota", "Renault"]} />
-      </FilterGroup>
-    </div>
-  );
-
-  return (
-    <>
-      <aside className="hidden lg:block">
-        <div className="sticky top-[192px] max-h-[calc(100vh-220px)] overflow-y-auto rounded-lg border border-gray-100 bg-white">
-          {content}
-        </div>
-      </aside>
-
-      {open ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar filtros"
-            className="absolute inset-0 bg-black/40"
-          />
-          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] overflow-y-auto bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-              <h2 className="text-sm font-black text-[#0a2b3d]">Filtros</h2>
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-lg text-gray-500 hover:text-[#0a2b3d]"
-                aria-label="Cerrar"
-              >
-                ×
-              </button>
-            </div>
-            {content}
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-500">
-        {label}
-      </h3>
-      {children}
-    </div>
-  );
-}
-
-function FilterStub({ items }: { items: string[] }) {
-  return (
-    <ul className="space-y-1.5">
-      {items.map((item) => (
-        <li key={item} className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            disabled
-            className="h-3.5 w-3.5 rounded border-gray-300 opacity-60"
-          />
-          <span className="text-xs text-gray-400">{item}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -708,33 +669,6 @@ function SelectField({
         ))}
       </select>
     </label>
-  );
-}
-
-function ResultsGrid({ results }: { results: CatalogProduct[] }) {
-  if (results.length === 0) {
-    return <EmptyState message="No se encontraron productos." />;
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-gray-500">
-        <span className="font-bold text-[#0a2b3d]">{results.length}</span>{" "}
-        {results.length === 1 ? "producto" : "productos"} encontrados
-      </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {results.map((p) => (
-          <ProductCard key={p.id} product={p} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <p className="rounded-lg border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
-      {message}
-    </p>
   );
 }
 
