@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getFeaturedSlug } from "@/data/featured-products";
-import { getAttrValue, getMercadoLibreUrl } from "@/lib/catalog/utils";
+import { getAttrValue, getMercadoLibreUrl, getProductLocation } from "@/lib/catalog/utils";
 
 import { VehiclesModal } from "./VehiclesModal";
 
@@ -19,7 +19,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const primaryImage = product.pictures?.[0]?.image_url;
   const meliUrl = getMercadoLibreUrl(product);
 
-  const location = getAttrValue(product, "ubicaci");
+  const location = getProductLocation(product);
   const sideRaw = getAttrValue(product, "lado");
   const side = sideRaw && sideRaw !== location ? sideRaw : "";
 

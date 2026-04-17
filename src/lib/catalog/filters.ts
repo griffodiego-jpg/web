@@ -20,7 +20,7 @@
  */
 
 import type { CatalogProduct, SpecPartsProduct } from "@/types/specparts";
-import { getAttrValue } from "./utils";
+import { getAttrValue, getProductLocation } from "./utils";
 
 export type FilterGroup = "linea" | "tipo" | "ubicacion" | "lado" | "marca" | "modelo";
 
@@ -161,7 +161,7 @@ export function matchesFilters(
   }
 
   if (skip !== "ubicacion" && f.ubicacion.size > 0) {
-    const loc = getAttrValue(p, "ubicaci").toUpperCase().trim();
+    const loc = getProductLocation(p).toUpperCase().trim();
     if (!loc || !f.ubicacion.has(loc)) return false;
   }
 
@@ -242,7 +242,7 @@ function extractValues(p: CatalogProduct, group: FilterGroup, f: CatalogFilters)
       return t ? [t] : [];
     }
     case "ubicacion": {
-      const loc = getAttrValue(p, "ubicaci").toUpperCase().trim();
+      const loc = getProductLocation(p).toUpperCase().trim();
       return loc ? [loc] : [];
     }
     case "lado": {

@@ -180,6 +180,36 @@ export function getAttrValue(p: SpecPartsProduct, nameContains: string): string 
   return "";
 }
 
+/**
+ * Ubicación del producto en el vehículo (ej. DELANTERO, TRASERO, LADO RUEDA).
+ * SpecParts no tiene un nombre de campo consistente — a veces es "Ubicación",
+ * a veces "Posición", "Eje", "Montaje". Probamos varios en orden y si ninguno
+ * matchea, caemos al fallback de buscar cualquier attribute cuyo VALOR sea
+ * DELANTERO/TRASERO.
+ */
+const LOCATION_ATTR_NAMES = ["ubicaci", "posici", "eje", "montaje"];
+const LOCATION_VALUES = new Set([
+  "DELANTERO",
+  "DELANTERA",
+  "TRASERO",
+  "TRASERA",
+  "LADO RUEDA",
+  "LADO CAJA",
+]);
+
+export function getProductLocation(p: SpecPartsProduct): string {
+  for (const needle of LOCATION_ATTR_NAMES) {
+    const v = getAttrValue(p, needle);
+    if (v) return v;
+  }
+  if (!p.attributes) return "";
+  for (const a of p.attributes) {
+    const val = (a.value ?? "").trim().toUpperCase();
+    if (LOCATION_VALUES.has(val)) return val;
+  }
+  return "";
+}
+
 function toNumber(value: string): number | null {
   if (!value) return null;
   const n = parseFloat(value.replace(",", "."));
