@@ -7,12 +7,11 @@ import { useRouter } from "next/navigation";
 
 import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getFeaturedSlug } from "@/data/featured-products";
-import { getMercadoLibreUrl } from "@/lib/catalog/utils";
 import { getDisplayApplication } from "@/lib/catalog/display";
-import { useMockSession } from "@/lib/mock-session";
 
 import { VehiclesModal } from "./VehiclesModal";
 import { AddToCartButton } from "./AddToCartButton";
+import { ProductPrice } from "./ProductPrice";
 
 type ProductCardProps = {
   product: CatalogProduct;
@@ -21,10 +20,8 @@ type ProductCardProps = {
 export function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const { isLoggedIn } = useMockSession();
 
   const primaryImage = product.pictures?.[0]?.image_url;
-  const meliUrl = getMercadoLibreUrl(product);
 
   const { ubicaciones, lados } = getDisplayApplication(product);
   const locationText = ubicaciones.join(", ");
@@ -127,15 +124,16 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           ) : null}
 
-          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-            <Link
-              href={detailHref}
-              onClick={(e) => e.stopPropagation()}
-              className="text-[11px] font-bold text-primary hover:text-primary-dark"
-            >
-              Ver detalle →
-            </Link>
-            {isLoggedIn ? (
+          <div className="mt-auto flex flex-col gap-2 pt-2">
+            <ProductPrice productCode={product.code} size="md" />
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                href={detailHref}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[11px] font-bold text-primary hover:text-primary-dark"
+              >
+                Ver detalle →
+              </Link>
               <AddToCartButton
                 productCode={product.code}
                 slug={product.slug}
@@ -143,17 +141,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 image={primaryImage}
                 compact
               />
-            ) : meliUrl ? (
-              <a
-                href={meliUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 rounded-md bg-[#FFE600] px-2 py-1 text-[10px] font-bold text-[#333] transition hover:brightness-95"
-              >
-                MercadoLibre <span>↗</span>
-              </a>
-            ) : null}
+            </div>
           </div>
         </div>
       </article>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ProductGallery } from "@/components/catalog/ProductGallery";
+import { ProductPrice } from "@/components/catalog/ProductPrice";
+import { AddToCartButton } from "@/components/catalog/AddToCartButton";
 import { BreadcrumbJsonLd, ProductJsonLd } from "@/components/StructuredData";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getProductBySlug, listCatalog } from "@/lib/api/specparts";
@@ -148,17 +150,28 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
             </div>
           ) : null}
 
-          {/* 4. CTA MercadoLibre arriba del fold */}
-          {meliUrl ? (
-            <a
-              href={meliUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FFE600] px-5 py-3 text-sm font-bold text-[#333] shadow-sm transition hover:brightness-95"
-            >
-              Comprar en MercadoLibre ↗
-            </a>
-          ) : null}
+          {/* 4. Precio + CTAs arriba del fold */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3">
+            <ProductPrice productCode={product.code} size="lg" />
+            <div className="flex items-center gap-2">
+              <AddToCartButton
+                productCode={product.code}
+                slug={product.slug}
+                name={product.product}
+                image={product.pictures?.[0]?.image_url}
+              />
+              {meliUrl ? (
+                <a
+                  href={meliUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1 rounded-md bg-[#FFE600] px-3 py-1.5 text-xs font-bold text-[#333] transition hover:brightness-95"
+                >
+                  MercadoLibre ↗
+                </a>
+              ) : null}
+            </div>
+          </div>
 
           {/* 5. Medidas técnicas compactas */}
           {medidas.length > 0 ? (

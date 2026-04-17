@@ -74,30 +74,43 @@ export function Header() {
         </span>
       </Link>
 
-      {/* Hamburger */}
-      <button
-        type="button"
-        aria-label={open ? "Cerrar menú" : "Abrir menú"}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="lg:hidden flex flex-col justify-center items-center w-10 h-10 border-0 bg-transparent focus:outline-none"
-      >
-        <span
-          className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
-            open ? "translate-y-2 rotate-45" : ""
-          }`}
-        />
-        <span
-          className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
-            open ? "opacity-0" : ""
-          }`}
-        />
-        <span
-          className={`block w-7 h-0.5 bg-primary transition-all ${
-            open ? "-translate-y-2 -rotate-45" : ""
-          }`}
-        />
-      </button>
+      {/* Controles del extremo derecho — carrito SIEMPRE visible,
+          hamburguesa solo en mobile. Quedan en el orden inverso al
+          natural (order-last) porque en el JSX vienen antes del nav
+          para que en desktop justify-between los ubique al final. */}
+      <div className="flex items-center gap-2 order-last lg:order-none">
+        {/* Cart mobile: solo visible fuera del menú cuando estás en
+            mobile. En desktop la otra instancia dentro del nav se
+            encarga para que quede al lado de "Acceso clientes". */}
+        <span className="lg:hidden">
+          <CartIndicator mobile />
+        </span>
+
+        {/* Hamburger — mobile only */}
+        <button
+          type="button"
+          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="lg:hidden flex flex-col justify-center items-center w-10 h-10 border-0 bg-transparent focus:outline-none"
+        >
+          <span
+            className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
+              open ? "translate-y-2 rotate-45" : ""
+            }`}
+          />
+          <span
+            className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
+              open ? "opacity-0" : ""
+            }`}
+          />
+          <span
+            className={`block w-7 h-0.5 bg-primary transition-all ${
+              open ? "-translate-y-2 -rotate-45" : ""
+            }`}
+          />
+        </button>
+      </div>
 
       <nav
         id="navbar"

@@ -197,12 +197,14 @@ function PreciosYMargen() {
           </p>
         </div>
 
-        {/* Margen */}
+        {/* Margen — solo habilitado en modo PVP */}
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label
               htmlFor="margen"
-              className="block text-xs font-semibold text-[#0a2b3d] mb-1 uppercase tracking-wider"
+              className={`block text-xs font-semibold mb-1 uppercase tracking-wider ${
+                prefs.priceMode === "pvp" ? "text-[#0a2b3d]" : "text-gray-400"
+              }`}
             >
               Tu margen de ganancia
             </label>
@@ -214,6 +216,7 @@ function PreciosYMargen() {
                 min={0}
                 max={1000}
                 step={0.5}
+                disabled={prefs.priceMode !== "pvp"}
                 value={displayValue}
                 onChange={(e) => setMarginInput(e.target.value)}
                 onBlur={() => {
@@ -223,15 +226,25 @@ function PreciosYMargen() {
                   }
                   setMarginInput("");
                 }}
-                className="w-32 px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-sm"
+                className="w-32 px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm">
+              <span
+                className={`absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-sm ${
+                  prefs.priceMode === "pvp" ? "text-gray-500" : "text-gray-300"
+                }`}
+              >
                 %
               </span>
             </div>
           </div>
           <div className="text-xs text-gray-600 pb-3">
-            Se aplica solamente cuando el modo es <b>PVP</b>.
+            {prefs.priceMode === "pvp" ? (
+              <>El margen se aplica sobre el precio de compra.</>
+            ) : (
+              <>
+                Activá el modo <b>PVP</b> para habilitar el margen.
+              </>
+            )}
           </div>
         </div>
 
@@ -241,8 +254,14 @@ function PreciosYMargen() {
             Ejemplo
           </p>
           <p className="text-blue-900">
-            Si un producto tiene <b>${ejemploCompra.toLocaleString("es-AR")}</b> de precio
-            de compra y tu margen es <b>{currentMargin}%</b>, en modo{" "}
+            Si un producto tiene <b>${ejemploCompra.toLocaleString("es-AR")} + IVA</b> de
+            precio de compra
+            {prefs.priceMode === "pvp" && (
+              <>
+                {" "}y tu margen es <b>{currentMargin}%</b>
+              </>
+            )}
+            , en modo{" "}
             <b>{prefs.priceMode === "compra" ? "Precio de compra" : "PVP"}</b>{" "}
             vas a verlo como:
           </p>
@@ -252,6 +271,7 @@ function PreciosYMargen() {
               "es-AR",
               { maximumFractionDigits: 2 },
             )}
+            <span className="text-sm text-gray-600 font-bold ml-2">+ IVA</span>
           </p>
         </div>
 
