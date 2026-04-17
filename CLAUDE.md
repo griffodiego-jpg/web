@@ -12,6 +12,22 @@ por ahora queda pendiente. **El catálogo se construyó nativo en `/catalogo`**
 (reemplaza el externo `griffo.specparts.shop`), consumiendo la misma API de
 SpecParts que ya usa `app.griffo.com.ar`. Ver sección "Catálogo de productos".
 
+## Coordinación multi-sesión
+
+Hay varias sesiones de Claude Code trabajando en paralelo sobre esta rama
+(`claude/new-website-2026-g1UGd`). Pautas para evitar pisarse:
+
+- **Siempre hacer `git pull --rebase origin claude/new-website-2026-g1UGd`
+  antes de editar** y antes de cada push — así se detectan cambios de
+  las otras sesiones.
+- Los conflictos típicos son en `src/app/admin/layout.tsx` (sidebar),
+  `CLAUDE.md` y `next.config.ts`. Resolver manteniendo ambos aportes.
+- **La memoria canónica entre sesiones es este archivo (`CLAUDE.md`)**.
+  Al cerrar una feature grande, actualizar la sección relevante acá
+  para que la siguiente sesión arranque con el contexto correcto.
+- Commit messages en español, primera línea < 72 chars. Ver sección
+  "Git / commits".
+
 ## Entorno
 
 - **Branch de desarrollo actual**: `claude/new-website-2026-g1UGd` (todos los
@@ -105,26 +121,24 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 
 ## Estado de las páginas
 
-- `/` home: **completa**. Banner vectorial + TrustStrip + 3 cards destacadas.
-- `/empresa`: **completa** con contenido real del sitio original. Hero 2 cols,
-  sticky nav interna, 5 secciones (Historia, Segmentos, Misión, Comercio,
-  Compromiso). Assets locales en `public/images/empresa/`.
-- `/desarrollo-a-medida`: **completa** estructura. Faltan assets reales (21
-  archivos en `public/images/desarrollo-a-medida/`, `public/videos/`,
-  `public/clientes/`). Mientras no estén, placeholders.
-- `/distribuidores`: **completa y funcional**. Selector de provincia con
-  auto-filter, tabla ordenable por columna (localeCompare 'es'), contador
-  arriba. 24 distribuidores únicos con 25 provincias de filtro.
-- `/contacto`: **funcional** (form + datos). Endpoint stub en
-  `/api/contacto/route.ts`. TODO: conectar con email real (Brevo/Mailgun/SMTP).
-- `/productos`: grilla básica con 7 productos destacados del siteConfig.
-  `/productos/[slug]`: landing rica por destacado (video, beneficios,
-  presentación, CTA a MeLi). Contenido en `src/data/productos.ts`.
-- `/catalogo`: **funcional y completo**. Buscador con 5 tabs + sidebar de
-  filtros facetados + grilla densa + detalle de producto. Consume la API de
-  SpecParts. Ver sección "Catálogo de productos" más abajo.
-- `/garantia`, `/catalogo/download` (Descargas), `/novedades/*`: **stubs**
-  con ComingSoon. Esperan HTML del sitio original.
+- `/` home: **completa**. Banner vectorial clickeable a /catalogo +
+  TrustStrip + 3 cards destacadas.
+- `/empresa`: **completa** con contenido real del sitio original.
+- `/desarrollo-a-medida`: **completa + formulario de consulta**
+  (DesarrolloForm → `/api/desarrollo`). Algunos assets pendientes.
+- `/distribuidores`: **completa y funcional**.
+- `/contacto`: **funcional + Resend conectado**. Endpoint
+  `/api/contacto/route.ts` manda mail y persiste lead en Redis.
+- `/productos`: grilla con 7 destacados. `/productos/[slug]`: landing
+  rica con video/beneficios/presentación/CTA. Contenido en
+  `src/data/productos.ts`.
+- `/catalogo`: **funcional y completo**. Ver sección "Catálogo de productos".
+- `/catalogo/download`: **funcional**. Descargas con scan de
+  `/public/downloads` + override por Redis (subidas desde admin via
+  Vercel Blob). Forms de Material para catalogar (banco imágenes,
+  base de datos) capturan lead antes de dar URL.
+- `/garantia`, `/novedades/*`: **stubs** con ComingSoon. Esperan HTML
+  del sitio viejo.
 
 ## Catálogo de productos (SpecParts)
 
@@ -151,9 +165,11 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
 
 ### Cache
 
-Cache en memoria del proceso (30 min) con deduplicación de requests concurrentes
-vía promise in-flight. Persiste mientras la instancia serverless de Vercel
-esté warm.
+- **Server**: cache en memoria del proceso (30 min) con dedup via
+  promise in-flight. Persiste mientras la instancia Vercel esté warm.
+- **CDN**: `next/image` + `remotePatterns` para el S3 de SpecParts.
+  Vercel convierte JPG → AVIF/WebP y cachea 30 días. Pre-warming
+  manual en `/admin/cache` (dispara requests a todas las imágenes).
 
 ### Páginas y rutas
 
@@ -166,7 +182,8 @@ esté warm.
 ### Búsqueda — 5 tabs
 
 1. **Palabra**: multi-word AND, accent-insensitive (`normalizeSearch`).
-   Índice `_searchText` construido server-side concatenando código,
+   Índice `_searchText` se construye **client-side** con `indexProducts()`
+   al montar (ahorra ~150KB en el payload inicial). Concatena código,
    descripción, producto, categoría, slug, vehículos, atributos, etc.
 2. **Patente**: llama `/api/catalog/plate` → filtra por `brand` + `master_model`
    o `model`.
@@ -193,24 +210,54 @@ esté warm.
 **Comportamiento**:
 
 - Multi-select con **OR interno** dentro de cada grupo, **AND entre grupos**.
-- Contadores dinámicos con **exclusión de la propia facet** (tildar Suspensión
-  recalcula counts de los demás grupos pero no esconde las otras líneas).
-- Opciones con count 0 se muestran en gris deshabilitado (no se ocultan).
-- Filtros **globales persistentes** al cambiar de tab (se guardan en memoria
-  del componente, no en URL).
-- Tab Medidas: sidebar **oculto**.
+- Contadores dinámicos con **exclusión de la propia facet**.
+- Opciones con count 0 se muestran deshabilitadas (no se ocultan).
+- **Estado persistente en URL** (`?linea=...&marca=FORD,CHEVROLET&tab=vehiculo`):
+  shareable, back/forward del browser lo restaura. Debounce 200ms para
+  text inputs. Ver `readStateFromParams`/`buildQueryString` en
+  `CatalogSearch.tsx`.
+- Tab Medidas: sidebar **oculto** (la tabla tiene su propia dinámica).
 - Mobile: drawer con botón "Filtros" y badge del count activo.
 
 ### ProductCard
 
-- Imagen cuadrada, código (grande, azul), producto, Ubicación, Lado.
-- **Descripción** = vehículos agrupados por marca sin motor:
-  `FORD (KUGA - RANGER), CHEVROLET (S-10)`. Replica el formato del sitio viejo.
-- Botón "Ver N vehículos compatibles" abre un modal con la lista detallada
-  (marca → modelo + versión + años).
-- Badge "DESTACADO" si el código matchea un producto destacado; el link del
-  detalle va a `/productos/[slug-destacado]` en vez de `/catalogo/[slug]`.
-- Cinta MercadoLibre al pie si hay link en `product.links[]`.
+- Imagen cuadrada (`next/image`), código azul grande, producto uppercase.
+- **Descripción** = vehículos agrupados por marca sin motor, marca en
+  negrita: `**FORD** (KUGA - RANGER), **CHEVROLET** (S-10)`.
+- Botón "Ver N vehículos compatibles" abre modal `VehiclesModal` con
+  lista detallada (marca → modelo + versión + años).
+- Ubicación y Lado con helper compartido `getDisplayApplication` —
+  aplica reglas por línea (ver más abajo).
+- Badge **DESTACADO** si el código matchea un destacado; el link va
+  a `/productos/[slug-destacado]` en vez de `/catalogo/[slug]`.
+- **Toda la card es clickeable** (navega al detalle). Los botones
+  internos (modal, MercadoLibre) hacen `stopPropagation`.
+- Pie: `Ver detalle →` a la izquierda + botón compacto amarillo
+  `MercadoLibre ↗` a la derecha si hay link en `product.links[]`.
+
+### Reglas por línea (helper `getDisplayApplication`)
+
+`src/lib/catalog/display.ts`. Aplica tanto en ProductCard como en
+detalle del producto:
+
+- **Suspensión**: oculta "Lado IZQUIERDO/DERECHO" (no aporta — son
+  simétricos). DELANTERO/TRASERO sí quedan.
+- **Dirección**: promueve "Lado IZQUIERDO/DERECHO" a "Ubicación"
+  (es el dato principal).
+- **Transmisión**: en "Ubicación" sólo deja LADO CAJA / LADO RUEDA.
+
+### Detalle de producto (`/catalogo/[slug]`)
+
+Layout por prioridad de info (de más a menos relevante):
+
+1. Breadcrumb + categoría (badge chico)
+2. Código grande + producto
+3. Pills compactos de Ubicación/Lado (con reglas por línea aplicadas)
+4. CTA **MercadoLibre** (arriba del fold)
+5. Tabla compacta de medidas (divide-y, no cajas grandes)
+6. Componentes del kit (si aplica) — inline
+7. Vehículos compatibles — **masonry CSS columns** (cada card
+   ocupa solo el alto que necesita), ordenados por cantidad desc
 
 ### Productos destacados → landing rica
 
@@ -264,6 +311,84 @@ URLs indexables en Google (cada producto tiene una sola URL canónica).
 - `reference/arquitectura-app-griffo.md` — doc completa de la API SpecParts,
   el schema de producto, credenciales, y las decisiones de arquitectura.
 
+## Admin (`/admin`)
+
+Protegido por middleware (`src/middleware.ts`) con auth de cookie
+`griffo-admin-token` + env var `ADMIN_PASSWORD`. El middleware corre
+en Edge (Web Crypto), la auth de API corre en Node (`src/lib/admin-auth.ts`).
+
+### Sidebar agrupado (`src/app/admin/layout.tsx`)
+
+Grupos:
+- **Diseño de web**: Banners, Distribuidores, Descargas
+- **Administración de catálogo**: Productos destacados, Cobertura, Cache de imágenes
+- **Formularios**: Leads capturados
+- **Vista pública**: link externo a `/catalogo`
+
+### Páginas
+
+- `/admin` — Dashboard con stats.
+- `/admin/distribuidores` — CRUD (lee CSV estático, edits futuros a Redis).
+- `/admin/productos` — Editor de links externos de productos destacados.
+- `/admin/banners` — Stub para banners del home (pendiente).
+- `/admin/descargas` — Gestión de archivos de `/catalogo/download`.
+  Subida directa cliente → Vercel Blob (evita el límite de 4.5 MB de
+  serverless functions); URL se guarda en Redis (`downloads:urls`).
+  Ver `src/lib/descargas-store.ts`.
+- `/admin/leads` — Lista de leads capturados por los forms públicos
+  (contacto, newsletter, descargas). Persistencia en Redis
+  (`src/lib/leads.ts`). Export CSV disponible.
+- `/admin/cobertura` — Matriz vehículo × tipo de producto (18 columnas
+  agrupadas en Dirección/Suspensión/Transmisión). Detecta huecos del
+  catálogo. Filter + sort + sticky headers. Export CSV **respeta el
+  filtro activo** (ver `src/components/admin/CoverageTable.tsx`).
+  Lógica en `src/lib/catalog/coverage.ts`.
+- `/admin/cache` — Pre-warming del CDN de imágenes. Dispara N
+  requests a `/_next/image?url=...&w=...&q=75` para que Vercel procese
+  y cachee todas las fotos antes que las vean usuarios reales.
+
+### API admin (`/api/admin/*`)
+
+Protegido por el mismo middleware.
+
+- `login/route.ts`, `logout/route.ts` — auth.
+- `descargas/upload/route.ts` — firma de URL de upload a Vercel Blob.
+- `leads/*` — listado y export.
+
+## Descargas (`/catalogo/download`)
+
+Cuatro secciones:
+
+1. **Catálogo general PDF** — `/pdfs/catalogo-griffo.pdf`.
+2. **Material por producto** — flyer + video redes por destacado.
+   Config en `src/data/descargas.ts` (`materialPorProducto`).
+3. **Banco de imágenes** — detrás de form de registro (lead va a Redis).
+4. **Base de datos de productos** — detrás de form de registro.
+
+Resolución de URLs (ver `src/lib/descargas-store.ts`):
+1. Si hay override en Redis (`downloads:urls`) → usa esa URL (Blob).
+2. Sino, escanea `/public/downloads` y `/public/pdfs` con
+   `fs.readdirSync` y usa el primer archivo que matchea.
+3. `next.config.ts` incluye esos directorios en
+   `outputFileTracingIncludes` para que fs funcione en Vercel.
+
+Si un archivo no existe, el link se oculta (no da 404 al usuario).
+
+## Leads y forms
+
+`src/lib/leads.ts` — guarda cada submit en una lista Redis (LPUSH).
+Tipos: `contacto`, `newsletter`, `descarga`.
+
+Cada form tiene su endpoint en `/api/*/route.ts`:
+- `/api/contacto` → email con Resend + lead Redis.
+- `/api/newsletter` → lead Redis.
+- `/api/garantia` → email Resend.
+- `/api/desarrollo` → email + lead.
+- `/api/descargas/registro` → captura registro antes de dar link.
+
+**Si Resend o Redis falla, el lead se guarda en el otro canal** (no
+se pierde). Si ambos fallan, devuelve 500 al front.
+
 ## Assets subidos al repo (situación actual)
 
 - `public/header-icon.svg` — logo real.
@@ -311,34 +436,40 @@ URLs indexables en Google (cada producto tiene una sola URL canónica).
 
 ## Servicios conectados
 
-- **Resend** (email): API key en env var `RESEND_API_KEY`. Contacto →
-  `contacto@griffo.com.ar`, Garantía → `garantia@griffo.com.ar`,
-  Newsletter → `contacto@griffo.com.ar`. Sender: `onboarding@resend.dev`
-  (verificar dominio en Resend para enviar desde `@griffo.com.ar`).
-- **Google Analytics 4**: measurement ID `G-FR8KN76LQ2` (mismo que el
-  sitio viejo). Script en `layout.tsx`.
-- **Admin panel**: `/admin` con login por contraseña (`ADMIN_PASSWORD`
-  env var). Dashboard + tabla distribuidores + editor links productos +
-  placeholder banners. CRUD real pendiente de conectar Vercel KV
-  (Upstash Redis ya creado por la cliente).
-- **WhatsApp**: mensaje pre-cargado "Hola, estoy visitando la web de
-  Griffo y tengo una consulta." en todas las páginas.
+- **Resend** (email): `RESEND_API_KEY`. Sender `onboarding@resend.dev`
+  (verificar dominio en Resend para mandar desde `@griffo.com.ar`).
+  Los handlers toleran fallos (leads se siguen guardando en Redis).
+- **Upstash Redis** (KV): conectado via `KV_REST_API_URL/TOKEN` o
+  `UPSTASH_REDIS_REST_URL/TOKEN` (ambos soportados — ver
+  `src/lib/kv.ts`). Se usa para leads y overrides de descargas.
+- **Vercel Blob**: `BLOB_READ_WRITE_TOKEN`. Usado por
+  `/admin/descargas` para subir archivos grandes (> 4.5 MB) desde
+  cliente evitando el límite de serverless functions.
+- **SpecParts API**: `SPECPARTS_CLIENT_ID/SECRET`. Cliente del catálogo.
+- **Google Analytics 4**: `G-FR8KN76LQ2` (mismo que el sitio viejo).
+- **Admin**: login con `ADMIN_PASSWORD`.
+- **WhatsApp**: mensaje pre-cargado en todas las páginas.
 
 ## Pendientes y decisiones abiertas
 
-1. **🚨 Login / cuenta corriente / descarga de facturas**: en la primera
-   conversación la cliente dijo que quería replicar estas features, pero el
-   sitio público no las tiene. **Sigue sin aclarar si están en
-   `griffo.specparts.shop` (catálogo externo, fuera de alcance) o si son una
-   feature nueva a construir**. Si vuelve a pedir "seguimos con la plata del
-   proyecto", preguntar primero.
-2. **Conectar `/api/contacto` y `/api/newsletter`** a un proveedor real (Brevo,
-   Mailgun, SMTP) cuando la cliente tenga una cuenta.
-3. **Optimizar imágenes**: varios archivos de empresa pesan 2-9 MB. En algún
-   momento pasarlos por compresor (TinyPNG, squoosh) y bajar el peso.
-4. **Página de Garantía, Descargas, Novedades**: esperan HTML del sitio viejo.
-5. **Data del Excel de distribuidores**: hay 7 filas con `Provincia para filtro
-   = "Distribuidores"` que se reasignaron heurísticamente a Tucumán. Verificar.
+1. **🚨 Login / cuenta corriente / descarga de facturas**: la cliente
+   mencionó en la primera conversación replicar estas features, pero
+   el sitio público no las tiene. Sin aclarar si están en
+   `griffo.specparts.shop` (fuera de alcance) o si es feature nueva.
+   Preguntar antes de implementar si lo vuelve a pedir.
+2. **Parque automotor circulante** para `/admin/cobertura`: hoy solo
+   detecta huecos en vehículos que Griffo YA cubre. Preguntarle a
+   SpecParts si expone `/vehicle/list` o conseguir base externa
+   (ADEFA, ACARA).
+3. **Analytics de búsqueda**: loguear queries del catálogo que dan
+   cero resultados. Complemento natural de la matriz de cobertura.
+4. **Página de Garantía, Novedades**: esperan HTML del sitio viejo.
+5. **Data del Excel de distribuidores**: 7 filas con `Provincia para
+   filtro = "Distribuidores"` se reasignaron heurísticamente a
+   Tucumán. Verificar con la cliente.
+6. **Verificar dominio en Resend**: hoy manda desde
+   `onboarding@resend.dev`. Cuando se verifique `griffo.com.ar`,
+   cambiar el sender.
 
 ## Git / commits
 
