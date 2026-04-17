@@ -147,6 +147,63 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 - `/novedades/*`: **stubs** con ComingSoon. Los redirects 301 de
   `/noticias/*` mandan todo acá — cuando tengamos el HTML del sitio
   viejo, armamos contenido real.
+- `/cuenta/*`: **portal B2B en modo demo** (datos mock). Ver sección
+  "Portal B2B (/cuenta/*)" más abajo.
+
+## Portal B2B (`/cuenta/*`)
+
+Portal para clientes mayoristas (~80 distribuidores). Consume la API
+del ERP Griffo (middleware sobre Bejerman) documentada en
+`reference/bejerman/`. Cliente HTTP en `src/lib/api/bejerman.ts`,
+tipos en `src/types/bejerman.ts`.
+
+### Estado actual
+
+**Scaffolding armado, auth real pendiente.** Todas las páginas se
+renderizan con datos mock (`src/data/mock-b2b.ts`) para que la
+cliente valide diseño y flujo. Cuando haya:
+
+1. Credenciales válidas del ERP cargadas en Vercel
+   (`BEJERMAN_EMAIL` / `BEJERMAN_PASSWORD`).
+2. Proyecto Firebase nuevo creado y configurado (no reusar
+   `griffo-app` — decisión de la cliente el 2026-04-17).
+3. Vínculo user Firebase ↔ `client_id` de Bejerman (matcheo por email
+   contra `GET /ERP/Clients`).
+
+se reemplazan los imports de `mock-b2b.ts` por llamadas a las
+funciones de `src/lib/api/bejerman.ts` y el portal empieza a mostrar
+datos reales. Los shapes ya coinciden 1:1 con los tipos del ERP.
+
+### Estructura de rutas
+
+- `/cuenta/login` — form de login (sin auth real, submit redirige a
+  `/cuenta`). Route group `/cuenta/login/` fuera del grupo portal
+  para tener chrome propio.
+- `/cuenta/(portal)/layout.tsx` — encabezado con nombre del cliente +
+  sub-nav (`PortalNav` client component) + botón "Cerrar sesión".
+- `/cuenta/(portal)/page.tsx` → URL `/cuenta` — dashboard con KPIs,
+  accesos rápidos y últimos 3 pedidos.
+- `/cuenta/(portal)/pedidos/page.tsx` — tabla de pedidos.
+- `/cuenta/(portal)/facturas/page.tsx` — lista de FC con botón PDF.
+- `/cuenta/(portal)/cuenta-corriente/page.tsx` — KPIs + tabla de
+  movimientos con saldo running.
+- `/cuenta/(portal)/listas/page.tsx` — cards de descarga PDF/XLSX.
+
+### Acceso desde el sitio público
+
+CTA "Acceso clientes" en el header (`components/Header.tsx`) — pill
+amarilla accent al final del nav, linkea a `/cuenta/login`.
+
+### Badges y comentarios "🚧 Modo demo"
+
+Cada página tiene una línea al pie que indica qué endpoint de
+Bejerman la va a alimentar. Quitar cuando se haga el swap.
+
+### Admin `/admin/clientes`
+
+Server component que lee `getClients()` del ERP y los lista en una
+tabla. Protegido por el proxy admin estándar. Renderiza un error
+amigable si faltan `BEJERMAN_EMAIL`/`PASSWORD`.
 
 ## Catálogo de productos (SpecParts)
 
