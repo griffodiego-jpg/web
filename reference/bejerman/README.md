@@ -13,7 +13,7 @@ de ejemplo `mpinero@promotive.la`). Falta confirmar con la cliente.
 
 ## Conexión
 
-- **Base URL:** `http://griffo.stidns.net:86/api`
+- **Base URL:** `http://intranet.remotogriffo.com.ar:86/api`
 - ⚠️ **HTTP, no HTTPS.** El middleware no expone TLS. Implicancias:
   - Desde el navegador (código cliente) **NO se puede llamar** por mixed
     content (Vercel sirve HTTPS). Todas las llamadas van **server-side**
@@ -246,7 +246,7 @@ listamos con `ClientAccountStatus` y cada fila linkea a `GetComprobante`.
 ## Env vars
 
 ```
-BEJERMAN_API_URL=http://griffo.stidns.net:86/api
+BEJERMAN_API_URL=http://intranet.remotogriffo.com.ar:86/api
 BEJERMAN_EMAIL=           # usuario de la API de Griffo
 BEJERMAN_PASSWORD=        # contraseña del usuario de la API
 ```

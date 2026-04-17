@@ -25,7 +25,7 @@ import type {
   BejermanPriceRequest,
 } from "@/types/bejerman";
 
-const DEFAULT_BASE_URL = "http://griffo.stidns.net:86/api";
+const DEFAULT_BASE_URL = "http://intranet.remotogriffo.com.ar:86/api";
 const TOKEN_TTL_MS = 55 * 60 * 1000;
 
 type TokenCache = { token: string; expiresAt: number };
