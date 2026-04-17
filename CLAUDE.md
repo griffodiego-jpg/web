@@ -144,9 +144,10 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   de bases y condiciones, sección de Montadora con CTA "Registrar máquina",
   formulario de registro de máquina (`GarantiaForm` → `/api/garantia`)
   con contacto al lado.
-- `/novedades/*`: **stubs** con ComingSoon. Los redirects 301 de
-  `/noticias/*` mandan todo acá — cuando tengamos el HTML del sitio
-  viejo, armamos contenido real.
+- `/novedades`: **funcional**. Auto-detección desde SpecParts (productos
+  con `updated_at` dentro de los últimos 12 meses) como candidatos. Por
+  default nada se publica — el admin marca explícitamente cada código
+  como Lanzamiento o Nueva aplicación. Ver sección "Novedades".
 - `/cuenta/*`: **portal B2B en modo demo** (datos mock). Ver sección
   "Portal B2B (/cuenta/*)" más abajo.
 
@@ -518,6 +519,105 @@ Upload directo **cliente → Vercel Blob** usando `@vercel/blob/client`
 Fallback idempotente a `/api/admin/descargas/save` del cliente por si
 el webhook de Blob no alcanza en previews con protección.
 
+## Novedades (`/novedades`)
+
+Reemplazo nativo de `/noticias/*` del sitio viejo. Dos tipos:
+**Lanzamiento** (producto nuevo) y **Nueva aplicación** (se suma a
+productos existentes).
+
+### Data layer (`src/lib/novedades.ts`)
+
+Fuente de candidatos: **SpecParts** (`listCatalog()`), filtrando
+productos con `updated_at` dentro de los últimos 12 meses,
+`enabled=1` y `discontinued=0`.
+
+Nada se publica por defecto. El admin marca explícitamente:
+
+| Key Redis | Qué guarda |
+|---|---|
+| `novedades:tipo:<code>` | "lanzamiento" o "aplicacion" — si existe = publicada |
+| `novedades:hidden` (Set) | códigos ocultos (publicados pero no se muestran) |
+| `novedades:nuevos:<code>` (Set) | claves `BRAND:MODELO` marcadas como "Nuevo" dentro de una aplicación |
+
+`Novedad` enriquecida tiene `published: boolean` (true si tiene
+override de tipo), `tipo`, `hidden`, `nuevosVehiculos[]`,
+`ubicaciones` + `lados` (via `getDisplayApplication`), slug de
+destacado si aplica, slug del catálogo.
+
+**Migración legacy** (`migrateLegacyIfNeeded`): detecta si existe la
+key vieja `novedades:publicadas` (del primer diseño, lista con JSON) y
+la convierte al modelo nuevo (un `novedades:tipo:<code>` por entrada),
+después elimina la key vieja. Idempotente. Cacheada en memoria con
+flag `migrationDone` para no repetir el LRANGE.
+
+### Páginas públicas
+
+- `/novedades`: hub con tabs Todas / Lanzamientos / Nuevas aplicaciones
+  + contadores. Default: **Lanzamientos**. Grid 1/2/3 columnas (mobile/
+  md/xl) con `NovedadCard`.
+- `/novedades/lanzamientos` y `/novedades/aplicaciones`: mismo hub con
+  tab inicial distinto. Son los destinos de los redirects 301 desde
+  `/noticias/categoria/*` del sitio viejo.
+- `/novedades/[code]`: detalle individual (breadcrumb, imagen, descripción,
+  CTA al catálogo o al producto destacado, grid de vehículos por marca).
+
+El item del header "Novedades" es un link plano (sin dropdown) que va
+directo a `/novedades`.
+
+### `NovedadCard`
+
+Compacta — 3 columnas en xl para que entren muchas por pantalla.
+Header con badge de tipo + fecha. Imagen 96×96. Código en font-mono,
+título uppercase, línea en accent. Ubicación/Lado inline con reglas
+por línea.
+
+Chips de marca agrupando modelos (hasta 4 marcas con 3 modelos
+c/u). Si hay más, botón "Ver N más" o "Ver todos" abre
+`VehiclesModal`. La card mantiene colores neutros siempre —
+**ningún rojo en la card**.
+
+### `VehiclesModal` (compartido con el catálogo, extendido)
+
+Prop nueva opcional `nuevosKeys?: string[]`. Si un vehículo listado
+matchea una de esas claves:
+- Badge rojo **"NUEVO"** antes del modelo
+- Modelo + versión + años pintados en rojo
+- Cabecera de la marca se pinta en rojo si tiene al menos un nuevo
+
+El catálogo no pasa `nuevosKeys` → render igual que antes.
+
+### Admin (`/admin/novedades`, dentro del grupo "Diseño de web")
+
+5 tabs: **Sin publicar** (default) / Publicadas / Lanzamientos /
+Nuevas aplicaciones / Ocultas. Buscador por código/título/línea.
+
+Por fila:
+- **Si no está publicada**: badge gris "Sin publicar" + 2 botones
+  grandes "Publicar Lanzamiento" (azul) / "Publicar Nueva aplicación"
+  (accent).
+- **Si está publicada**: badge del tipo + "Cambiar a ..." (toggle tipo)
+  + "Despublicar" (amarillo, borra el override, vuelve a "Sin publicar").
+- Para aplicaciones publicadas: botón adicional **"Vehículos nuevos (N)"**
+  que expande un panel con checkboxes por cada brand+model único del
+  producto. Guardar envía a `/api/admin/novedades/nuevos`.
+
+### APIs
+
+- `POST /api/admin/novedades/publicar` — `{ code, tipo }` → upsert
+  `novedades:tipo:<code>`. Valida contra SpecParts que el código exista.
+- `POST /api/admin/novedades/despublicar` — `{ code, action }` donde
+  action ∈ `"hide" | "unhide" | "unpublish"`. `unpublish` borra el
+  override de tipo.
+- `POST /api/admin/novedades/nuevos` — `{ code, keys[] }` → reemplaza
+  el set de vehículos marcados como nuevos.
+
+### Limitaciones conocidas
+
+- **Fecha de alta**: SpecParts solo expone `updated_at`. Si todas las
+  novedades aparecen con la misma fecha, es porque su backend hizo un
+  sync masivo reciente. La fecha real de alta (`created_at`) no está
+  en la API actual — habría que pedirle a SpecParts que la exponga.
+
 ## Leads y forms
 
 `src/lib/leads.ts` — guarda cada submit en una lista Redis (LPUSH).
@@ -636,7 +736,10 @@ exacto del servidor (no un genérico "Hubo un error") — ver
    (ADEFA, ACARA).
 3. **Analytics de búsqueda**: loguear queries del catálogo que dan
    cero resultados. Complemento natural de la matriz de cobertura.
-4. **Página de Garantía, Novedades**: esperan HTML del sitio viejo.
+4. **Contenido histórico de Novedades**: el módulo está armado y
+   conectado a SpecParts, pero si la cliente quiere preservar noticias
+   puntuales del sitio viejo (ej. "Nuevo pack de grasa Molykote") hay
+   que importarlas manual — SpecParts solo tiene productos.
 5. **Data del Excel de distribuidores**: 7 filas con `Provincia para
    filtro = "Distribuidores"` se reasignaron heurísticamente a
    Tucumán. Verificar con la cliente.
