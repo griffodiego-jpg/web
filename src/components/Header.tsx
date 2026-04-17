@@ -228,12 +228,13 @@ export function Header() {
               </li>
             );
           })}
-          {/* CTA destacado para portal B2B */}
-          <li className="lg:ml-2">
+          {/* CTA destacado para portal B2B — baseline alineado con el resto
+              del nav (mismo text-sm + pb-1 que los items normales) */}
+          <li className="lg:ml-3">
             <Link
               href="/cuenta/login"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-accent bg-accent lg:bg-transparent lg:hover:bg-accent text-primary lg:text-primary hover:text-white font-black text-xs uppercase tracking-wider transition whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border-2 border-accent bg-accent lg:bg-transparent lg:hover:bg-accent text-primary hover:text-white font-black text-sm uppercase tracking-wide transition whitespace-nowrap"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />

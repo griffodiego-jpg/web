@@ -9,6 +9,7 @@ const TABS = [
   { href: "/cuenta/facturas", label: "Facturas" },
   { href: "/cuenta/cuenta-corriente", label: "Cuenta corriente" },
   { href: "/cuenta/listas", label: "Lista de precios" },
+  { href: "/cuenta/perfil", label: "Mi perfil" },
 ];
 
 export function PortalNav() {

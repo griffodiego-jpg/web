@@ -23,9 +23,6 @@ export default function LoginPage() {
             <h1 className="text-2xl font-black text-[#0a2b3d]">
               Acceso clientes
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Portal para distribuidores mayoristas
-            </p>
           </div>
 
           <div className="mb-5 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
