@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AssetImage } from "@/components/AssetImage";
 import { AssetVideo } from "@/components/AssetVideo";
+import { DesarrolloForm } from "@/components/DesarrolloForm";
 
 export const metadata: Metadata = {
   title: "Desarrollo a medida",
@@ -118,6 +119,24 @@ export default function DesarrolloAMedidaPage() {
         </div>
       </section>
 
+      {/* CTA intermedio */}
+      <aside className="bg-primary py-10 px-5">
+        <div className="container mx-auto max-w-4xl text-center">
+          <h2 className="text-xl lg:text-2xl font-bold text-white">
+            ¿Tenés un proyecto en mente?
+          </h2>
+          <p className="mt-2 text-white/80">
+            Contanos qué pieza necesitás y te asesoramos sin compromiso.
+          </p>
+          <a
+            href="#consulta"
+            className="inline-flex items-center justify-center mt-5 px-8 py-2.5 uppercase bg-white text-primary font-bold rounded-full hover:bg-gray-100 transition"
+          >
+            Consultanos
+          </a>
+        </div>
+      </aside>
+
       {/* ISO 9001 — solo el texto, sin las piezas individuales */}
       <aside className="bg-primary/10 py-12">
         <div className="container mx-auto max-w-4xl px-5">
@@ -147,18 +166,44 @@ export default function DesarrolloAMedidaPage() {
         </ul>
       </aside>
 
-      {/* CTA FINAL */}
-      <aside className="bg-black py-12 px-5 grid place-items-center gap-6">
-        <h2 className="text-2xl lg:text-3xl font-bold text-center text-white">
-          ¿Necesitás un desarrollo en caucho?
-        </h2>
-        <Link
-          href="/contacto"
-          className="inline-flex items-center justify-center gap-5 px-10 py-2.5 uppercase bg-primary text-white text-center font-bold rounded-full border border-primary hover:bg-white hover:text-primary transition-all duration-300"
-        >
-          Contactanos
-        </Link>
-      </aside>
+      {/* FORMULARIO DE CONSULTA ESPECÍFICO */}
+      <section
+        id="consulta"
+        className="bg-gray-50 py-14 scroll-mt-20"
+      >
+        <div className="container mx-auto max-w-6xl px-5">
+          <div className="grid lg:grid-cols-[1fr_1.2fr] gap-10 items-start">
+            <div>
+              <h2 className="text-2xl lg:text-3xl font-black text-[#0a2b3d]">
+                ¿Tenés un proyecto en mente?
+              </h2>
+              <p className="mt-3 text-gray-600 leading-relaxed">
+                Contanos qué pieza necesitás y te asesoramos sin compromiso.
+                Podés adjuntar un plano, foto o PDF de referencia.
+              </p>
+              <ul className="mt-6 space-y-3 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">✓</span>
+                  Respuesta en menos de 48 hs hábiles
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">✓</span>
+                  Asesoramiento técnico gratuito
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">✓</span>
+                  Más de 50 años de experiencia en caucho moldeado
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">✓</span>
+                  Certificación ISO 9001
+                </li>
+              </ul>
+            </div>
+            <DesarrolloForm />
+          </div>
+        </div>
+      </section>
     </>
   );
 }
