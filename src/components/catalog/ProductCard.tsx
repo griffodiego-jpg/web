@@ -9,8 +9,10 @@ import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getMercadoLibreUrl } from "@/lib/catalog/utils";
 import { getDisplayApplication } from "@/lib/catalog/display";
+import { useMockSession } from "@/lib/mock-session";
 
 import { VehiclesModal } from "./VehiclesModal";
+import { AddToCartButton } from "./AddToCartButton";
 
 type ProductCardProps = {
   product: CatalogProduct;
@@ -19,6 +21,7 @@ type ProductCardProps = {
 export function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
+  const { isLoggedIn } = useMockSession();
 
   const primaryImage = product.pictures?.[0]?.image_url;
   const meliUrl = getMercadoLibreUrl(product);
@@ -132,7 +135,15 @@ export function ProductCard({ product }: ProductCardProps) {
             >
               Ver detalle →
             </Link>
-            {meliUrl ? (
+            {isLoggedIn ? (
+              <AddToCartButton
+                productCode={product.code}
+                slug={product.slug}
+                name={product.product}
+                image={primaryImage}
+                compact
+              />
+            ) : meliUrl ? (
               <a
                 href={meliUrl}
                 target="_blank"

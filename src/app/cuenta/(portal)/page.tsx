@@ -4,27 +4,18 @@ import {
   formatARS,
   formatDate,
   mockAccountStatus,
-  mockCurrentClient,
   mockOrders,
 } from "@/data/mock-b2b";
 
-export default function DashboardPage() {
+export const metadata = { title: "Resumen" };
+
+export default function ResumenPage() {
   const saldo = computeSaldo(mockAccountStatus);
   const facturas = mockAccountStatus.filter((x) => x.comp === "FC");
   const ultimoPedido = mockOrders[0];
-  const firstName = mockCurrentClient.name.split(" ")[0];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-black text-[#0a2b3d]">
-          Hola, {firstName}
-        </h2>
-        <p className="text-gray-600 mt-1">
-          Este es un resumen rápido de tu cuenta.
-        </p>
-      </div>
-
       {/* Quick stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard

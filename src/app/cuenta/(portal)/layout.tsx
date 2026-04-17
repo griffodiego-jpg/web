@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PortalNav } from "@/components/cuenta/PortalNav";
+import { CerrarSesionButton } from "@/components/cuenta/CerrarSesionButton";
 import { mockCurrentClient } from "@/data/mock-b2b";
 
 export const metadata: Metadata = {
@@ -32,12 +33,7 @@ export default function PortalLayout({
               <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900">
                 🚧 Modo demo
               </span>
-              <a
-                href="/"
-                className="text-sm text-gray-600 hover:text-[#0a2b3d] transition px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50"
-              >
-                Cerrar sesión
-              </a>
+              <CerrarSesionButton />
             </div>
           </div>
           <PortalNav />

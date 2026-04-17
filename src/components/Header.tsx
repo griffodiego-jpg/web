@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { navigation, type NavItem } from "@/lib/site-config";
 import { Logo } from "@/components/Logo";
+import { CartIndicator } from "@/components/cart/CartIndicator";
 
 /**
  * Determina si un item del nav está activo según el pathname actual.
@@ -128,31 +129,32 @@ export function Header() {
                   onMouseEnter={() => setOpenDropdown(item.label)}
                   onMouseLeave={() => setOpenDropdown(null)}
                 >
-                  {/* El texto es un link que navega a la página resumen.
-                      El dropdown se abre por hover (desktop) o por click
-                      en la flechita (mobile). */}
-                  <div className={`${linkCls} flex items-center gap-1`}>
-                    <Link
-                      href={item.href}
-                      onClick={() => {
-                        setOpen(false);
-                        setOpenDropdown(null);
-                      }}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      {item.label}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenDropdown((v) =>
-                          v === item.label ? null : item.label
-                        )
-                      }
-                      aria-expanded={isOpen}
-                      aria-label={`Desplegar ${item.label}`}
-                      className="lg:hidden p-1 cursor-pointer"
-                    >
+                  {/* Link principal con exactamente el mismo shape que los
+                      items sin hijos — así el baseline queda alineado.
+                      El botón del chevron se muestra solo en mobile,
+                      posicionado absolute para no romper el flujo. */}
+                  <Link
+                    href={item.href}
+                    onClick={() => {
+                      setOpen(false);
+                      setOpenDropdown(null);
+                    }}
+                    aria-current={active ? "page" : undefined}
+                    className={linkCls}
+                  >
+                    {item.label}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenDropdown((v) =>
+                        v === item.label ? null : item.label
+                      )
+                    }
+                    aria-expanded={isOpen}
+                    aria-label={`Desplegar ${item.label}`}
+                    className="lg:hidden absolute right-0 top-0 p-1 cursor-pointer text-white"
+                  >
                     <svg
                       width="12"
                       height="12"
@@ -170,8 +172,7 @@ export function Header() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    </button>
-                  </div>
+                  </button>
                   {/* pt-3 en desktop: padding transparente que actúa como "puente"
                       entre el botón y el dropdown — evita que onMouseLeave dispare
                       al mover el mouse en el gap. El bg del dropdown empieza en
@@ -228,9 +229,10 @@ export function Header() {
               </li>
             );
           })}
-          {/* CTA destacado para portal B2B — baseline alineado con el resto
-              del nav (mismo text-sm + pb-1 que los items normales) */}
-          <li className="lg:ml-3">
+          {/* CTAs de B2B: acceso clientes + carrito. Se renderizan en su
+              propia fila (items-center) para que el baseline quede parejo
+              con los items de texto del nav principal. */}
+          <li className="lg:ml-3 flex items-center gap-2">
             <Link
               href="/cuenta/login"
               onClick={() => setOpen(false)}
@@ -242,6 +244,7 @@ export function Header() {
               </svg>
               Acceso clientes
             </Link>
+            <CartIndicator onClick={() => setOpen(false)} />
           </li>
         </ul>
       </nav>
