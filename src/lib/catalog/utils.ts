@@ -142,6 +142,8 @@ export type MeasureRow = {
   diamMayorNum: number | null;
   largoNum: number | null;
   productSlug: string;
+  imageUrl: string | null;
+  productName: string;
 };
 
 function isFuelleDireccion(p: SpecPartsProduct): boolean {
@@ -197,6 +199,8 @@ function buildMeasureRow(p: SpecPartsProduct, codeOverride?: string): MeasureRow
     diamMenorNum: toNumber(diamMenor),
     largoNum: toNumber(largo),
     productSlug: p.slug,
+    imageUrl: p.pictures?.[0]?.image_url ?? null,
+    productName: p.product || p.description || "",
   };
 }
 

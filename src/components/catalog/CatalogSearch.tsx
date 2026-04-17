@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 
 import type { CatalogProduct, SpecPartsPlateResponse } from "@/types/specparts";
@@ -25,6 +25,7 @@ import {
 } from "@/lib/catalog/filters";
 
 import { FiltersSidebar } from "./FiltersSidebar";
+import { ImageLightbox } from "./ImageLightbox";
 import { ProductCard } from "./ProductCard";
 
 type TabKey = "palabra" | "patente" | "vehiculo" | "codigo" | "medidas";
@@ -40,6 +41,40 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const STICKY_TOP = "top-[60px]";
+const STORAGE_KEY = "griffo-catalog-state";
+
+type PersistedState = {
+  tab: TabKey;
+  keyword: string;
+  plate: string;
+  code: string;
+  brand: string;
+  model: string;
+  year: string;
+  measureType: MeasureType;
+  filters: {
+    linea: string[];
+    tipo: string[];
+    ubicacion: string[];
+    lado: string[];
+    marca: string[];
+    modelo: string[];
+  };
+};
+
+const VALID_TABS: TabKey[] = ["palabra", "patente", "vehiculo", "codigo", "medidas"];
+const VALID_MEASURES: MeasureType[] = ["direccion", "transmision", "tope"];
+
+function loadPersistedState(): Partial<PersistedState> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as PersistedState;
+  } catch {
+    return null;
+  }
+}
 
 export function CatalogSearch({ products }: Props) {
   const [tab, setTab] = useState<TabKey>("palabra");
@@ -57,6 +92,8 @@ export function CatalogSearch({ products }: Props) {
   const [code, setCode] = useState("");
   const [measureType, setMeasureType] = useState<MeasureType>("direccion");
 
+  const hydrated = useRef(false);
+
   const vehicleTree = useMemo(() => buildVehicleTree(products), [products]);
 
   const onToggleFilter = useCallback((group: FilterGroup, value: string) => {
@@ -64,25 +101,97 @@ export function CatalogSearch({ products }: Props) {
   }, []);
   const onClearFilters = useCallback(() => setFilters(emptyFilters()), []);
 
-  const searchPlate = (plateValue: string) => {
-    const q = plateValue.trim().toUpperCase();
-    if (!q) return;
-    setPlateError(null);
-    setPlateVehicle(null);
-    startPlateTransition(async () => {
-      try {
-        const res = await fetch(`/api/catalog/plate?plate=${encodeURIComponent(q)}`);
-        const data = (await res.json()) as SpecPartsPlateResponse;
-        if (!res.ok || data.error || !data.brand) {
-          setPlateError(data.error || "No se encontró vehículo para esa patente");
-          return;
+  const searchPlate = useCallback(
+    (plateValue: string) => {
+      const q = plateValue.trim().toUpperCase();
+      if (!q) return;
+      setPlateError(null);
+      setPlateVehicle(null);
+      startPlateTransition(async () => {
+        try {
+          const res = await fetch(`/api/catalog/plate?plate=${encodeURIComponent(q)}`);
+          const data = (await res.json()) as SpecPartsPlateResponse;
+          if (!res.ok || data.error || !data.brand) {
+            setPlateError(data.error || "No se encontró vehículo para esa patente");
+            return;
+          }
+          setPlateVehicle(data);
+        } catch (err) {
+          setPlateError(err instanceof Error ? err.message : "Error al buscar la patente");
         }
-        setPlateVehicle(data);
-      } catch (err) {
-        setPlateError(err instanceof Error ? err.message : "Error al buscar la patente");
-      }
-    });
-  };
+      });
+    },
+    [startPlateTransition],
+  );
+
+  /**
+   * Hidratación: al montar en el cliente, restaura el estado guardado
+   * en sessionStorage. Así al volver atrás desde una page de producto,
+   * el usuario encuentra sus filtros y búsqueda intactos.
+   */
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+    const saved = loadPersistedState();
+    if (!saved) return;
+
+    if (saved.tab && VALID_TABS.includes(saved.tab)) setTab(saved.tab);
+    if (typeof saved.keyword === "string") setKeyword(saved.keyword);
+    if (typeof saved.plate === "string") setPlate(saved.plate);
+    if (typeof saved.code === "string") setCode(saved.code);
+    if (typeof saved.brand === "string") setBrand(saved.brand);
+    if (typeof saved.model === "string") setModel(saved.model);
+    if (typeof saved.year === "string") setYear(saved.year);
+    if (saved.measureType && VALID_MEASURES.includes(saved.measureType)) {
+      setMeasureType(saved.measureType);
+    }
+    if (saved.filters) {
+      setFilters({
+        linea: new Set(saved.filters.linea ?? []),
+        tipo: new Set(saved.filters.tipo ?? []),
+        ubicacion: new Set(saved.filters.ubicacion ?? []),
+        lado: new Set(saved.filters.lado ?? []),
+        marca: new Set(saved.filters.marca ?? []),
+        modelo: new Set(saved.filters.modelo ?? []),
+      });
+    }
+    // Si el usuario estaba en tab=patente con plate, re-disparamos la búsqueda
+    // (el vehículo identificado no se persiste — se vuelve a pedir a la API).
+    if (saved.tab === "patente" && typeof saved.plate === "string" && saved.plate.trim()) {
+      searchPlate(saved.plate);
+    }
+  }, [searchPlate]);
+
+  /**
+   * Persistencia: cada vez que cambia algo relevante, guardamos snapshot.
+   * Sets se serializan como arrays. plateVehicle no se guarda (se re-fetcha).
+   */
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const snapshot: PersistedState = {
+      tab,
+      keyword,
+      plate,
+      code,
+      brand,
+      model,
+      year,
+      measureType,
+      filters: {
+        linea: [...filters.linea],
+        tipo: [...filters.tipo],
+        ubicacion: [...filters.ubicacion],
+        lado: [...filters.lado],
+        marca: [...filters.marca],
+        modelo: [...filters.modelo],
+      },
+    };
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // sessionStorage puede fallar en modo privado con cuotas agotadas — silencio
+    }
+  }, [tab, keyword, plate, code, brand, model, year, measureType, filters]);
 
   /* --- Base results por tab (antes de aplicar filtros del sidebar) --- */
   const tabState = useMemo(() => {
@@ -530,6 +639,7 @@ type SortCol = "diamMenor" | "diamMayor" | "largo" | "code";
 function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: MeasureType }) {
   const [sortCol, setSortCol] = useState<SortCol>("diamMenor");
   const [sortAsc, setSortAsc] = useState(true);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
   const rows = useMemo(() => buildMeasureRows(products, type), [products, type]);
   const sorted = useMemo(() => {
@@ -560,41 +670,59 @@ function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: M
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-xs text-gray-500">
-        <span className="font-bold text-[#0a2b3d]">{sorted.length}</span>{" "}
-        {sorted.length === 1 ? "producto" : "productos"}
-      </p>
-      <div className="overflow-x-auto rounded-lg border border-gray-100">
-        <table className="min-w-full text-xs">
-          <thead className="bg-primary text-white">
-            <tr>
-              <Th onClick={() => onSort("diamMenor")} active={sortCol === "diamMenor"} asc={sortAsc}>
-                Diám. Menor
-              </Th>
-              <Th onClick={() => onSort("diamMayor")} active={sortCol === "diamMayor"} asc={sortAsc}>
-                Diám. Mayor
-              </Th>
-              <Th onClick={() => onSort("largo")} active={sortCol === "largo"} asc={sortAsc}>
-                Largo
-              </Th>
-              <Th onClick={() => onSort("code")} active={sortCol === "code"} asc={sortAsc}>
-                Código
-              </Th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((row) => (
-              <MeasureRowView key={`${type}-${row.code}`} row={row} />
-            ))}
-          </tbody>
-        </table>
+    <>
+      <div className="flex flex-col gap-3">
+        <p className="text-xs text-gray-500">
+          <span className="font-bold text-[#0a2b3d]">{sorted.length}</span>{" "}
+          {sorted.length === 1 ? "producto" : "productos"}
+        </p>
+        <div className="overflow-x-auto rounded-lg border border-gray-100">
+          <table className="min-w-full text-xs">
+            <thead className="bg-primary text-white">
+              <tr>
+                <Th onClick={() => onSort("diamMenor")} active={sortCol === "diamMenor"} asc={sortAsc}>
+                  Diám. Menor
+                </Th>
+                <Th onClick={() => onSort("diamMayor")} active={sortCol === "diamMayor"} asc={sortAsc}>
+                  Diám. Mayor
+                </Th>
+                <Th onClick={() => onSort("largo")} active={sortCol === "largo"} asc={sortAsc}>
+                  Largo
+                </Th>
+                <Th onClick={() => onSort("code")} active={sortCol === "code"} asc={sortAsc}>
+                  Código
+                </Th>
+                <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wide">
+                  Foto
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((row) => (
+                <MeasureRowView
+                  key={`${type}-${row.code}`}
+                  row={row}
+                  onImageClick={(src, alt) => setLightbox({ src, alt })}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+      {lightbox ? (
+        <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
+      ) : null}
+    </>
   );
 }
 
-function MeasureRowView({ row }: { row: MeasureRow }) {
+function MeasureRowView({
+  row,
+  onImageClick,
+}: {
+  row: MeasureRow;
+  onImageClick: (src: string, alt: string) => void;
+}) {
   return (
     <tr className="border-b border-gray-50 transition hover:bg-primary/5">
       <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMenor || "—"}</td>
@@ -607,6 +735,26 @@ function MeasureRowView({ row }: { row: MeasureRow }) {
         >
           {row.code}
         </Link>
+      </td>
+      <td className="px-3 py-1.5 text-right">
+        {row.imageUrl ? (
+          <button
+            type="button"
+            onClick={() => onImageClick(row.imageUrl!, row.productName || row.code)}
+            aria-label={`Ampliar foto del producto ${row.code}`}
+            className="inline-block overflow-hidden rounded border border-gray-200 bg-white p-1 transition hover:border-accent hover:shadow-sm"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={row.imageUrl}
+              alt={row.productName || row.code}
+              loading="lazy"
+              className="h-10 w-10 object-contain"
+            />
+          </button>
+        ) : (
+          <span className="text-[10px] text-gray-300">—</span>
+        )}
       </td>
     </tr>
   );

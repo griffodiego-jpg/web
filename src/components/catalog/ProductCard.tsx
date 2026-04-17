@@ -65,10 +65,16 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           </Link>
 
-          {vehicleSummary ? (
+          {vehicleSummary.length > 0 ? (
             <p className="text-[11px] leading-snug text-gray-600 line-clamp-4">
               <span className="font-semibold text-gray-500">Descripción: </span>
-              {vehicleSummary}
+              {vehicleSummary.map((entry, i) => (
+                <span key={entry.brand}>
+                  <strong className="font-bold text-[#0a2b3d]">{entry.brand}</strong>
+                  {` (${entry.models.join(" - ")})`}
+                  {i < vehicleSummary.length - 1 ? ", " : ""}
+                </span>
+              ))}
             </p>
           ) : null}
 
@@ -126,13 +132,15 @@ export function ProductCard({ product }: ProductCardProps) {
   );
 }
 
+type BrandSummary = { brand: string; models: string[] };
+
 /**
- * Resumen compacto de vehículos: agrupa por marca y muestra los modelos únicos.
- * Formato: "FORD (KUGA - RANGER), CHEVROLET (S-10), TOYOTA (COROLLA - HILUX)".
- * Reproduce la convención del sitio anterior de Griffo.
+ * Resumen compacto de vehículos: agrupa por marca y devuelve los modelos únicos.
+ * Reproduce el formato del sitio anterior de Griffo para renderizar luego como
+ * "FORD (KUGA - RANGER), CHEVROLET (S-10)" con la marca en negrita.
  */
-function buildVehicleSummary(vehicles: SpecPartsVehicle[]): string {
-  if (!vehicles.length) return "";
+function buildVehicleSummary(vehicles: SpecPartsVehicle[]): BrandSummary[] {
+  if (!vehicles.length) return [];
 
   const byBrand = new Map<string, Set<string>>();
   for (const v of vehicles) {
@@ -144,10 +152,8 @@ function buildVehicleSummary(vehicles: SpecPartsVehicle[]): string {
     byBrand.get(brand)!.add(model);
   }
 
-  return Array.from(byBrand.entries())
-    .map(([brand, models]) => {
-      const sorted = Array.from(models).sort();
-      return `${brand} (${sorted.join(" - ")})`;
-    })
-    .join(", ");
+  return Array.from(byBrand.entries()).map(([brand, models]) => ({
+    brand,
+    models: Array.from(models).sort(),
+  }));
 }
