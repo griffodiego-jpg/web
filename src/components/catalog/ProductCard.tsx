@@ -20,9 +20,30 @@ export function ProductCard({ product }: ProductCardProps) {
   const meliUrl = getMercadoLibreUrl(product);
 
   const locations = getProductLocations(product);
-  const sides = getAttrValues(product, "lado").filter((v) => !locations.includes(v));
-  const locationText = locations.join(", ");
-  const sideText = sides.join(sides.length === 2 ? " y " : ", ");
+  const allSides = getAttrValues(product, "lado").filter((v) => !locations.includes(v));
+
+  // Tratamiento por línea: en Suspensión el Lado izq/der no aporta, lo escondemos.
+  // En Dirección, izq/der ES la ubicación principal — lo movemos a Ubicación.
+  const category = (product.category || "").toLowerCase();
+  const isSuspension = category.includes("susp");
+  const isDireccion = category.includes("direc");
+
+  const displayLocations: string[] = [...locations];
+  let displaySides: string[] = allSides;
+
+  if (isSuspension) {
+    displaySides = displaySides.filter((s) => !isIzqDer(s));
+  }
+  if (isDireccion) {
+    const izqDer = displaySides.filter(isIzqDer);
+    displaySides = displaySides.filter((s) => !isIzqDer(s));
+    for (const s of izqDer) {
+      if (!displayLocations.includes(s)) displayLocations.push(s);
+    }
+  }
+
+  const locationText = displayLocations.join(", ");
+  const sideText = displaySides.join(displaySides.length === 2 ? " y " : ", ");
 
   const vehicles = product.vehicles ?? [];
   const vehicleSummary = useMemo(() => buildVehicleSummary(vehicles), [vehicles]);
@@ -131,6 +152,15 @@ export function ProductCard({ product }: ProductCardProps) {
       />
     </>
   );
+}
+
+function isIzqDer(value: string): boolean {
+  const norm = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  return /^(izquier|derech|izq\b|der\b)/.test(norm);
 }
 
 type BrandSummary = { brand: string; models: string[] };
