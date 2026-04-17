@@ -39,14 +39,7 @@ export type NavItem = {
 
 export const navigation: NavItem[] = [
   { label: "Empresa", href: "/empresa" },
-  {
-    label: "Novedades",
-    href: "/novedades",
-    children: [
-      { label: "Lanzamientos", href: "/novedades/lanzamientos" },
-      { label: "Nuevas aplicaciones", href: "/novedades/aplicaciones" },
-    ],
-  },
+  { label: "Novedades", href: "/novedades" },
   { label: "Catálogo", href: "/catalogo" },
   { label: "Descargas", href: "/catalogo/download" },
   {

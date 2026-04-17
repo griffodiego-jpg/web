@@ -16,5 +16,5 @@ export const runtime = "nodejs";
 
 export default async function NovedadesPage() {
   const novedades = await listNovedades();
-  return <NovedadesHub novedades={novedades} initialTipo="todas" />;
+  return <NovedadesHub novedades={novedades} initialTipo="lanzamiento" />;
 }
