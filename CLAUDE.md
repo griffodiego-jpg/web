@@ -90,8 +90,6 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 - `components/Header.tsx` — sticky, nav con dropdowns, estado activo.
 - `components/Footer.tsx` — 3 columnas de nav + dirección + redes.
 - `components/Logo.tsx` — real SVG con fallback.
-- `components/TopBar.tsx` — existe pero **no se usa** en layout actual (sacada
-  a pedido de la cliente).
 - `components/TrustStrip.tsx` — franja de 4 credenciales (Garantía, ISO 1968,
   50+). Usa inline SVG icons. Se muestra en la home entre el banner y las cards.
 - `components/BuscadorPatenteBanner.tsx` — banner principal de la home, SVG
@@ -341,7 +339,8 @@ Diseño actual (`src/lib/admin-auth.ts`):
 - **Sin salt hardcodeado**: ADMIN_SALT del diseño anterior desaparece
   — los session IDs son random puros, no hay hash que saltear.
 
-Middleware (`src/middleware.ts`, corre en **Edge**):
+Proxy (`src/proxy.ts`, corre en **Edge** — antes `middleware.ts`,
+renombrado por Next.js 16):
 
 - Lista blanca de paths exentos: `/admin/login`, `/api/admin/login`,
   `/api/admin/descargas/upload` (último recibe webhooks firmados de
@@ -391,7 +390,7 @@ Grupos:
 
 ### API admin (`/api/admin/*`)
 
-Protegido por middleware (excepto la whitelist descrita arriba).
+Protegido por el proxy (excepto la whitelist descrita arriba).
 
 - `login/route.ts` — valida password (timingSafeEqual), rate-limit por
   IP, `createSession()` → setea cookie.

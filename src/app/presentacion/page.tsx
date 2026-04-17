@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AssetImage } from "@/components/AssetImage";
+import {
+  BreadcrumbJsonLd,
+  ItemListJsonLd,
+} from "@/components/StructuredData";
 import { productosDetalle } from "@/data/productos";
 import { resolveDescargas } from "@/lib/descargas-store";
 import { navigation, siteConfig } from "@/lib/site-config";
@@ -56,8 +60,34 @@ export default async function PresentacionPage() {
     "Hola, estoy escaneando el QR de Griffo y tengo una consulta."
   )}`;
 
+  // Items para JSON-LD — coinciden 1:1 con las cards visibles.
+  const itemListProductos = productosDestacados.map((p) => {
+    const slug = p.href.split("/").pop()!;
+    const detalle = productosDetalle[slug];
+    return {
+      name: p.label,
+      url: p.href,
+      image: detalle?.image,
+    };
+  });
+
   return (
     <>
+      {/* JSON-LD: Breadcrumb (Home → Presentación) + ItemList con los
+          productos destacados, para que Google entienda esto como un
+          listado y muestre rich snippets. */}
+      <BreadcrumbJsonLd
+        items={[
+          { label: "Inicio", url: "/" },
+          { label: "Presentación", url: "/presentacion" },
+        ]}
+      />
+      <ItemListJsonLd
+        name="Productos destacados Griffo"
+        description="Productos Griffo listados en la página de presentación."
+        items={itemListProductos}
+      />
+
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary-dark text-white">
         <div className="absolute inset-0 opacity-10" aria-hidden>

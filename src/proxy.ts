@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
+ * Proxy (antes "middleware") — Next.js 16 renombró el file convention
+ * de `middleware.ts` a `proxy.ts`. Comportamiento idéntico.
+ *
  * Guard de /admin/* y /api/admin/*.
  *
  * Valida la cookie contra Redis (sesiones reales, revocables). Si no
@@ -50,7 +53,7 @@ function getRedisEdge(): Redis | null {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isExempt(pathname)) {
