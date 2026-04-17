@@ -95,34 +95,13 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
               {shownBrands.map((g) => (
                 <li
                   key={g.brand}
-                  className={`inline-flex items-start gap-1 text-xs rounded-md px-2 py-1 max-w-full ${
-                    g.hasNuevo ? "bg-red-50 border border-red-200" : "bg-gray-100"
-                  }`}
+                  className="inline-flex items-start gap-1 text-xs bg-gray-100 rounded-md px-2 py-1 max-w-full"
                 >
-                  {g.hasNuevo && (
-                    <span className="inline-flex items-center rounded bg-red-600 text-white px-1 text-[9px] font-black uppercase tracking-wide shrink-0">
-                      Nueva
-                    </span>
-                  )}
                   <span className="font-bold text-[#0a2b3d] shrink-0">
                     {g.brand}
                   </span>
                   <span className="text-gray-600 truncate">
-                    (
-                    {g.models.slice(0, 3).map((m, i) => (
-                      <span key={m.name}>
-                        {i > 0 && " · "}
-                        <span
-                          className={
-                            m.isNew
-                              ? "text-red-700 font-bold"
-                              : undefined
-                          }
-                        >
-                          {m.name}
-                        </span>
-                      </span>
-                    ))}
+                    ({g.models.slice(0, 3).map((m) => m.name).join(" · ")}
                     {g.models.length > 3 ? ` +${g.models.length - 3}` : ""})
                   </span>
                 </li>
@@ -179,6 +158,7 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
           sold_from_year: v.sold_from_year ?? 0,
           sold_until_year: v.sold_until_year ?? 0,
         }))}
+        nuevosKeys={novedad.nuevosVehiculos}
       />
     </>
   );
