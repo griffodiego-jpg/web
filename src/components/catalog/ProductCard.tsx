@@ -62,19 +62,6 @@ export function ProductCard({ product }: ProductCardProps) {
               Destacado
             </span>
           ) : null}
-          {meliUrl ? (
-            <a
-              href={meliUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title="Comprar en MercadoLibre"
-              aria-label="Comprar en MercadoLibre"
-              className="absolute right-2 top-2 z-10 inline-flex h-7 items-center gap-1 rounded-md bg-[#FFE600] px-2 text-[9px] font-black uppercase tracking-widest text-[#333] shadow-sm transition hover:brightness-95"
-            >
-              ML <span className="text-[10px]">↗</span>
-            </a>
-          ) : null}
           {primaryImage ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -136,13 +123,26 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           ) : null}
 
-          <Link
-            href={detailHref}
-            onClick={(e) => e.stopPropagation()}
-            className="mt-auto pt-2 text-[11px] font-bold text-primary hover:text-primary-dark"
-          >
-            Ver detalle →
-          </Link>
+          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+            <Link
+              href={detailHref}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] font-bold text-primary hover:text-primary-dark"
+            >
+              Ver detalle →
+            </Link>
+            {meliUrl ? (
+              <a
+                href={meliUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded-md bg-[#FFE600] px-2 py-1 text-[10px] font-bold text-[#333] transition hover:brightness-95"
+              >
+                MercadoLibre <span>↗</span>
+              </a>
+            ) : null}
+          </div>
         </div>
       </article>
 
