@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ProductGallery } from "@/components/catalog/ProductGallery";
 import { BreadcrumbJsonLd, ProductJsonLd } from "@/components/StructuredData";
+import { getFeaturedSlug } from "@/data/featured-products";
 import { getProductBySlug, listCatalog } from "@/lib/api/specparts";
 import { getMercadoLibreUrl } from "@/lib/catalog/utils";
 import { SITE_URL } from "@/lib/site-url";
@@ -17,7 +18,11 @@ type Params = Promise<{ slug: string }>;
 export async function generateStaticParams() {
   try {
     const products = await listCatalog();
-    return products.map((p) => ({ slug: p.slug }));
+    // Los destacados tienen landing propia en /productos/[slug] — no pre-renderizamos
+    // sus rutas en /catalogo/[slug] para evitar duplicados de URLs en Google.
+    return products
+      .filter((p) => !getFeaturedSlug(p.code))
+      .map((p) => ({ slug: p.slug }));
   } catch {
     return [];
   }
@@ -51,6 +56,13 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
   const { slug } = await params;
   const product = await getProductBySlug(slug).catch(() => null);
   if (!product) notFound();
+
+  // Si alguien entra directo a /catalogo/<slug> y el producto es uno de los
+  // destacados, lo mandamos a su landing rica en /productos/<slug-destacado>.
+  const featuredSlug = getFeaturedSlug(product.code);
+  if (featuredSlug) {
+    redirect(`/productos/${featuredSlug}`);
+  }
 
   const primaryImage = product.pictures?.[0]?.image_url ?? "";
   const meliUrl = getMercadoLibreUrl(product);

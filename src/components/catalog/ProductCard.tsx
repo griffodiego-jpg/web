@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
+import { getFeaturedSlug } from "@/data/featured-products";
 import { getAttrValue, getMercadoLibreUrl } from "@/lib/catalog/utils";
 
 type ProductCardProps = {
@@ -26,12 +27,20 @@ export function ProductCard({ product }: ProductCardProps) {
   const visible = expanded ? vehicles : vehicles.slice(0, VISIBLE_VEHICLES);
   const hiddenCount = Math.max(0, vehicles.length - VISIBLE_VEHICLES);
 
-  const detailHref = `/catalogo/${product.slug}`;
+  const featuredSlug = getFeaturedSlug(product.code);
+  const detailHref = featuredSlug
+    ? `/productos/${featuredSlug}`
+    : `/catalogo/${product.slug}`;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white transition hover:border-accent hover:shadow-md">
       <Link href={detailHref} className="block">
         <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
+          {featuredSlug ? (
+            <span className="absolute left-2 top-2 z-10 rounded bg-primary px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm">
+              Destacado
+            </span>
+          ) : null}
           {primaryImage ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img

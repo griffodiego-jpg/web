@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getFeaturedSlug } from "@/data/featured-products";
 import { listCatalog } from "@/lib/api/specparts";
 import { navigation } from "@/lib/site-config";
 import { SITE_URL } from "@/lib/site-url";
@@ -40,12 +41,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let catalogRoutes: MetadataRoute.Sitemap = [];
   try {
     const products = await listCatalog();
-    catalogRoutes = products.map((p) => ({
-      url: `${SITE_URL}/catalogo/${p.slug}`,
-      lastModified: p.updated_at ? new Date(p.updated_at) : now,
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    }));
+    // Excluimos los productos destacados del sitemap del catálogo — viven en
+    // /productos/[slug] y ya se listan como `destacadosRoutes`.
+    catalogRoutes = products
+      .filter((p) => !getFeaturedSlug(p.code))
+      .map((p) => ({
+        url: `${SITE_URL}/catalogo/${p.slug}`,
+        lastModified: p.updated_at ? new Date(p.updated_at) : now,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      }));
   } catch {
     // Silencio: si SpecParts no responde, el sitemap mantiene las rutas estáticas.
   }
