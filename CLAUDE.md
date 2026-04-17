@@ -142,8 +142,13 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   con `site-config.ts` y `productos.ts`. La URL `griffo.com.ar/presentacion`
   está impresa en packaging — los QRs viejos van a hitear esta página
   al migrar el dominio.
-- `/garantia`, `/novedades/*`: **stubs** con ComingSoon. Esperan HTML
-  del sitio viejo.
+- `/garantia`: **completa**. Hero con "2 años de garantía" + link al PDF
+  de bases y condiciones, sección de Montadora con CTA "Registrar máquina",
+  formulario de registro de máquina (`GarantiaForm` → `/api/garantia`)
+  con contacto al lado.
+- `/novedades/*`: **stubs** con ComingSoon. Los redirects 301 de
+  `/noticias/*` mandan todo acá — cuando tengamos el HTML del sitio
+  viejo, armamos contenido real.
 
 ## Catálogo de productos (SpecParts)
 
