@@ -42,6 +42,12 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Formularios",
     items: [{ href: "/admin/leads", label: "Leads capturados", icon: "inbox" }],
   },
+  {
+    label: "Portal B2B",
+    items: [
+      { href: "/admin/clientes", label: "Clientes", icon: "users" },
+    ],
+  },
 ];
 
 export default function AdminLayout({
