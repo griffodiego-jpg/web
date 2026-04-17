@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import type { CatalogProduct, SpecPartsPlateResponse } from "@/types/specparts";
 import {
   buildMeasureRows,
   buildVehicleTree,
   filterByPlateVehicle,
+  indexProducts,
   searchByCode,
   searchByKeyword,
   searchByVehicle,
@@ -41,9 +43,62 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const STICKY_TOP = "top-[60px]";
-const STORAGE_KEY = "griffo-catalog-state";
+const VALID_TABS: TabKey[] = ["palabra", "patente", "vehiculo", "codigo", "medidas"];
+const VALID_MEASURES: MeasureType[] = ["direccion", "transmision", "tope"];
+const FILTER_GROUPS: FilterGroup[] = [
+  "linea",
+  "tipo",
+  "ubicacion",
+  "lado",
+  "marca",
+  "modelo",
+];
 
-type PersistedState = {
+/** Lee el estado inicial del catálogo desde los query params de la URL. */
+function readStateFromParams(sp: URLSearchParams) {
+  const tabParam = sp.get("tab");
+  const tab: TabKey =
+    tabParam && (VALID_TABS as string[]).includes(tabParam)
+      ? (tabParam as TabKey)
+      : "palabra";
+  const mtParam = sp.get("mt");
+  const measureType: MeasureType =
+    mtParam && (VALID_MEASURES as string[]).includes(mtParam)
+      ? (mtParam as MeasureType)
+      : "direccion";
+
+  const filters: CatalogFilters = {
+    linea: new Set(csvFromParam(sp.get("linea"))),
+    tipo: new Set(csvFromParam(sp.get("tipo"))),
+    ubicacion: new Set(csvFromParam(sp.get("ubicacion"))),
+    lado: new Set(csvFromParam(sp.get("lado"))),
+    marca: new Set(csvFromParam(sp.get("marca"))),
+    modelo: new Set(csvFromParam(sp.get("modelo"))),
+  };
+
+  return {
+    tab,
+    keyword: sp.get("q") ?? "",
+    plate: sp.get("p") ?? "",
+    code: sp.get("c") ?? "",
+    brand: sp.get("b") ?? "",
+    model: sp.get("m") ?? "",
+    year: sp.get("y") ?? "",
+    measureType,
+    filters,
+  };
+}
+
+function csvFromParam(raw: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** Construye la query string desde el estado actual. */
+function buildQueryString(state: {
   tab: TabKey;
   keyword: string;
   plate: string;
@@ -52,49 +107,63 @@ type PersistedState = {
   model: string;
   year: string;
   measureType: MeasureType;
-  filters: {
-    linea: string[];
-    tipo: string[];
-    ubicacion: string[];
-    lado: string[];
-    marca: string[];
-    modelo: string[];
-  };
-};
+  filters: CatalogFilters;
+}): string {
+  const p = new URLSearchParams();
+  if (state.tab !== "palabra") p.set("tab", state.tab);
 
-const VALID_TABS: TabKey[] = ["palabra", "patente", "vehiculo", "codigo", "medidas"];
-const VALID_MEASURES: MeasureType[] = ["direccion", "transmision", "tope"];
-
-function loadPersistedState(): Partial<PersistedState> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as PersistedState;
-  } catch {
-    return null;
+  if (state.tab === "palabra" && state.keyword.trim()) p.set("q", state.keyword.trim());
+  if (state.tab === "patente" && state.plate.trim()) p.set("p", state.plate.trim().toUpperCase());
+  if (state.tab === "codigo" && state.code.trim()) p.set("c", state.code.trim());
+  if (state.tab === "vehiculo") {
+    if (state.brand) p.set("b", state.brand);
+    if (state.model) p.set("m", state.model);
+    if (state.year) p.set("y", state.year);
   }
+  if (state.tab === "medidas" && state.measureType !== "direccion") {
+    p.set("mt", state.measureType);
+  }
+
+  for (const group of FILTER_GROUPS) {
+    const values = Array.from(state.filters[group]);
+    if (values.length > 0) p.set(group, values.join(","));
+  }
+
+  return p.toString();
 }
 
 export function CatalogSearch({ products }: Props) {
-  const [tab, setTab] = useState<TabKey>("palabra");
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<CatalogFilters>(() => emptyFilters());
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const [keyword, setKeyword] = useState("");
-  const [plate, setPlate] = useState("");
+  // Estado inicial desde la URL (al montar). Después sincronizamos en un efecto.
+  const initial = useMemo(
+    () => readStateFromParams(new URLSearchParams(searchParams.toString())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const [tab, setTab] = useState<TabKey>(initial.tab);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<CatalogFilters>(initial.filters);
+
+  const [keyword, setKeyword] = useState(initial.keyword);
+  const [plate, setPlate] = useState(initial.plate);
   const [plateVehicle, setPlateVehicle] = useState<SpecPartsPlateResponse | null>(null);
   const [plateError, setPlateError] = useState<string | null>(null);
   const [platePending, startPlateTransition] = useTransition();
-  const [brand, setBrand] = useState("");
-  const [model, setModel] = useState("");
-  const [year, setYear] = useState("");
-  const [code, setCode] = useState("");
-  const [measureType, setMeasureType] = useState<MeasureType>("direccion");
-
-  const hydrated = useRef(false);
+  const [brand, setBrand] = useState(initial.brand);
+  const [model, setModel] = useState(initial.model);
+  const [year, setYear] = useState(initial.year);
+  const [code, setCode] = useState(initial.code);
+  const [measureType, setMeasureType] = useState<MeasureType>(initial.measureType);
 
   const vehicleTree = useMemo(() => buildVehicleTree(products), [products]);
+
+  // Índice de búsqueda (keyword) — se construye en el cliente al montar.
+  // Ahorra ~150KB en el payload inicial vs enviarlo pre-computado del server.
+  const indexedProducts = useMemo(() => indexProducts(products), [products]);
 
   const onToggleFilter = useCallback((group: FilterGroup, value: string) => {
     setFilters((f) => toggleFilter(f, group, value));
@@ -124,51 +193,24 @@ export function CatalogSearch({ products }: Props) {
     [startPlateTransition],
   );
 
-  /**
-   * Hidratación: al montar en el cliente, restaura el estado guardado
-   * en sessionStorage. Así al volver atrás desde una page de producto,
-   * el usuario encuentra sus filtros y búsqueda intactos.
-   */
+  // Al montar: si venimos con ?tab=patente&p=XXX, re-disparamos la búsqueda
+  // de patente (el vehicle identificado no se persiste en URL — es server).
+  const didInitPlate = useRef(false);
   useEffect(() => {
-    if (hydrated.current) return;
-    hydrated.current = true;
-    const saved = loadPersistedState();
-    if (!saved) return;
-
-    if (saved.tab && VALID_TABS.includes(saved.tab)) setTab(saved.tab);
-    if (typeof saved.keyword === "string") setKeyword(saved.keyword);
-    if (typeof saved.plate === "string") setPlate(saved.plate);
-    if (typeof saved.code === "string") setCode(saved.code);
-    if (typeof saved.brand === "string") setBrand(saved.brand);
-    if (typeof saved.model === "string") setModel(saved.model);
-    if (typeof saved.year === "string") setYear(saved.year);
-    if (saved.measureType && VALID_MEASURES.includes(saved.measureType)) {
-      setMeasureType(saved.measureType);
+    if (didInitPlate.current) return;
+    didInitPlate.current = true;
+    if (initial.tab === "patente" && initial.plate.trim()) {
+      searchPlate(initial.plate);
     }
-    if (saved.filters) {
-      setFilters({
-        linea: new Set(saved.filters.linea ?? []),
-        tipo: new Set(saved.filters.tipo ?? []),
-        ubicacion: new Set(saved.filters.ubicacion ?? []),
-        lado: new Set(saved.filters.lado ?? []),
-        marca: new Set(saved.filters.marca ?? []),
-        modelo: new Set(saved.filters.modelo ?? []),
-      });
-    }
-    // Si el usuario estaba en tab=patente con plate, re-disparamos la búsqueda
-    // (el vehículo identificado no se persiste — se vuelve a pedir a la API).
-    if (saved.tab === "patente" && typeof saved.plate === "string" && saved.plate.trim()) {
-      searchPlate(saved.plate);
-    }
-  }, [searchPlate]);
+  }, [initial, searchPlate]);
 
   /**
-   * Persistencia: cada vez que cambia algo relevante, guardamos snapshot.
-   * Sets se serializan como arrays. plateVehicle no se guarda (se re-fetcha).
+   * URL sync: cada vez que cambia el estado, actualizamos la URL con
+   * router.replace (no agrega entrada al history). Debounce de 200ms para
+   * text inputs, así no inundamos el history con una entry por keystroke.
    */
   useEffect(() => {
-    if (!hydrated.current) return;
-    const snapshot: PersistedState = {
+    const qs = buildQueryString({
       tab,
       keyword,
       plate,
@@ -177,21 +219,26 @@ export function CatalogSearch({ products }: Props) {
       model,
       year,
       measureType,
-      filters: {
-        linea: [...filters.linea],
-        tipo: [...filters.tipo],
-        ubicacion: [...filters.ubicacion],
-        lado: [...filters.lado],
-        marca: [...filters.marca],
-        modelo: [...filters.modelo],
-      },
-    };
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-    } catch {
-      // sessionStorage puede fallar en modo privado con cuotas agotadas — silencio
-    }
-  }, [tab, keyword, plate, code, brand, model, year, measureType, filters]);
+      filters,
+    });
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    const timer = setTimeout(() => {
+      router.replace(target, { scroll: false });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [
+    tab,
+    keyword,
+    plate,
+    code,
+    brand,
+    model,
+    year,
+    measureType,
+    filters,
+    pathname,
+    router,
+  ]);
 
   /* --- Base results por tab (antes de aplicar filtros del sidebar) --- */
   const tabState = useMemo(() => {
@@ -199,7 +246,7 @@ export function CatalogSearch({ products }: Props) {
       if (keyword.trim().length < 2) {
         return { kind: "empty" as const, message: "Escribí al menos 2 letras para buscar." };
       }
-      return { kind: "results" as const, products: searchByKeyword(products, keyword) };
+      return { kind: "results" as const, products: searchByKeyword(indexedProducts, keyword) };
     }
     if (tab === "patente") {
       if (plateError) return { kind: "error" as const, message: plateError };
@@ -232,7 +279,18 @@ export function CatalogSearch({ products }: Props) {
       return { kind: "results" as const, products: searchByCode(products, code) };
     }
     return { kind: "measures" as const };
-  }, [tab, products, keyword, plateError, plateVehicle, brand, model, year, code]);
+  }, [
+    tab,
+    products,
+    indexedProducts,
+    keyword,
+    plateError,
+    plateVehicle,
+    brand,
+    model,
+    year,
+    code,
+  ]);
 
   const baseResults = tabState.kind === "results" ? tabState.products : [];
   const filteredResults = useMemo(

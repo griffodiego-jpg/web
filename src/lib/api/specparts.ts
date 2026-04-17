@@ -113,29 +113,6 @@ export function normalizeSearch(s: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function buildSearchText(p: SpecPartsProduct): string {
-  const parts: string[] = [p.code, p.description, p.product, p.category, p.slug];
-  for (const v of p.vehicles ?? []) {
-    parts.push(v.brand, v.master_model, v.model, v.version);
-  }
-  for (const a of p.attributes ?? []) {
-    parts.push(a.name, a.value, a.unit);
-  }
-  for (const c of p.components ?? []) {
-    parts.push(c.code, c.product);
-  }
-  for (const c of p.cross ?? []) {
-    parts.push(c.brand, c.code);
-  }
-  for (const r of p.reference ?? []) {
-    parts.push(r.brand, r.code);
-  }
-  for (const e of p.ean ?? []) {
-    parts.push(e);
-  }
-  return normalizeSearch(parts.filter(Boolean).join(" "));
-}
-
 async function fetchAllProducts(): Promise<CatalogProduct[]> {
   const token = await getAccessToken();
   const all: SpecPartsProduct[] = [];
@@ -154,7 +131,9 @@ async function fetchAllProducts(): Promise<CatalogProduct[]> {
     page += 1;
   }
 
-  return all.map((p) => ({ ...p, _searchText: buildSearchText(p) }));
+  // NO calculamos _searchText server-side: se hace en el cliente para
+  // bajar el payload del response inicial.
+  return all;
 }
 
 /**

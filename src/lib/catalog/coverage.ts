@@ -302,11 +302,19 @@ function csvEscape(value: string): string {
   return value;
 }
 
-export function buildCoverageCsv(matrix: CoverageMatrix): string {
-  const { columnas, vehiculos, celdas } = matrix;
+/**
+ * Arma el CSV de la matriz. Si se pasa `vehiculosOverride` (ej. una
+ * lista filtrada/ordenada del client), usa esos en vez de los del matrix.
+ */
+export function buildCoverageCsv(
+  matrix: CoverageMatrix,
+  vehiculosOverride?: VehiculoFila[],
+): string {
+  const { columnas, celdas } = matrix;
+  const filas = vehiculosOverride ?? matrix.vehiculos;
   const header = ["Marca", "Modelo", ...columnas.map((c) => `${c.grupo} — ${c.labelLargo}`)];
   const rows: string[] = [header.map(csvEscape).join(",")];
-  for (const v of vehiculos) {
+  for (const v of filas) {
     const key = vehiculoKey(v.brand, v.masterModel);
     const row = [v.brand, v.masterModel];
     for (const col of columnas) {

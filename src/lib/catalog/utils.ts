@@ -3,7 +3,7 @@
  * Ported de la app mobile (app.griffo.com.ar v2.11).
  */
 
-import type { CatalogProduct, SpecPartsProduct } from "@/types/specparts";
+import type { CatalogProduct, IndexedProduct, SpecPartsProduct } from "@/types/specparts";
 
 /** Marcas que se excluyen del filtro de "Por Vehículo" (no se venden en AR). */
 const EXCLUDED_VEHICLE_BRANDS = new Set(["AGRALE", "IVECO", "UNIVERSAL"]);
@@ -27,7 +27,40 @@ export function getMercadoLibreUrl(product: SpecPartsProduct): string | null {
 
 /* ========= Búsqueda por palabra ========= */
 
-export function searchByKeyword(products: CatalogProduct[], query: string): CatalogProduct[] {
+/**
+ * Construye el texto de búsqueda para un producto. Concatena code,
+ * description, product, category, slug, vehicles, attributes, components,
+ * cross, reference, ean — todo normalizado (lowercase sin acentos).
+ * Se invoca una vez en el cliente tras recibir el payload y se cachea.
+ */
+export function buildSearchText(p: SpecPartsProduct): string {
+  const parts: string[] = [p.code, p.description, p.product, p.category, p.slug];
+  for (const v of p.vehicles ?? []) {
+    parts.push(v.brand, v.master_model, v.model, v.version);
+  }
+  for (const a of p.attributes ?? []) {
+    parts.push(a.name, a.value, a.unit);
+  }
+  for (const c of p.components ?? []) {
+    parts.push(c.code, c.product);
+  }
+  for (const c of p.cross ?? []) {
+    parts.push(c.brand, c.code);
+  }
+  for (const r of p.reference ?? []) {
+    parts.push(r.brand, r.code);
+  }
+  for (const e of p.ean ?? []) {
+    parts.push(e);
+  }
+  return normalizeSearch(parts.filter(Boolean).join(" "));
+}
+
+export function indexProducts(products: CatalogProduct[]): IndexedProduct[] {
+  return products.map((p) => ({ ...p, _searchText: buildSearchText(p) }));
+}
+
+export function searchByKeyword(products: IndexedProduct[], query: string): IndexedProduct[] {
   const normalized = normalizeSearch(query.trim());
   if (!normalized) return [];
   const words = normalized.split(/\s+/).filter(Boolean);

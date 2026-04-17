@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { CoverageMatrix, VehiculoFila } from "@/lib/catalog/coverage";
-import { vehiculoKey } from "@/lib/catalog/coverage";
+import { buildCoverageCsv, vehiculoKey } from "@/lib/catalog/coverage";
 
 type SortKey = "brand" | "masterModel";
 
@@ -74,6 +74,21 @@ export function CoverageTable({ matrix }: Props) {
     };
   }, [filtered, columnas, celdas]);
 
+  const handleExport = () => {
+    const csv = buildCoverageCsv(matrix, filtered);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const today = new Date().toISOString().slice(0, 10);
+    const suffix = filter.trim() ? "-filtrado" : "";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `griffo-cobertura-${today}${suffix}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Controls */}
@@ -90,10 +105,23 @@ export function CoverageTable({ matrix }: Props) {
             className="h-10 w-72 rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
-        <div className="grid grid-cols-3 gap-2 text-[11px]">
-          <Pill label="Modelos" value={`${filtered.length} / ${vehiculos.length}`} />
-          <Pill label="Cubiertas" value={`${stats.covered} / ${stats.total}`} />
-          <Pill label="Cobertura" value={`${stats.percent}%`} />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-3 gap-2 text-[11px]">
+            <Pill label="Modelos" value={`${filtered.length} / ${vehiculos.length}`} />
+            <Pill label="Cubiertas" value={`${stats.covered} / ${stats.total}`} />
+            <Pill label="Cobertura" value={`${stats.percent}%`} />
+          </div>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-dark disabled:opacity-50"
+          >
+            <DownloadIcon /> Exportar CSV
+            {filter.trim() ? (
+              <span className="rounded bg-white/20 px-1.5 text-[10px]">filtrado</span>
+            ) : null}
+          </button>
         </div>
       </div>
 
@@ -213,5 +241,24 @@ function Pill({ label, value }: { label: string; value: string }) {
       <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
       <p className="text-sm font-black text-[#0a2b3d]">{value}</p>
     </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
   );
 }

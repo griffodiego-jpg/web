@@ -99,10 +99,15 @@ export type SpecPartsPlateResponse = {
 };
 
 /**
- * Producto enriquecido con índice de búsqueda pre-computado.
- * El índice se construye server-side al cargar el catálogo para no repetir
- * la normalización en cada query cliente.
+ * Alias de SpecPartsProduct usado por el catálogo. No contiene índice de
+ * búsqueda — ese se construye client-side con `buildSearchIndex()` para
+ * ahorrar payload en el response inicial (~150KB gzipped menos).
  */
-export type CatalogProduct = SpecPartsProduct & {
+export type CatalogProduct = SpecPartsProduct;
+
+/**
+ * Producto enriquecido con índice de búsqueda en memoria (solo cliente).
+ */
+export type IndexedProduct = CatalogProduct & {
   _searchText: string;
 };

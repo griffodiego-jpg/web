@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
@@ -44,5 +45,9 @@ export default async function CatalogoPage() {
     );
   }
 
-  return <CatalogSearch products={products} />;
+  return (
+    <Suspense>
+      <CatalogSearch products={products} />
+    </Suspense>
+  );
 }
