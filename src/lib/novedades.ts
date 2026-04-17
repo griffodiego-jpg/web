@@ -2,6 +2,7 @@ import {
   getProductByCode,
   listCatalog,
 } from "@/lib/api/specparts";
+import { getDisplayApplication } from "@/lib/catalog/display";
 import { getRedis } from "@/lib/kv";
 import type { CatalogProduct } from "@/types/specparts";
 
@@ -37,10 +38,14 @@ export type Novedad = {
   tipo: TipoNovedad;
   titulo: string;
   descripcion: string;
-  fecha: Date; // fecha de actualización en SpecParts
+  fecha: Date; // fecha de actualización en SpecParts (es lo único que expone la API)
   linea: string | null; // product.category
   imagen: string | null;
   vehiculos: VehiculoNovedad[];
+  /** Ubicaciones aplicando reglas por línea (ej. LADO RUEDA, DELANTERO). */
+  ubicaciones: string[];
+  /** Lados aplicando reglas por línea. */
+  lados: string[];
   /** Slug del producto destacado si corresponde (para linkear a /productos), sino null. */
   destacadoSlug: string | null;
   /** Slug del producto en el catálogo — para linkear a /catalogo/[slug]. */
@@ -141,6 +146,7 @@ function enrichProduct(
   hidden: boolean,
   getSlug: (code: string) => string | null
 ): Novedad {
+  const display = getDisplayApplication(product);
   return {
     code: product.code,
     tipo,
@@ -157,6 +163,8 @@ function enrichProduct(
       sold_from_year: v.sold_from_year,
       sold_until_year: v.sold_until_year,
     })),
+    ubicaciones: display.ubicaciones,
+    lados: display.lados,
     destacadoSlug: getSlug(product.code),
     catalogoSlug: product.slug,
     hidden,

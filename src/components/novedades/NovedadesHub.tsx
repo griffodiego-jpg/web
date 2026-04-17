@@ -35,19 +35,9 @@ export function NovedadesHub({
   }, [novedades, filtro]);
 
   return (
-    <div className="container mx-auto max-w-6xl px-5 pt-8 pb-16">
-      {/* Header */}
-      <div className="border-l-4 border-accent pl-4 mb-6">
-        <h1 className="text-2xl lg:text-3xl font-black text-[#0a2b3d] uppercase tracking-tight">
-          Novedades
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Lanzamientos y nuevas aplicaciones de productos Griffo.
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+    <div className="container mx-auto max-w-6xl px-5 pt-5 pb-14">
+      {/* Tabs (sin título — el menú activo ya dice "Novedades") */}
+      <div className="flex items-start gap-1 border-b border-gray-200 mb-5 overflow-x-auto">
         <Tab
           active={filtro === "todas"}
           onClick={() => setFiltro("todas")}
@@ -58,21 +48,23 @@ export function NovedadesHub({
           active={filtro === "lanzamiento"}
           onClick={() => setFiltro("lanzamiento")}
           label="Lanzamientos"
+          sublabel="de nuevos productos"
           count={counts.lanzamiento}
         />
         <Tab
           active={filtro === "aplicacion"}
           onClick={() => setFiltro("aplicacion")}
           label="Nuevas aplicaciones"
+          sublabel="de productos existentes"
           count={counts.aplicacion}
         />
       </div>
 
-      {/* Grid */}
+      {/* Grid — 3 columnas en desktop para que entren más por pantalla */}
       {filtered.length === 0 ? (
         <EmptyState filtro={filtro} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((n) => (
             <NovedadCard key={n.code} novedad={n} />
           ))}
@@ -86,31 +78,40 @@ function Tab({
   active,
   onClick,
   label,
+  sublabel,
   count,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  sublabel?: string;
   count: number;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-3 text-sm font-bold border-b-2 transition cursor-pointer whitespace-nowrap ${
+      className={`px-4 py-2.5 text-left border-b-2 transition cursor-pointer whitespace-nowrap ${
         active
           ? "border-primary text-primary"
           : "border-transparent text-gray-500 hover:text-gray-700"
       }`}
     >
-      {label}
-      <span
-        className={`ml-2 text-xs rounded-full px-2 py-0.5 ${
-          active ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
-        }`}
-      >
-        {count}
+      <span className="flex items-center gap-2">
+        <span className="text-sm font-bold">{label}</span>
+        <span
+          className={`text-[10px] rounded-full px-2 py-0.5 ${
+            active ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {count}
+        </span>
       </span>
+      {sublabel && (
+        <span className="block text-[10px] text-gray-400 font-normal normal-case">
+          {sublabel}
+        </span>
+      )}
     </button>
   );
 }

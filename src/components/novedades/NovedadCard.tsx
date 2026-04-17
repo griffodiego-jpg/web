@@ -1,143 +1,178 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { AssetImage } from "@/components/AssetImage";
+import { VehiclesModal } from "@/components/catalog/VehiclesModal";
 import type { Novedad } from "@/lib/novedades";
 
 /**
- * Card de novedad — grande, pensada para que entre harta info sin
- * sentirse apretada. Muestra hasta 12 vehículos antes de truncar.
- * Si es un producto destacado, el link va a /productos/[slug]; sino,
- * al catálogo o al detalle de la novedad.
+ * Card de novedad — compacta, optimizada para entrar más de 2 por pantalla.
+ * Muestra hasta ~3-4 marcas agrupadas con sus modelos; si hay más, botón
+ * "Ver más" abre un modal con el listado completo.
+ *
+ * CTA único: "Ver en catálogo" que va a /productos/[slug] si es destacado
+ * o a /catalogo/[slug] si no.
  */
 export function NovedadCard({ novedad }: { novedad: Novedad }) {
+  const [modalOpen, setModalOpen] = useState(false);
+
   const detalleHref = novedad.destacadoSlug
     ? `/productos/${novedad.destacadoSlug}`
     : `/catalogo/${novedad.catalogoSlug}`;
 
-  // Agrupamos vehículos por marca para compactar visualmente.
   const grouped = groupByBrand(novedad.vehiculos);
-  const maxBrands = 6;
+  const maxBrands = 4;
   const shownBrands = grouped.slice(0, maxBrands);
-  const hiddenCount = grouped.slice(maxBrands).reduce(
-    (acc, b) => acc + b.models.length,
-    0
-  );
+  const hiddenBrandsCount = grouped.length - shownBrands.length;
 
   return (
-    <article className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col">
-      {/* Header con badge del tipo + fecha */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <TipoBadge tipo={novedad.tipo} />
-        <time
-          className="text-xs text-gray-400 font-semibold uppercase tracking-wide"
-          dateTime={novedad.fecha.toISOString()}
-        >
-          {formatFecha(novedad.fecha)}
-        </time>
-      </div>
+    <>
+      <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden">
+        {/* Header: badge + fecha */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          <TipoBadge tipo={novedad.tipo} />
+          <time
+            className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide"
+            dateTime={novedad.fecha.toISOString()}
+          >
+            {formatFecha(novedad.fecha)}
+          </time>
+        </div>
 
-      <div className="flex flex-col md:flex-row gap-5 p-5 pt-2">
-        {/* Imagen a la izquierda (desktop) */}
-        {novedad.imagen && (
-          <div className="md:w-48 shrink-0 bg-gray-50 rounded-lg p-3 flex items-center justify-center aspect-square md:aspect-auto md:h-48">
-            <AssetImage
-              src={novedad.imagen}
-              alt={novedad.titulo}
-              bare
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
-        )}
-
-        {/* Contenido */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          {/* Código grande */}
-          <p className="text-primary font-mono font-black text-2xl leading-none">
-            {novedad.code}
-          </p>
-
-          {/* Título + línea */}
-          <h3 className="mt-2 font-bold text-lg text-[#0a2b3d] leading-tight">
-            {novedad.titulo}
-          </h3>
-          {novedad.linea && (
-            <p className="mt-1 text-xs uppercase tracking-wide text-accent font-bold">
-              {novedad.linea}
-            </p>
-          )}
-
-          {/* Descripción */}
-          {novedad.descripcion && (
-            <p className="mt-3 text-sm text-gray-700 leading-relaxed line-clamp-3">
-              {novedad.descripcion}
-            </p>
-          )}
-
-          {/* Vehículos compatibles — agrupados por marca, hasta 6 marcas */}
-          {grouped.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">
-                {novedad.tipo === "aplicacion"
-                  ? "Nuevas aplicaciones"
-                  : "Vehículos compatibles"}
-              </p>
-              <ul className="flex flex-wrap gap-1.5">
-                {shownBrands.map((g) => (
-                  <li
-                    key={g.brand}
-                    className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded-full px-3 py-1"
-                  >
-                    <span className="font-bold text-[#0a2b3d]">{g.brand}</span>
-                    <span className="text-gray-600">
-                      ({g.models.slice(0, 4).join(" · ")}
-                      {g.models.length > 4 ? ` +${g.models.length - 4}` : ""})
-                    </span>
-                  </li>
-                ))}
-                {hiddenCount > 0 && (
-                  <li className="text-xs text-gray-500 self-center">
-                    +{hiddenCount} vehículos más
-                  </li>
-                )}
-              </ul>
+        <div className="flex gap-3 px-4 pt-1 pb-3">
+          {/* Imagen chica */}
+          {novedad.imagen && (
+            <div className="w-24 h-24 shrink-0 bg-gray-50 rounded-lg p-2 flex items-center justify-center">
+              <AssetImage
+                src={novedad.imagen}
+                alt={novedad.titulo}
+                bare
+                className="max-h-full max-w-full object-contain"
+              />
             </div>
           )}
 
-          {/* CTA */}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <Link
-              href={detalleHref}
-              className="inline-flex items-center gap-1.5 text-sm text-primary font-bold hover:gap-2 transition-all"
-            >
-              {novedad.destacadoSlug
-                ? "Ver producto destacado"
-                : "Ver en catálogo"}
-              <ArrowIcon />
-            </Link>
-            <span className="text-gray-300">·</span>
-            <Link
-              href={`/novedades/${encodeURIComponent(novedad.code)}`}
-              className="text-sm text-gray-500 hover:text-primary transition"
-            >
-              Ver novedad
-            </Link>
+          {/* Info principal */}
+          <div className="flex-1 min-w-0">
+            <p className="text-primary font-mono font-black text-lg leading-none">
+              {novedad.code}
+            </p>
+            <h3 className="mt-1 font-bold text-sm text-[#0a2b3d] leading-tight uppercase">
+              {novedad.titulo}
+            </h3>
+            {novedad.linea && (
+              <p className="mt-0.5 text-[10px] uppercase tracking-wide text-accent font-bold">
+                {novedad.linea}
+              </p>
+            )}
+            {/* Ubicación / Lado — inline, solo primero de cada */}
+            <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+              {novedad.ubicaciones.length > 0 && (
+                <p>
+                  <span className="font-semibold">Ubicación:</span>{" "}
+                  {novedad.ubicaciones.join(" · ")}
+                </p>
+              )}
+              {novedad.lados.length > 0 && (
+                <p>
+                  <span className="font-semibold">Lado:</span>{" "}
+                  {novedad.lados.join(" · ")}
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </article>
+
+        {/* Vehículos */}
+        {grouped.length > 0 && (
+          <div className="px-4 pb-3 pt-2 border-t border-gray-100">
+            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1.5">
+              Vehículos compatibles
+            </p>
+            <ul className="flex flex-wrap gap-1">
+              {shownBrands.map((g) => (
+                <li
+                  key={g.brand}
+                  className="inline-flex items-start gap-1 text-xs bg-gray-100 rounded-md px-2 py-1 max-w-full"
+                >
+                  <span className="font-bold text-[#0a2b3d] shrink-0">
+                    {g.brand}
+                  </span>
+                  <span className="text-gray-600 truncate">
+                    ({g.models.slice(0, 3).join(" · ")}
+                    {g.models.length > 3 ? ` +${g.models.length - 3}` : ""})
+                  </span>
+                </li>
+              ))}
+              {hiddenBrandsCount > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(true)}
+                    className="inline-flex items-center gap-1 text-xs text-primary font-bold bg-primary/5 hover:bg-primary/10 rounded-md px-2 py-1 cursor-pointer transition"
+                  >
+                    + Ver {novedad.vehiculos.length - shownBrandsVehicleCount(shownBrands)}{" "}
+                    más
+                  </button>
+                </li>
+              )}
+              {hiddenBrandsCount === 0 && totalTruncatedModels(shownBrands) > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(true)}
+                    className="inline-flex items-center gap-1 text-xs text-primary font-bold bg-primary/5 hover:bg-primary/10 rounded-md px-2 py-1 cursor-pointer transition"
+                  >
+                    Ver todos ({novedad.vehiculos.length})
+                  </button>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="px-4 pb-3 mt-auto">
+          <Link
+            href={detalleHref}
+            className="inline-flex items-center gap-1 text-xs text-primary font-bold hover:gap-2 transition-all"
+          >
+            Ver en catálogo
+            <ArrowIcon />
+          </Link>
+        </div>
+      </article>
+
+      <VehiclesModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        productCode={novedad.code}
+        productName={novedad.titulo}
+        vehicles={novedad.vehiculos.map((v) => ({
+          brand: v.brand,
+          master_model: v.master_model,
+          model: v.model,
+          version: v.version,
+          sold_from_year: v.sold_from_year ?? 0,
+          sold_until_year: v.sold_until_year ?? 0,
+        }))}
+      />
+    </>
   );
 }
 
 function TipoBadge({ tipo }: { tipo: "lanzamiento" | "aplicacion" }) {
   if (tipo === "lanzamiento") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary text-white px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+      <span className="inline-flex items-center gap-1 rounded-full bg-primary text-white px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
         <SparkIcon />
         Lanzamiento
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-accent text-white px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+    <span className="inline-flex items-center gap-1 rounded-full bg-accent text-white px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
       <CarIcon />
       Nueva aplicación
     </span>
@@ -161,6 +196,18 @@ function groupByBrand(vehicles: Novedad["vehiculos"]) {
     .sort((a, b) => b.models.length - a.models.length);
 }
 
+function shownBrandsVehicleCount(brands: { brand: string; models: string[] }[]) {
+  return brands.reduce((acc, b) => acc + b.models.length, 0);
+}
+
+function totalTruncatedModels(brands: { brand: string; models: string[] }[]) {
+  // Contamos cuántos modelos quedaron truncados dentro de las marcas mostradas.
+  return brands.reduce(
+    (acc, b) => acc + Math.max(0, b.models.length - 3),
+    0
+  );
+}
+
 function formatFecha(date: Date): string {
   return date.toLocaleDateString("es-AR", {
     day: "2-digit",
@@ -172,8 +219,8 @@ function formatFecha(date: Date): string {
 function ArrowIcon() {
   return (
     <svg
-      width="14"
-      height="14"
+      width="12"
+      height="12"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -189,7 +236,7 @@ function ArrowIcon() {
 
 function SparkIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12 2l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 2z" />
     </svg>
   );
@@ -197,7 +244,7 @@ function SparkIcon() {
 
 function CarIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h.5A1.5 1.5 0 0 1 21 12.5v4a1.5 1.5 0 0 1-1.5 1.5H19v1a1 1 0 0 1-2 0v-1H7v1a1 1 0 0 1-2 0v-1h-.5A1.5 1.5 0 0 1 3 16.5v-4A1.5 1.5 0 0 1 4.5 11H5zm2.1 0h9.8l-1-3H8.1l-1 3zm-.6 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm11 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
     </svg>
   );
