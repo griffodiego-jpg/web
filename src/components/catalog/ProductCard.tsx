@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getFeaturedSlug } from "@/data/featured-products";
-import { getAttrValue, getMercadoLibreUrl, getProductLocation } from "@/lib/catalog/utils";
+import { getAttrValues, getMercadoLibreUrl, getProductLocations } from "@/lib/catalog/utils";
 
 import { VehiclesModal } from "./VehiclesModal";
 
@@ -19,9 +19,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const primaryImage = product.pictures?.[0]?.image_url;
   const meliUrl = getMercadoLibreUrl(product);
 
-  const location = getProductLocation(product);
-  const sideRaw = getAttrValue(product, "lado");
-  const side = sideRaw && sideRaw !== location ? sideRaw : "";
+  const locations = getProductLocations(product);
+  const sides = getAttrValues(product, "lado").filter((v) => !locations.includes(v));
+  const locationText = locations.join(", ");
+  const sideText = sides.join(sides.length === 2 ? " y " : ", ");
 
   const vehicles = product.vehicles ?? [];
   const vehicleSummary = useMemo(() => buildVehicleSummary(vehicles), [vehicles]);
@@ -78,16 +79,16 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           ) : null}
 
-          {location ? (
+          {locationText ? (
             <p className="text-[11px] text-gray-600">
               <span className="font-semibold text-gray-500">Ubicación: </span>
-              <span className="font-semibold text-[#0a2b3d]">{location}</span>
+              <span className="font-semibold text-[#0a2b3d]">{locationText}</span>
             </p>
           ) : null}
-          {side ? (
+          {sideText ? (
             <p className="text-[11px] text-gray-600">
               <span className="font-semibold text-gray-500">Lado: </span>
-              <span className="font-semibold text-[#0a2b3d]">{side}</span>
+              <span className="font-semibold text-[#0a2b3d]">{sideText}</span>
             </p>
           ) : null}
 

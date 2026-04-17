@@ -167,17 +167,27 @@ function getBaseCode(code: string): string {
 }
 
 export function getAttrValue(p: SpecPartsProduct, nameContains: string): string {
-  if (!p.attributes) return "";
+  return getAttrValues(p, nameContains)[0] ?? "";
+}
+
+/**
+ * Devuelve TODOS los valores de attributes cuyo nombre matchea. Un mismo
+ * producto puede tener múltiples attributes con el mismo nombre (ej. dos
+ * entradas "Lado" cuando aplica a izquierdo y derecho a la vez).
+ */
+export function getAttrValues(p: SpecPartsProduct, nameContains: string): string[] {
+  if (!p.attributes) return [];
   const needle = nameContains.toLowerCase();
+  const out: string[] = [];
   for (const a of p.attributes) {
     const name = (a.name ?? "").toLowerCase();
-    if (name.includes(needle)) {
-      const value = a.value ?? "";
-      const unit = a.unit ?? "";
-      return unit ? `${value} ${unit}` : value;
-    }
+    if (!name.includes(needle)) continue;
+    const value = a.value ?? "";
+    const unit = a.unit ?? "";
+    const full = unit ? `${value} ${unit}` : value;
+    if (full && !out.includes(full)) out.push(full);
   }
-  return "";
+  return out;
 }
 
 /**
@@ -198,16 +208,23 @@ const LOCATION_VALUES = new Set([
 ]);
 
 export function getProductLocation(p: SpecPartsProduct): string {
+  return getProductLocations(p)[0] ?? "";
+}
+
+export function getProductLocations(p: SpecPartsProduct): string[] {
+  const out: string[] = [];
   for (const needle of LOCATION_ATTR_NAMES) {
-    const v = getAttrValue(p, needle);
-    if (v) return v;
+    for (const v of getAttrValues(p, needle)) {
+      if (!out.includes(v)) out.push(v);
+    }
   }
-  if (!p.attributes) return "";
+  if (out.length > 0) return out;
+  if (!p.attributes) return [];
   for (const a of p.attributes) {
     const val = (a.value ?? "").trim().toUpperCase();
-    if (LOCATION_VALUES.has(val)) return val;
+    if (LOCATION_VALUES.has(val) && !out.includes(val)) out.push(val);
   }
-  return "";
+  return out;
 }
 
 function toNumber(value: string): number | null {

@@ -20,7 +20,7 @@
  */
 
 import type { CatalogProduct, SpecPartsProduct } from "@/types/specparts";
-import { getAttrValue, getProductLocation } from "./utils";
+import { getAttrValues, getProductLocations } from "./utils";
 
 export type FilterGroup = "linea" | "tipo" | "ubicacion" | "lado" | "marca" | "modelo";
 
@@ -161,14 +161,23 @@ export function matchesFilters(
   }
 
   if (skip !== "ubicacion" && f.ubicacion.size > 0) {
-    const loc = getProductLocation(p).toUpperCase().trim();
-    if (!loc || !f.ubicacion.has(loc)) return false;
+    const locs = getProductLocations(p).map((l) => l.toUpperCase().trim()).filter(Boolean);
+    if (!locs.some((l) => f.ubicacion.has(l))) return false;
   }
 
   if (skip !== "lado" && f.lado.size > 0) {
-    const raw = getAttrValue(p, "lado");
-    const expanded = expandLadoValue(raw);
-    if (!expanded.some((v) => f.lado.has(v))) return false;
+    const expanded = new Set<string>();
+    for (const raw of getAttrValues(p, "lado")) {
+      for (const v of expandLadoValue(raw)) expanded.add(v);
+    }
+    let hit = false;
+    for (const v of expanded) {
+      if (f.lado.has(v)) {
+        hit = true;
+        break;
+      }
+    }
+    if (!hit) return false;
   }
 
   if (skip !== "marca" && f.marca.size > 0) {
@@ -242,12 +251,16 @@ function extractValues(p: CatalogProduct, group: FilterGroup, f: CatalogFilters)
       return t ? [t] : [];
     }
     case "ubicacion": {
-      const loc = getProductLocation(p).toUpperCase().trim();
-      return loc ? [loc] : [];
+      return getProductLocations(p)
+        .map((l) => l.toUpperCase().trim())
+        .filter(Boolean);
     }
     case "lado": {
-      const raw = getAttrValue(p, "lado");
-      return expandLadoValue(raw);
+      const out = new Set<string>();
+      for (const raw of getAttrValues(p, "lado")) {
+        for (const v of expandLadoValue(raw)) out.add(v);
+      }
+      return Array.from(out);
     }
     case "marca": {
       const brands = new Set<string>();
