@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { saveLead } from "@/lib/leads";
 import { getResend } from "@/lib/resend";
 
 export async function POST(request: Request) {
@@ -10,6 +11,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    await saveLead({ kind: "newsletter", ts: Date.now(), email });
 
     await getResend().emails.send({
       from: "Griffo Web <onboarding@resend.dev>",

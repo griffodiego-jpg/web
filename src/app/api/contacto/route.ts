@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { saveLead } from "@/lib/leads";
 import { getResend } from "@/lib/resend";
 
 export async function POST(request: Request) {
@@ -22,6 +23,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    await saveLead({
+      kind: "contacto",
+      ts: Date.now(),
+      nombre: body.nombre,
+      email: body.email,
+      telefono: body.telefono,
+      mensaje: body.mensaje,
+    });
 
     await getResend().emails.send({
       from: "Griffo Web <onboarding@resend.dev>",

@@ -43,6 +43,16 @@ export default function AdminLayout({
             icon="grid"
           />
           <SidebarLink
+            href="/admin/descargas"
+            label="Descargas"
+            icon="download"
+          />
+          <SidebarLink
+            href="/admin/leads"
+            label="Formularios"
+            icon="inbox"
+          />
+          <SidebarLink
             href="/admin/banners"
             label="Banners"
             icon="image"
@@ -108,6 +118,19 @@ function SidebarLink({
         <rect x="14" y="3" width="7" height="7" />
         <rect x="14" y="14" width="7" height="7" />
         <rect x="3" y="14" width="7" height="7" />
+      </svg>
+    ),
+    download: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+    ),
+    inbox: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
       </svg>
     ),
   };

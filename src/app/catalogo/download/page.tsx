@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { AssetImage } from "@/components/AssetImage";
 import { RegistroDescargaForm } from "@/components/RegistroDescargaForm";
-import {
-  catalogoGeneralPdf,
-  materialPorProducto,
-  recursosGated,
-} from "@/data/descargas";
+import type { RecursoGated } from "@/data/descargas";
 import { productosDetalle } from "@/data/productos";
+import { resolveDescargas } from "@/lib/descargas-store";
 import { navigation } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -16,13 +13,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/catalogo/download" },
 };
 
+// Se revalida cada 60s para que los cambios del admin aparezcan rápido
+// sin pegarle a Redis en cada request.
+export const revalidate = 60;
+
 const secciones = [
   { id: "catalogo-pdf", label: "Catálogo de productos en PDF" },
   { id: "material-producto", label: "Material por producto" },
   { id: "material-catalogar", label: "Material para catalogar" },
 ];
 
-export default function DescargasPage() {
+export default async function DescargasPage() {
+  const { catalogoGeneralPdf, materialPorProducto, recursosGated } =
+    await resolveDescargas();
+
   const productos =
     navigation.find((i) => i.label === "Productos destacados")?.children ?? [];
 
@@ -55,7 +59,7 @@ export default function DescargasPage() {
             subtitle="Descargá el catálogo oficial Griffo con el listado completo de productos."
           />
           <div className="mt-5">
-            <CatalogoGeneralCard />
+            <CatalogoGeneralCard href={catalogoGeneralPdf} />
           </div>
         </section>
 
@@ -118,10 +122,10 @@ function SectionHeader({
   );
 }
 
-function CatalogoGeneralCard() {
+function CatalogoGeneralCard({ href }: { href: string }) {
   return (
     <a
-      href={catalogoGeneralPdf}
+      href={href}
       download
       className="group flex flex-col sm:flex-row items-stretch bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
     >
@@ -216,11 +220,7 @@ function DownloadRow({
   );
 }
 
-function RecursoGatedCard({
-  recurso,
-}: {
-  recurso: (typeof recursosGated)[number];
-}) {
+function RecursoGatedCard({ recurso }: { recurso: RecursoGated }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
       <div className="bg-primary/5 border-b border-gray-200 p-5">

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { saveLead } from "@/lib/leads";
 import { getResend } from "@/lib/resend";
 
 /**
@@ -33,6 +34,17 @@ export async function POST(request: Request) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 });
     }
+
+    await saveLead({
+      kind: "descarga",
+      ts: Date.now(),
+      nombre: body.nombre,
+      empresa: body.empresa,
+      email: body.email,
+      telefono: body.telefono,
+      compraA: body.compraA,
+      recurso: body.recursoTitulo ?? body.recursoId,
+    });
 
     await getResend().emails.send({
       from: "Griffo Web <onboarding@resend.dev>",
