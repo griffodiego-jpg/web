@@ -14,16 +14,20 @@ export async function POST(request: Request) {
 
     await saveLead({ kind: "newsletter", ts: Date.now(), email });
 
-    await getResend().emails.send({
-      from: "Griffo Web <onboarding@resend.dev>",
-      to: "contacto@griffo.com.ar",
-      subject: `Nueva suscripción al newsletter: ${email}`,
-      html: `
-        <h2>Nueva suscripción al newsletter</h2>
-        <p><strong>Email:</strong> ${email}</p>
-        <p>El usuario solicitó recibir información sobre productos, lanzamientos y promociones.</p>
-      `,
-    });
+    try {
+      await getResend().emails.send({
+        from: "Griffo Web <onboarding@resend.dev>",
+        to: "contacto@griffo.com.ar",
+        subject: `Nueva suscripción al newsletter: ${email}`,
+        html: `
+          <h2>Nueva suscripción al newsletter</h2>
+          <p><strong>Email:</strong> ${email}</p>
+          <p>El usuario solicitó recibir información sobre productos, lanzamientos y promociones.</p>
+        `,
+      });
+    } catch (e) {
+      console.error("[newsletter] error enviando email:", e);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

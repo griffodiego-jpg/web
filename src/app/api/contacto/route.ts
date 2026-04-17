@@ -33,21 +33,27 @@ export async function POST(request: Request) {
       mensaje: body.mensaje,
     });
 
-    await getResend().emails.send({
-      from: "Griffo Web <onboarding@resend.dev>",
-      to: "contacto@griffo.com.ar",
-      replyTo: body.email,
-      subject: `Consulta web de ${body.nombre}`,
-      html: `
-        <h2>Nueva consulta desde la web</h2>
-        <p><strong>Nombre:</strong> ${body.nombre}</p>
-        <p><strong>Email:</strong> ${body.email}</p>
-        <p><strong>Teléfono:</strong> ${body.telefono || "No proporcionado"}</p>
-        <hr />
-        <p><strong>Mensaje:</strong></p>
-        <p>${body.mensaje.replace(/\n/g, "<br>")}</p>
-      `,
-    });
+    try {
+      await getResend().emails.send({
+        from: "Griffo Web <onboarding@resend.dev>",
+        to: "contacto@griffo.com.ar",
+        replyTo: body.email,
+        subject: `Consulta web de ${body.nombre}`,
+        html: `
+          <h2>Nueva consulta desde la web</h2>
+          <p><strong>Nombre:</strong> ${body.nombre}</p>
+          <p><strong>Email:</strong> ${body.email}</p>
+          <p><strong>Teléfono:</strong> ${body.telefono || "No proporcionado"}</p>
+          <hr />
+          <p><strong>Mensaje:</strong></p>
+          <p>${body.mensaje.replace(/\n/g, "<br>")}</p>
+        `,
+      });
+    } catch (e) {
+      // Si Resend falla (API key faltante, sender no verificado, etc.)
+      // el lead igual quedó guardado en Redis, así que devolvemos OK.
+      console.error("[contacto] error enviando email:", e);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

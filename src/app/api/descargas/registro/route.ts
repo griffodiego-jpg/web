@@ -46,23 +46,27 @@ export async function POST(request: Request) {
       recurso: body.recursoTitulo ?? body.recursoId,
     });
 
-    await getResend().emails.send({
-      from: "Griffo Web <onboarding@resend.dev>",
-      to: "contacto@griffo.com.ar",
-      replyTo: body.email,
-      subject: `Descarga registrada: ${body.recursoTitulo ?? body.recursoId}`,
-      html: `
-        <h2>Nuevo registro para descarga</h2>
-        <p>Recurso solicitado: <strong>${body.recursoTitulo ?? body.recursoId}</strong></p>
-        <table style="border-collapse:collapse;width:100%;max-width:600px">
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Nombre</td><td style="padding:6px;border-bottom:1px solid #eee">${body.nombre}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Empresa</td><td style="padding:6px;border-bottom:1px solid #eee">${body.empresa}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:6px;border-bottom:1px solid #eee">${body.email}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Teléfono</td><td style="padding:6px;border-bottom:1px solid #eee">${body.telefono}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Compra Griffo a</td><td style="padding:6px;border-bottom:1px solid #eee">${body.compraA}</td></tr>
-        </table>
-      `,
-    });
+    try {
+      await getResend().emails.send({
+        from: "Griffo Web <onboarding@resend.dev>",
+        to: "contacto@griffo.com.ar",
+        replyTo: body.email,
+        subject: `Descarga registrada: ${body.recursoTitulo ?? body.recursoId}`,
+        html: `
+          <h2>Nuevo registro para descarga</h2>
+          <p>Recurso solicitado: <strong>${body.recursoTitulo ?? body.recursoId}</strong></p>
+          <table style="border-collapse:collapse;width:100%;max-width:600px">
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Nombre</td><td style="padding:6px;border-bottom:1px solid #eee">${body.nombre}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Empresa</td><td style="padding:6px;border-bottom:1px solid #eee">${body.empresa}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:6px;border-bottom:1px solid #eee">${body.email}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Teléfono</td><td style="padding:6px;border-bottom:1px solid #eee">${body.telefono}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Compra Griffo a</td><td style="padding:6px;border-bottom:1px solid #eee">${body.compraA}</td></tr>
+          </table>
+        `,
+      });
+    } catch (e) {
+      console.error("[descargas/registro] error enviando email:", e);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
