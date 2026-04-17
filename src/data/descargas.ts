@@ -58,6 +58,8 @@ export const materialPorProducto: MaterialProducto[] = [
   {
     slug: "extractor-de-juntas-homocineticas",
     flyer: "/downloads/productos/extractor-de-juntas-homocineticas/flyer.pdf",
+    videoRrss:
+      "/downloads/productos/extractor-de-juntas-homocineticas/video-rrss.mp4",
   },
   {
     slug: "pinza-para-abrazaderas",

@@ -179,7 +179,7 @@ function MaterialCard({
       </div>
       <ul className="border-t border-gray-100 divide-y divide-gray-100">
         <DownloadRow href={flyer} label="Flyer" sub="PDF" />
-        <DownloadRow href={videoRrss} label="Video" sub="MP4" />
+        <DownloadRow href={videoRrss} label="Video para redes" sub="MP4" />
       </ul>
     </div>
   );
