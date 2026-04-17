@@ -26,9 +26,26 @@ import type { CatalogProduct } from "@/types/specparts";
 
 const TIPO_KEY_PREFIX = "novedades:tipo:"; // código → "lanzamiento" (si override)
 const HIDDEN_KEY = "novedades:hidden"; // set de códigos ocultos
+/** Set de claves de vehículos marcados como "nuevos" por el admin. */
+const NUEVOS_KEY_PREFIX = "novedades:nuevos:"; // código → set de "BRAND:MODEL"
 
 /** Ventana de tiempo para considerar una novedad. */
 const WINDOW_MONTHS = 12;
+
+/**
+ * Normaliza un vehículo a una clave única por marca+modelo (ignora
+ * versión y años). Se usa tanto para marcar como nuevo desde el admin
+ * como para renderizar el badge en el público.
+ */
+export function vehicleKey(v: {
+  brand: string;
+  master_model: string;
+  model: string;
+}): string {
+  const brand = (v.brand || "").toUpperCase().trim();
+  const modelo = (v.master_model || v.model || "").toUpperCase().trim();
+  return `${brand}:${modelo}`;
+}
 
 export type TipoNovedad = "lanzamiento" | "aplicacion";
 
@@ -46,6 +63,8 @@ export type Novedad = {
   ubicaciones: string[];
   /** Lados aplicando reglas por línea. */
   lados: string[];
+  /** Claves (BRAND:MODELO) de vehículos marcados como "nuevos" por el admin. */
+  nuevosVehiculos: string[];
   /** Slug del producto destacado si corresponde (para linkear a /productos), sino null. */
   destacadoSlug: string | null;
   /** Slug del producto en el catálogo — para linkear a /catalogo/[slug]. */
@@ -134,6 +153,36 @@ export async function unhideNovedad(code: string): Promise<void> {
   await redis.srem(HIDDEN_KEY, code);
 }
 
+/** Lee las claves de vehículos marcados como "nuevos" para un código. */
+async function readNuevosVehiculos(code: string): Promise<string[]> {
+  const redis = getRedis();
+  if (!redis) return [];
+  try {
+    const raw = (await redis.smembers(NUEVOS_KEY_PREFIX + code)) as
+      | string[]
+      | null;
+    return raw ?? [];
+  } catch (e) {
+    console.error("[novedades] error leyendo nuevos:", e);
+    return [];
+  }
+}
+
+/** Reemplaza el set de vehículos "nuevos" para un código. */
+export async function setNuevosVehiculos(
+  code: string,
+  keys: string[]
+): Promise<void> {
+  const redis = getRedis();
+  if (!redis) throw new Error("Redis no configurado");
+  const setKey = NUEVOS_KEY_PREFIX + code;
+  // Rewrite completo: borramos y reescribimos. Más simple que un diff.
+  await redis.del(setKey);
+  if (keys.length > 0) {
+    await redis.sadd(setKey, keys[0], ...keys.slice(1));
+  }
+}
+
 function firstPictureUrl(p: CatalogProduct): string | null {
   const ordered = p.pictures.slice().sort((a, b) => a.sort_order - b.sort_order);
   const nonBlueprint = ordered.find((x) => !x.is_blueprint);
@@ -144,6 +193,7 @@ function enrichProduct(
   product: CatalogProduct,
   tipo: TipoNovedad,
   hidden: boolean,
+  nuevosVehiculos: string[],
   getSlug: (code: string) => string | null
 ): Novedad {
   const display = getDisplayApplication(product);
@@ -165,6 +215,7 @@ function enrichProduct(
     })),
     ubicaciones: display.ubicaciones,
     lados: display.lados,
+    nuevosVehiculos,
     destacadoSlug: getSlug(product.code),
     catalogoSlug: product.slug,
     hidden,
@@ -203,11 +254,24 @@ export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
     import("@/data/featured-products"),
   ]);
 
+  // Traemos los sets de "nuevos vehículos" en paralelo para todos los
+  // códigos candidatos — una llamada a Redis por cada código. Si hay
+  // muchos podríamos batchear, pero con ~370 productos y N candidatos
+  // (típicamente <50) va bien.
+  const nuevosPorCodigo = new Map<string, string[]>();
+  await Promise.all(
+    candidates.map(async (p) => {
+      const list = await readNuevosVehiculos(p.code);
+      if (list.length > 0) nuevosPorCodigo.set(p.code, list);
+    })
+  );
+
   const enriched = candidates.map((p) =>
     enrichProduct(
       p,
       tipoOverrides.get(p.code) ?? "aplicacion",
       hiddenSet.has(p.code),
+      nuevosPorCodigo.get(p.code) ?? [],
       getFeaturedSlug
     )
   );
@@ -225,11 +289,13 @@ export async function getNovedad(code: string): Promise<Novedad | null> {
   const updated = new Date(product.updated_at).getTime();
   if (updated < windowStart().getTime()) return null;
 
-  const [tipoOverrides, hiddenSet, { getFeaturedSlug }] = await Promise.all([
-    readTipoOverrides(),
-    readHidden(),
-    import("@/data/featured-products"),
-  ]);
+  const [tipoOverrides, hiddenSet, nuevos, { getFeaturedSlug }] =
+    await Promise.all([
+      readTipoOverrides(),
+      readHidden(),
+      readNuevosVehiculos(product.code),
+      import("@/data/featured-products"),
+    ]);
 
   // Si está oculta, no la mostramos en la página pública.
   if (hiddenSet.has(product.code)) return null;
@@ -238,6 +304,7 @@ export async function getNovedad(code: string): Promise<Novedad | null> {
     product,
     tipoOverrides.get(product.code) ?? "aplicacion",
     false,
+    nuevos,
     getFeaturedSlug
   );
 }

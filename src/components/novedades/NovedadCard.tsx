@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AssetImage } from "@/components/AssetImage";
 import { VehiclesModal } from "@/components/catalog/VehiclesModal";
-import type { Novedad } from "@/lib/novedades";
+import { vehicleKey, type Novedad } from "@/lib/novedades";
 
 /**
  * Card de novedad — compacta, optimizada para entrar más de 2 por pantalla.
@@ -21,7 +21,8 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
     ? `/productos/${novedad.destacadoSlug}`
     : `/catalogo/${novedad.catalogoSlug}`;
 
-  const grouped = groupByBrand(novedad.vehiculos);
+  const nuevosSet = new Set(novedad.nuevosVehiculos);
+  const grouped = groupByBrand(novedad.vehiculos, nuevosSet);
   const maxBrands = 4;
   const shownBrands = grouped.slice(0, maxBrands);
   const hiddenBrandsCount = grouped.length - shownBrands.length;
@@ -94,13 +95,34 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
               {shownBrands.map((g) => (
                 <li
                   key={g.brand}
-                  className="inline-flex items-start gap-1 text-xs bg-gray-100 rounded-md px-2 py-1 max-w-full"
+                  className={`inline-flex items-start gap-1 text-xs rounded-md px-2 py-1 max-w-full ${
+                    g.hasNuevo ? "bg-red-50 border border-red-200" : "bg-gray-100"
+                  }`}
                 >
+                  {g.hasNuevo && (
+                    <span className="inline-flex items-center rounded bg-red-600 text-white px-1 text-[9px] font-black uppercase tracking-wide shrink-0">
+                      Nueva
+                    </span>
+                  )}
                   <span className="font-bold text-[#0a2b3d] shrink-0">
                     {g.brand}
                   </span>
                   <span className="text-gray-600 truncate">
-                    ({g.models.slice(0, 3).join(" · ")}
+                    (
+                    {g.models.slice(0, 3).map((m, i) => (
+                      <span key={m.name}>
+                        {i > 0 && " · "}
+                        <span
+                          className={
+                            m.isNew
+                              ? "text-red-700 font-bold"
+                              : undefined
+                          }
+                        >
+                          {m.name}
+                        </span>
+                      </span>
+                    ))}
                     {g.models.length > 3 ? ` +${g.models.length - 3}` : ""})
                   </span>
                 </li>
@@ -179,29 +201,54 @@ function TipoBadge({ tipo }: { tipo: "lanzamiento" | "aplicacion" }) {
   );
 }
 
-function groupByBrand(vehicles: Novedad["vehiculos"]) {
-  const map = new Map<string, Set<string>>();
+type GroupedBrand = {
+  brand: string;
+  models: { name: string; isNew: boolean }[];
+  hasNuevo: boolean;
+};
+
+function groupByBrand(
+  vehicles: Novedad["vehiculos"],
+  nuevosSet: Set<string>
+): GroupedBrand[] {
+  const map = new Map<string, Map<string, boolean>>();
   for (const v of vehicles) {
     if (!v.brand) continue;
-    const key = v.brand.toUpperCase();
-    if (!map.has(key)) map.set(key, new Set());
-    const label = v.master_model || v.model;
-    if (label) map.get(key)!.add(label);
+    const brand = v.brand.toUpperCase();
+    const label = (v.master_model || v.model || "").trim();
+    if (!label) continue;
+    const key = vehicleKey(v);
+    const isNew = nuevosSet.has(key);
+    if (!map.has(brand)) map.set(brand, new Map());
+    const models = map.get(brand)!;
+    // Si ya estaba, quedamos con el "más nuevo" (OR).
+    models.set(label, (models.get(label) ?? false) || isNew);
   }
   return Array.from(map.entries())
-    .map(([brand, models]) => ({
-      brand,
-      models: Array.from(models).sort(),
-    }))
-    .sort((a, b) => b.models.length - a.models.length);
+    .map(([brand, models]) => {
+      const arr = Array.from(models.entries())
+        .map(([name, isNew]) => ({ name, isNew }))
+        .sort((a, b) => {
+          if (a.isNew !== b.isNew) return a.isNew ? -1 : 1; // nuevos primero
+          return a.name.localeCompare(b.name);
+        });
+      return {
+        brand,
+        models: arr,
+        hasNuevo: arr.some((m) => m.isNew),
+      };
+    })
+    .sort((a, b) => {
+      if (a.hasNuevo !== b.hasNuevo) return a.hasNuevo ? -1 : 1; // marcas con nuevos primero
+      return b.models.length - a.models.length;
+    });
 }
 
-function shownBrandsVehicleCount(brands: { brand: string; models: string[] }[]) {
+function shownBrandsVehicleCount(brands: GroupedBrand[]) {
   return brands.reduce((acc, b) => acc + b.models.length, 0);
 }
 
-function totalTruncatedModels(brands: { brand: string; models: string[] }[]) {
-  // Contamos cuántos modelos quedaron truncados dentro de las marcas mostradas.
+function totalTruncatedModels(brands: GroupedBrand[]) {
   return brands.reduce(
     (acc, b) => acc + Math.max(0, b.models.length - 3),
     0

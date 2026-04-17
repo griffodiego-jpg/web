@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { Novedad, TipoNovedad } from "@/lib/novedades";
+import { vehicleKey, type Novedad, type TipoNovedad } from "@/lib/novedades";
 
 type Filtro = "todas" | TipoNovedad | "ocultas";
 
@@ -22,6 +22,15 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedCode, setExpandedCode] = useState<string | null>(null);
+  /** Estado local (por código) de los vehículos marcados como "nuevos". */
+  const [nuevosByCode, setNuevosByCode] = useState<Record<string, Set<string>>>(() => {
+    const init: Record<string, Set<string>> = {};
+    for (const n of novedades) {
+      init[n.code] = new Set(n.nuevosVehiculos);
+    }
+    return init;
+  });
 
   const counts = useMemo(
     () => ({
@@ -73,6 +82,35 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
     } finally {
       setBusy(null);
     }
+  }
+
+  /** Guarda el set de vehículos "nuevos" para un código. */
+  async function saveNuevos(code: string, keys: string[]) {
+    setBusy(code);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/novedades/nuevos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, keys }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function toggleVehiculoNuevo(code: string, key: string) {
+    setNuevosByCode((prev) => {
+      const current = new Set(prev[code] ?? []);
+      if (current.has(key)) current.delete(key);
+      else current.add(key);
+      return { ...prev, [code]: current };
+    });
   }
 
   async function toggleHidden(code: string, hide: boolean) {
@@ -153,13 +191,21 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
         </div>
       ) : (
         <ul className="space-y-2">
-          {filtered.map((n) => (
+          {filtered.map((n) => {
+            const isExpanded = expandedCode === n.code;
+            const localNuevos = nuevosByCode[n.code] ?? new Set();
+            const unique = uniqueBrandModels(n.vehiculos);
+            const nuevosCount = localNuevos.size;
+            const originalNuevosCount = n.nuevosVehiculos.length;
+            const dirty = nuevosCount !== originalNuevosCount || !sameSet(localNuevos, new Set(n.nuevosVehiculos));
+            return (
             <li
               key={n.code}
-              className={`bg-white border rounded-lg p-3 flex flex-wrap items-center gap-3 ${
+              className={`bg-white border rounded-lg ${
                 n.hidden ? "border-gray-200 opacity-60" : "border-gray-200"
               }`}
             >
+              <div className="p-3 flex flex-wrap items-center gap-3">
               {n.imagen && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -225,6 +271,25 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
                   </button>
                 )}
 
+                {/* Marcar vehículos nuevos (solo para aplicaciones) */}
+                {n.tipo === "aplicacion" && n.vehiculos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedCode(isExpanded ? null : n.code)
+                    }
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                      originalNuevosCount > 0
+                        ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Vehículos nuevos
+                    {originalNuevosCount > 0 && ` (${originalNuevosCount})`}
+                    <span className="ml-1">{isExpanded ? "▴" : "▾"}</span>
+                  </button>
+                )}
+
                 {/* Ocultar / restaurar */}
                 {n.hidden ? (
                   <button
@@ -246,12 +311,99 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
                   </button>
                 )}
               </div>
+              </div>
+
+              {isExpanded && n.tipo === "aplicacion" && (
+                <div className="border-t border-gray-200 p-3 bg-gray-50">
+                  <p className="text-xs font-bold text-gray-700 mb-2">
+                    Marcá los vehículos que son <span className="text-red-700">nuevas aplicaciones</span> para este producto:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 max-h-64 overflow-y-auto">
+                    {unique.map((v) => {
+                      const key = v.key;
+                      const checked = localNuevos.has(key);
+                      return (
+                        <label
+                          key={key}
+                          className="flex items-center gap-2 text-xs bg-white rounded border border-gray-200 px-2 py-1.5 cursor-pointer hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleVehiculoNuevo(n.code, key)}
+                            className="accent-red-600"
+                          />
+                          <span className="font-bold text-[#0a2b3d]">
+                            {v.brand}
+                          </span>
+                          <span className="text-gray-600 truncate">
+                            {v.modelo}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        saveNuevos(n.code, Array.from(localNuevos))
+                      }
+                      disabled={busy === n.code || !dirty}
+                      className="rounded-lg bg-red-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Guardar cambios
+                    </button>
+                    {nuevosCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevosByCode((prev) => ({
+                            ...prev,
+                            [n.code]: new Set(),
+                          }));
+                        }}
+                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                      >
+                        Limpiar selección
+                      </button>
+                    )}
+                    <p className="text-xs text-gray-500 ml-auto">
+                      {nuevosCount} / {unique.length} marcado
+                      {nuevosCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+              )}
             </li>
-          ))}
+          );
+          })}
         </ul>
       )}
     </div>
   );
+}
+
+function uniqueBrandModels(
+  vehicles: Novedad["vehiculos"]
+): { key: string; brand: string; modelo: string }[] {
+  const seen = new Map<string, { brand: string; modelo: string }>();
+  for (const v of vehicles) {
+    if (!v.brand) continue;
+    const modelo = (v.master_model || v.model || "").trim();
+    if (!modelo) continue;
+    const key = vehicleKey(v);
+    if (!seen.has(key)) seen.set(key, { brand: v.brand, modelo });
+  }
+  return Array.from(seen.entries())
+    .map(([key, v]) => ({ key, ...v }))
+    .sort((a, b) => a.brand.localeCompare(b.brand) || a.modelo.localeCompare(b.modelo));
+}
+
+function sameSet(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
 }
 
 function Tab({
