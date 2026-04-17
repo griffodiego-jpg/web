@@ -22,12 +22,19 @@ const EXCLUDED_BRANDS = new Set(["AGRALE", "IVECO", "UNIVERSAL"]);
 
 export type SistemaGrupo = "DIRECCIÓN" | "SUSPENSIÓN" | "TRANSMISIÓN";
 
-export type Columna = {
+/**
+ * Metadata pública y serializable de una columna (cruza el boundary
+ * Server → Client). No incluye la función `matches` — ésa solo se usa
+ * en el server para construir la matriz.
+ */
+export type ColumnaPublic = {
   id: string;
   grupo: SistemaGrupo;
   label: string;
-  /** Etiqueta larga para Excel. */
   labelLargo: string;
+};
+
+type ColumnaInternal = ColumnaPublic & {
   matches: (p: SpecPartsProduct) => boolean;
 };
 
@@ -37,7 +44,7 @@ export type VehiculoFila = {
 };
 
 export type CoverageMatrix = {
-  columnas: Columna[];
+  columnas: ColumnaPublic[];
   vehiculos: VehiculoFila[];
   /** Por `${brand}|${masterModel}` → por column.id → array de códigos. */
   celdas: Record<string, Record<string, string[]>>;
@@ -100,7 +107,7 @@ function isKitFuelleSemieje(p: SpecPartsProduct): boolean {
 /*  Columnas — 18 fijas                                                        */
 /* -------------------------------------------------------------------------- */
 
-export const COLUMNAS: Columna[] = [
+const COLUMNAS_INTERNAL: ColumnaInternal[] = [
   // DIRECCIÓN
   {
     id: "dir-del-der",
@@ -234,6 +241,10 @@ export const COLUMNAS: Columna[] = [
   },
 ];
 
+export const COLUMNAS: ColumnaPublic[] = COLUMNAS_INTERNAL.map(
+  ({ id, grupo, label, labelLargo }) => ({ id, grupo, label, labelLargo }),
+);
+
 export function vehiculoKey(brand: string, masterModel: string): string {
   return `${brand.toUpperCase()}|${masterModel.toUpperCase()}`;
 }
@@ -248,7 +259,7 @@ export function buildCoverageMatrix(products: CatalogProduct[]): CoverageMatrix 
 
   for (const p of products) {
     if (!p.vehicles?.length) continue;
-    const matchingCols = COLUMNAS.filter((c) => c.matches(p));
+    const matchingCols = COLUMNAS_INTERNAL.filter((c) => c.matches(p));
     if (matchingCols.length === 0) continue;
 
     for (const v of p.vehicles) {
