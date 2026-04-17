@@ -100,23 +100,31 @@ const nextConfig: NextConfig = {
   },
 
   /**
-   * Redirects 301 — preservan SEO cuando cambian URLs.
+   * Redirects 301 — preservan SEO cuando cambian URLs y mantienen los
+   * QRs impresos en packaging que apuntan a URLs viejas.
    *
-   * SKELETON para la migración a www.griffo.com.ar. Cuando tengamos el
-   * inventario de URLs del sitio viejo (desde Google Search Console),
-   * agregamos acá las que no coincidan con el nuevo. Los slugs actuales
-   * se mantienen iguales para no romper nada.
-   *
-   * Ver MIGRATION.md para el plan completo.
+   * IMPORTANTE: estos slugs están físicamente impresos en cajas de
+   * producto. No cambiarlos nunca. Si llega un QR roto, agregar el
+   * redirect acá.
    */
   async redirects() {
     return [
-      // Ejemplo (agregar cuando tengamos el inventario):
-      // {
-      //   source: "/blog/articulo-viejo",
-      //   destination: "/novedades",
-      //   permanent: true, // 301
-      // },
+      // QRs de packaging del sitio viejo — sin /productos/ prefix.
+      {
+        source: "/maquina-montadora-de-fuelles",
+        destination: "/productos/maquina-montadora-de-fuelles",
+        permanent: true,
+      },
+      {
+        source: "/kit-de-fuelles-universales-para-homocineticas",
+        destination: "/productos/kit-de-fuelles-universales-para-homocineticas",
+        permanent: true,
+      },
+      {
+        source: "/kit-de-proteccion-para-suspension-deportiva",
+        destination: "/productos/kit-de-proteccion-para-suspension-deportiva",
+        permanent: true,
+      },
     ];
   },
 };
