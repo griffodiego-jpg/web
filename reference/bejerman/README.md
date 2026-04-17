@@ -1,7 +1,10 @@
 # Bejerman (ERP Griffo) — documentación de la API
 
-Fuente oficial: `reference/bejerman/Documentación API ERP Griffo v2.pdf`
-(subido por la cliente el 2026-04-17).
+Fuentes oficiales:
+- `reference/bejerman/Documentación API ERP Griffo v2.pdf`
+  (auth, clientes, precios, pedidos).
+- `reference/bejerman/Documentación API Cuentas corrientes.docx`
+  (cuenta corriente + descarga de comprobantes).
 
 **Proveedor del middleware:** Promotive (presumido por el email del usuario
 de ejemplo `mpinero@promotive.la`). Falta confirmar con la cliente.
@@ -133,22 +136,65 @@ Response:
 { "ErpOrderId": "12345", "Status": "Confirmado" }
 ```
 
+### 5. `GET /ERP/ClientAccountStatus/{client_code}` — cuenta corriente
+
+Estado de cuenta del cliente: lista de comprobantes con debe/haber.
+De acá sale **la cuenta corriente Y el listado de facturas** (una sola
+llamada).
+
+Path param: `client_code` (string, obligatorio, sin espacios).
+
+```json
+[
+  {
+    "cliCod": "000001",
+    "razonSocial": "ASIR S.A.",
+    "emision": "2007-02-01T00:00:00.000Z",
+    "comp": "FC",
+    "compLetra": "A",
+    "puntoVenta": "0001",
+    "compNro": "00017176",
+    "vencimiento": "2007-02-08T00:00:00.000Z",
+    "debe": 130.28,
+    "haber": 0
+  }
+]
+```
+
+**Usos:**
+- `/cuenta/cuenta-corriente`: mostrar todos los movimientos, saldo =
+  `sum(debe) - sum(haber)`.
+- `/cuenta/facturas`: filtrar por `comp = "FC"` (facturas).
+
+### 6. `GET /ERP/GetComprobante` — descargar PDF de un comprobante
+
+Query params (todos strings): `Comp` (FC/ND/NC), `CompLetra` (A/B/…),
+`PuntoVenta` (0001), `CompNro` (00012345), `CodCliente` (000001).
+
+```
+GET /ERP/GetComprobante?Comp=FC&CompLetra=A&PuntoVenta=0001&CompNro=00012345&CodCliente=000001
+Content-Type: application/pdf
+```
+
+- 200 → PDF binario.
+- 404 → `{ "error": "El PDF no existe." }` (silenciar en la UI con un
+  "Factura aún no disponible").
+
+Los 5 params vienen 1:1 de un item de `ClientAccountStatus` — o sea,
+listamos con `ClientAccountStatus` y cada fila linkea a `GetComprobante`.
+
 ---
 
-## 🚨 Gaps vs lo que pidió la cliente
+## 🚨 Gaps restantes vs lo que pidió la cliente
 
-Lo que pidió y **NO está en la API**:
-
-| Feature pedida | Endpoint necesario | Estado |
+| Feature pedida | Estado | Workaround |
 |---|---|---|
-| Descarga de **facturas** | `GET /ERP/invoices` + `GET /ERP/invoices/{id}/pdf` | ❌ no existe |
-| **Cuenta corriente** (saldo + movimientos) | `GET /ERP/clients/{id}/account` | ❌ no existe |
-| **Lista de precios privada** descargable (PDF/XLSX) | `GET /ERP/clients/{id}/price-list` | ❌ no existe |
-| **Crear cliente** desde admin | `POST /ERP/clients` | ❌ no existe |
-| **Actualizar datos** de cliente | `PUT /ERP/clients/{id}` | ❌ no existe |
-
-Preguntar al proveedor si se pueden agregar. Sin esto, `/cuenta/facturas`
-y `/cuenta/cuenta-corriente` no son implementables.
+| Descarga de facturas | ✅ `GetComprobante` | — |
+| Cuenta corriente (saldo + movimientos) | ✅ `ClientAccountStatus` | — |
+| Lista de precios privada descargable | ❌ no existe | Generar PDF/XLSX nosotros iterando `/ERP/prices` con todos los códigos del catálogo. |
+| Crear cliente desde admin | ❌ no existe | Alta manual en Bejerman por Griffo. La web sólo matchea contra `/ERP/Clients`. |
+| Actualizar datos de cliente | ❌ no existe | Idem, editar en Bejerman. |
+| Recibos (ND / NC / pagos) | ✅ `ClientAccountStatus` devuelve todos los comprobantes (FC, ND, NC, etc.), `GetComprobante` baja el PDF. | — |
 
 ## Preguntas abiertas (para el proveedor / la cliente)
 
@@ -168,6 +214,11 @@ y `/cuenta/cuenta-corriente` no son implementables.
    alta autoservicio no sirve para ese cliente. Alternativa: matchear
    por **CUIT** — pero el endpoint no devuelve CUIT. Sería valioso que
    el proveedor lo incluya.
+
+   **Nota:** `GET /ERP/Clients` devuelve `client_id` pero
+   `ClientAccountStatus` recibe `client_code` (y devuelve `cliCod`).
+   Confirmar que son el mismo identificador — probablemente sí, pero
+   el cambio de nombre es una trampa fácil de tropezar.
 
 5. **Depósito en el pedido:** `POST /ERP/order` NO pide `warehouseId`.
    Si un cliente tiene varios depósitos, ¿cómo sabe el ERP dónde enviar?
