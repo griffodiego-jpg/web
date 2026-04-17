@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   title: "Cobertura de catálogo",
 };
 
-export const revalidate = 1800;
+// Dynamic: el admin siempre necesita datos frescos y no queremos que el build
+// falle si SpecParts no responde durante el prerender.
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function CoberturaPage() {
   let matrix: Awaited<ReturnType<typeof buildCoverageMatrix>> | null = null;
