@@ -77,6 +77,9 @@ function FiltersBody({
   onClear: () => void;
 }) {
   const active = hasActiveFilters(filters);
+  const modeloDisabled = filters.marca.size === 0;
+  const motorDisabled = filters.modelo.size === 0;
+  const anioDisabled = filters.modelo.size === 0;
 
   return (
     <div className="flex flex-col gap-5 p-4">
@@ -134,17 +137,39 @@ function FiltersBody({
         formatLabel={titleCase}
         placeholder="Buscar marca..."
       />
-      {filters.marca.size > 0 ? (
-        <SearchableFacetGroup
-          label="Modelo vehículo"
-          group="modelo"
-          facets={facets.modelo}
-          selected={filters.modelo}
-          onToggle={onToggle}
-          formatLabel={titleCase}
-          placeholder="Buscar modelo..."
-        />
-      ) : null}
+      <SearchableFacetGroup
+        label="Modelo vehículo"
+        group="modelo"
+        facets={facets.modelo}
+        selected={filters.modelo}
+        onToggle={onToggle}
+        formatLabel={titleCase}
+        placeholder="Buscar modelo..."
+        disabled={modeloDisabled}
+        disabledHint="Elegí primero una marca"
+      />
+      <SearchableFacetGroup
+        label="Motor"
+        group="motor"
+        facets={facets.motor}
+        selected={filters.motor}
+        onToggle={onToggle}
+        formatLabel={titleCase}
+        placeholder="Buscar motor..."
+        disabled={motorDisabled}
+        disabledHint="Elegí primero un modelo"
+      />
+      <SearchableFacetGroup
+        label="Año"
+        group="anio"
+        facets={facets.anio}
+        selected={filters.anio}
+        onToggle={onToggle}
+        formatLabel={(v) => v}
+        placeholder="Buscar año..."
+        disabled={anioDisabled}
+        disabledHint="Elegí primero un modelo"
+      />
     </div>
   );
 }
@@ -202,6 +227,8 @@ function SearchableFacetGroup({
   onToggle,
   formatLabel,
   placeholder,
+  disabled = false,
+  disabledHint,
 }: {
   label: string;
   group: FilterGroup;
@@ -210,12 +237,50 @@ function SearchableFacetGroup({
   onToggle: (g: FilterGroup, v: string) => void;
   formatLabel: (v: string) => string;
   placeholder: string;
+  disabled?: boolean;
+  disabledHint?: string;
 }) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
 
+  if (disabled) {
+    return (
+      <FacetSection label={label} disabled>
+        <div className="pointer-events-none select-none">
+          <input
+            type="search"
+            disabled
+            placeholder={placeholder}
+            className="mb-2 h-8 w-full rounded-md border border-gray-200 bg-gray-50 px-2 text-[11px] text-gray-300"
+          />
+          <ul className="flex flex-col gap-1.5 opacity-50">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  disabled
+                  className="h-3.5 w-3.5 rounded border-gray-300"
+                />
+                <span className="h-2 flex-1 rounded bg-gray-200" />
+              </li>
+            ))}
+          </ul>
+          {disabledHint ? (
+            <p className="mt-2 text-[10px] italic text-gray-400">{disabledHint}</p>
+          ) : null}
+        </div>
+      </FacetSection>
+    );
+  }
+
   const all = mergeSelected(facets, selected);
-  if (all.length === 0) return null;
+  if (all.length === 0) {
+    return (
+      <FacetSection label={label}>
+        <p className="text-[11px] text-gray-400">Sin opciones disponibles</p>
+      </FacetSection>
+    );
+  }
 
   const normalized = query.trim().toLowerCase();
   const filtered = normalized
@@ -280,10 +345,23 @@ function SearchableFacetGroup({
 /*  UI primitives                                                              */
 /* -------------------------------------------------------------------------- */
 
-function FacetSection({ label, children }: { label: string; children: React.ReactNode }) {
+function FacetSection({
+  label,
+  children,
+  disabled = false,
+}: {
+  label: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
   return (
     <details open className="group">
-      <summary className="flex cursor-pointer items-center justify-between text-[11px] font-bold uppercase tracking-widest text-gray-500 [&::-webkit-details-marker]:hidden">
+      <summary
+        className={[
+          "flex cursor-pointer items-center justify-between text-[11px] font-bold uppercase tracking-widest [&::-webkit-details-marker]:hidden",
+          disabled ? "text-gray-300" : "text-gray-500",
+        ].join(" ")}
+      >
         <span>{label}</span>
         <span className="text-gray-400 transition group-open:rotate-180">▾</span>
       </summary>

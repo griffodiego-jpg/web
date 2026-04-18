@@ -54,6 +54,8 @@ const FILTER_GROUPS: FilterGroup[] = [
   "lado",
   "marca",
   "modelo",
+  "motor",
+  "anio",
 ];
 
 /** Lee el estado inicial del catálogo desde los query params de la URL. */
@@ -76,6 +78,8 @@ function readStateFromParams(sp: URLSearchParams) {
     lado: new Set(csvFromParam(sp.get("lado"))),
     marca: new Set(csvFromParam(sp.get("marca"))),
     modelo: new Set(csvFromParam(sp.get("modelo"))),
+    motor: new Set(csvFromParam(sp.get("motor"))),
+    anio: new Set(csvFromParam(sp.get("anio"))),
   };
 
   return {

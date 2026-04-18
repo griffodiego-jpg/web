@@ -4,9 +4,7 @@
  * Funciona estilo Mercado Libre:
  *  - Multi-select dentro de cada grupo (OR interno)
  *  - Entre grupos distintos: AND
- *  - Contadores por opción calculados con exclusión de su propia facet
- *    (tildar Suspensión no esconde las demás líneas, pero sí recalcula
- *    los counts de Tipo, Ubicación, Lado, Marca, Modelo).
+ *  - Contadores por opción calculados con exclusión de su propia facet.
  *
  * Grupos:
  *   linea      → product.category
@@ -17,12 +15,26 @@
  *                Izquierdo como Derecho para que no se esconda del filtro.
  *   marca      → vehicles[].brand (excluye AGRALE, IVECO, UNIVERSAL)
  *   modelo     → vehicles[].master_model (dependiente de marca)
+ *   motor      → vehicles[].version (dependiente de modelo)
+ *   anio       → años entre sold_from_year y sold_until_year (dependiente de modelo)
+ *
+ * Los filtros de vehículo (marca+modelo+motor+anio) se chequean contra el
+ * MISMO vehicle del array para no cruzar datos. Un producto califica si
+ * tiene al menos UN vehicle que cumpla TODOS los criterios tildados.
  */
 
-import type { CatalogProduct, SpecPartsProduct } from "@/types/specparts";
+import type { CatalogProduct, SpecPartsProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getAttrValues, getProductLocations } from "./utils";
 
-export type FilterGroup = "linea" | "tipo" | "ubicacion" | "lado" | "marca" | "modelo";
+export type FilterGroup =
+  | "linea"
+  | "tipo"
+  | "ubicacion"
+  | "lado"
+  | "marca"
+  | "modelo"
+  | "motor"
+  | "anio";
 
 export type CatalogFilters = {
   linea: Set<string>;
@@ -31,6 +43,8 @@ export type CatalogFilters = {
   lado: Set<string>;
   marca: Set<string>;
   modelo: Set<string>;
+  motor: Set<string>;
+  anio: Set<string>;
 };
 
 export type TipoKey = "kit" | "fuelle" | "tope";
@@ -38,6 +52,30 @@ export type TipoKey = "kit" | "fuelle" | "tope";
 export type Facet = { value: string; count: number };
 
 const EXCLUDED_BRANDS = new Set(["AGRALE", "IVECO", "UNIVERSAL"]);
+
+const ALL_GROUPS: FilterGroup[] = [
+  "linea",
+  "tipo",
+  "ubicacion",
+  "lado",
+  "marca",
+  "modelo",
+  "motor",
+  "anio",
+];
+
+function cloneFilters(f: CatalogFilters): CatalogFilters {
+  return {
+    linea: new Set(f.linea),
+    tipo: new Set(f.tipo),
+    ubicacion: new Set(f.ubicacion),
+    lado: new Set(f.lado),
+    marca: new Set(f.marca),
+    modelo: new Set(f.modelo),
+    motor: new Set(f.motor),
+    anio: new Set(f.anio),
+  };
+}
 
 export function emptyFilters(): CatalogFilters {
   return {
@@ -47,54 +85,52 @@ export function emptyFilters(): CatalogFilters {
     lado: new Set(),
     marca: new Set(),
     modelo: new Set(),
+    motor: new Set(),
+    anio: new Set(),
   };
 }
 
 export function hasActiveFilters(f: CatalogFilters): boolean {
-  return (Object.keys(f) as FilterGroup[]).some((k) => f[k].size > 0);
+  return ALL_GROUPS.some((k) => f[k].size > 0);
 }
 
 export function countActiveFilters(f: CatalogFilters): number {
   let total = 0;
-  for (const k of Object.keys(f) as FilterGroup[]) {
-    total += f[k].size;
-  }
+  for (const k of ALL_GROUPS) total += f[k].size;
   return total;
 }
 
 export function toggleFilter(f: CatalogFilters, group: FilterGroup, value: string): CatalogFilters {
-  const next: CatalogFilters = {
-    linea: new Set(f.linea),
-    tipo: new Set(f.tipo),
-    ubicacion: new Set(f.ubicacion),
-    lado: new Set(f.lado),
-    marca: new Set(f.marca),
-    modelo: new Set(f.modelo),
-  };
+  const next = cloneFilters(f);
   const set = next[group];
   if (set.has(value)) set.delete(value);
   else set.add(value);
 
-  // Si sacan todas las marcas, limpiar modelos también (quedaría colgado).
+  // Cascada hacia abajo: al vaciar un filtro, los dependientes se limpian.
   if (group === "marca" && next.marca.size === 0) {
     next.modelo = new Set();
+    next.motor = new Set();
+    next.anio = new Set();
   }
-  // Si tildan/destildan una marca y el modelo seleccionado ya no aplica,
-  // lo dejamos — el matchesFilters() va a devolver 0 y el user lo verá.
+  if (group === "modelo" && next.modelo.size === 0) {
+    next.motor = new Set();
+    next.anio = new Set();
+  }
   return next;
 }
 
 export function clearGroup(f: CatalogFilters, group: FilterGroup): CatalogFilters {
-  const next: CatalogFilters = {
-    linea: new Set(f.linea),
-    tipo: new Set(f.tipo),
-    ubicacion: new Set(f.ubicacion),
-    lado: new Set(f.lado),
-    marca: new Set(f.marca),
-    modelo: new Set(f.modelo),
-  };
+  const next = cloneFilters(f);
   next[group] = new Set();
-  if (group === "marca") next.modelo = new Set();
+  if (group === "marca") {
+    next.modelo = new Set();
+    next.motor = new Set();
+    next.anio = new Set();
+  }
+  if (group === "modelo") {
+    next.motor = new Set();
+    next.anio = new Set();
+  }
   return next;
 }
 
@@ -110,11 +146,6 @@ export function classifyTipo(p: SpecPartsProduct): TipoKey | null {
   return null;
 }
 
-/**
- * Normaliza el lado. Los valores "según vehículo", "y/o", "ambos", "izquierdo
- * o derecho" etc. se expanden para que cualquier filtro de Izquierdo o Derecho
- * los incluya (vs. aparecer como opción separada en el sidebar).
- */
 export function expandLadoValue(raw: string): string[] {
   const cleaned = raw
     .trim()
@@ -139,11 +170,35 @@ export function displayLadoLabel(value: string): string {
 /*  Matching                                                                   */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Chequea si un producto cumple los filtros, opcionalmente salteando un grupo
- * (se usa para calcular facets: contar cuántos productos quedarían tildando X
- * sin contar X como filtro).
- */
+/** True si TODOS los criterios de vehicle tildados se cumplen en ESTE vehicle. */
+function vehicleMatches(
+  v: SpecPartsVehicle,
+  f: CatalogFilters,
+  opts: { skip?: FilterGroup },
+): boolean {
+  const { skip } = opts;
+
+  if (skip !== "marca" && f.marca.size > 0) {
+    if (!v.brand || !f.marca.has(v.brand.toUpperCase())) return false;
+  }
+  if (skip !== "modelo" && f.modelo.size > 0) {
+    if (!v.master_model || !f.modelo.has(v.master_model.toUpperCase())) return false;
+  }
+  if (skip !== "motor" && f.motor.size > 0) {
+    if (!v.version || !f.motor.has(v.version.toUpperCase())) return false;
+  }
+  if (skip !== "anio" && f.anio.size > 0) {
+    const from = v.sold_from_year ?? 0;
+    const to = v.sold_until_year ?? from;
+    const yearHits = Array.from(f.anio).some((year) => {
+      const y = parseInt(year, 10);
+      return Number.isFinite(y) && y >= from && y <= to;
+    });
+    if (!yearHits) return false;
+  }
+  return true;
+}
+
 export function matchesFilters(
   p: CatalogProduct,
   f: CatalogFilters,
@@ -180,15 +235,16 @@ export function matchesFilters(
     if (!hit) return false;
   }
 
-  if (skip !== "marca" && f.marca.size > 0) {
-    const hit = (p.vehicles ?? []).some((v) => v.brand && f.marca.has(v.brand.toUpperCase()));
-    if (!hit) return false;
-  }
-
-  if (skip !== "modelo" && f.modelo.size > 0) {
-    const hit = (p.vehicles ?? []).some(
-      (v) => v.master_model && f.modelo.has(v.master_model.toUpperCase()),
-    );
+  // Filtros de vehículo: marca/modelo/motor/año tienen que alinear en
+  // el mismo vehicle, si no estaríamos cruzando datos.
+  const vehicleActive =
+    (skip !== "marca" && f.marca.size > 0) ||
+    (skip !== "modelo" && f.modelo.size > 0) ||
+    (skip !== "motor" && f.motor.size > 0) ||
+    (skip !== "anio" && f.anio.size > 0);
+  if (vehicleActive) {
+    const vehicles = p.vehicles ?? [];
+    const hit = vehicles.some((v) => vehicleMatches(v, f, opts));
     if (!hit) return false;
   }
 
@@ -210,6 +266,8 @@ export type Facets = {
   lado: Facet[];
   marca: Facet[];
   modelo: Facet[];
+  motor: Facet[];
+  anio: Facet[];
 };
 
 export function computeFacets(products: CatalogProduct[], f: CatalogFilters): Facets {
@@ -226,7 +284,13 @@ export function computeFacets(products: CatalogProduct[], f: CatalogFilters): Fa
 
     return Array.from(counts.entries())
       .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => a.value.localeCompare(b.value, "es"));
+      .sort((a, b) => {
+        // Año: orden descendente numérico (más nuevo arriba).
+        if (group === "anio") {
+          return parseInt(b.value, 10) - parseInt(a.value, 10);
+        }
+        return a.value.localeCompare(b.value, "es");
+      });
   };
 
   return {
@@ -235,8 +299,10 @@ export function computeFacets(products: CatalogProduct[], f: CatalogFilters): Fa
     ubicacion: facetFor("ubicacion"),
     lado: facetFor("lado"),
     marca: facetFor("marca"),
-    // Modelo: solo tiene sentido si hay al menos una marca tildada.
+    // Modelo: depende de marca. Motor y Año: dependen de modelo.
     modelo: f.marca.size > 0 ? facetFor("modelo") : [],
+    motor: f.modelo.size > 0 ? facetFor("motor") : [],
+    anio: f.modelo.size > 0 ? facetFor("anio") : [],
   };
 }
 
@@ -277,12 +343,43 @@ function extractValues(p: CatalogProduct, group: FilterGroup, f: CatalogFilters)
       for (const v of p.vehicles ?? []) {
         if (!v.master_model) continue;
         const brand = (v.brand || "").toUpperCase();
-        // Solo contamos modelos de marcas tildadas (cuando hay alguna)
         if (f.marca.size > 0 && !f.marca.has(brand)) continue;
         if (EXCLUDED_BRANDS.has(brand)) continue;
         models.add(v.master_model.toUpperCase());
       }
       return Array.from(models);
+    }
+    case "motor": {
+      const motors = new Set<string>();
+      for (const v of p.vehicles ?? []) {
+        if (!v.version) continue;
+        const brand = (v.brand || "").toUpperCase();
+        const model = (v.master_model || "").toUpperCase();
+        if (EXCLUDED_BRANDS.has(brand)) continue;
+        if (f.marca.size > 0 && !f.marca.has(brand)) continue;
+        if (f.modelo.size > 0 && !f.modelo.has(model)) continue;
+        motors.add(v.version.toUpperCase());
+      }
+      return Array.from(motors);
+    }
+    case "anio": {
+      const years = new Set<string>();
+      for (const v of p.vehicles ?? []) {
+        const brand = (v.brand || "").toUpperCase();
+        const model = (v.master_model || "").toUpperCase();
+        const version = (v.version || "").toUpperCase();
+        if (EXCLUDED_BRANDS.has(brand)) continue;
+        if (f.marca.size > 0 && !f.marca.has(brand)) continue;
+        if (f.modelo.size > 0 && !f.modelo.has(model)) continue;
+        if (f.motor.size > 0 && !f.motor.has(version)) continue;
+        const from = v.sold_from_year;
+        const to = v.sold_until_year ?? from;
+        if (!from) continue;
+        for (let y = from; y <= (to ?? from); y += 1) {
+          if (y > 1950 && y < 2100) years.add(String(y));
+        }
+      }
+      return Array.from(years);
     }
   }
 }
