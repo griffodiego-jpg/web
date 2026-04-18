@@ -587,7 +587,17 @@ Grupos:
 
 ### Páginas
 
-- `/admin` — Dashboard con stats.
+- `/admin` — **Dashboard operativo** (primera pantalla al entrar).
+  Semáforos de servicios (SpecParts / Redis / Blob / Resend), alertas
+  de configuración (env vars faltantes, dominio en preview, Resend sin
+  verificar, destacados sin link ML, distribuidores sin email), widgets
+  de leads (últimos 7 días por tipo), novedades (publicadas/sin publicar/
+  ocultas), descargas (slots configurados), dashboard de SpecParts
+  (breakdown por línea, productos sin foto/vehículos/atributos/descripción,
+  discontinuados pero activos) con lista de los primeros 10 productos
+  problemáticos, y log de errores (últimos 100 en Redis, botón "Limpiar").
+  Helpers en `src/lib/admin-health.ts`, `admin-alerts.ts`,
+  `admin-catalog-issues.ts`, `admin-log.ts`.
 - `/admin/distribuidores` — CRUD (lee CSV estático, edits futuros a Redis).
 - `/admin/productos` — Editor de links externos de productos destacados.
 - `/admin/banners` — Stub para banners del home (pendiente).
