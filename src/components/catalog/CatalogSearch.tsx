@@ -703,10 +703,15 @@ function EmptyState({ message }: { message: string }) {
 
 type SortCol = "diamMenor" | "diamMayor" | "largo" | "code";
 
+// Path de la imagen estática "Medidas de tréboles". Si el archivo existe
+// en /public, el botón está activo; si no, queda deshabilitado.
+const TREBOLES_IMAGE = "/catalogo/medidas-treboles.png";
+
 function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: MeasureType }) {
   const [sortCol, setSortCol] = useState<SortCol>("diamMenor");
   const [sortAsc, setSortAsc] = useState(true);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [trebolesOpen, setTrebolesOpen] = useState(false);
 
   const rows = useMemo(() => buildMeasureRows(products, type), [products, type]);
   const sorted = useMemo(() => {
@@ -739,13 +744,19 @@ function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: M
   return (
     <>
       <div className="flex flex-col gap-3">
+        {/* Llamadores del tab Transmisión: accesos rápidos a Fuelle Universal
+            y a la grilla de Tréboles. Replica la convención del sitio viejo. */}
+        {type === "transmision" ? (
+          <TransmisionShortcuts onOpenTreboles={() => setTrebolesOpen(true)} />
+        ) : null}
+
         <p className="text-xs text-gray-500">
           <span className="font-bold text-[#0a2b3d]">{sorted.length}</span>{" "}
           {sorted.length === 1 ? "producto" : "productos"}
         </p>
-        <div className="overflow-x-auto rounded-lg border border-gray-100">
+        <div className="overflow-auto rounded-lg border border-gray-100 max-h-[70vh]">
           <table className="min-w-full text-xs">
-            <thead className="bg-primary text-white">
+            <thead className="sticky top-0 z-10 bg-primary text-white shadow-sm">
               <tr>
                 <Th onClick={() => onSort("diamMenor")} active={sortCol === "diamMenor"} asc={sortAsc}>
                   Diám. Menor
@@ -779,7 +790,53 @@ function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: M
       {lightbox ? (
         <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
       ) : null}
+      {trebolesOpen ? (
+        <ImageLightbox
+          src={TREBOLES_IMAGE}
+          alt="Medidas de tréboles — catálogo Griffo"
+          onClose={() => setTrebolesOpen(false)}
+        />
+      ) : null}
     </>
+  );
+}
+
+function TransmisionShortcuts({ onOpenTreboles }: { onOpenTreboles: () => void }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <Link
+        href="/productos/kit-de-fuelles-universales-para-homocineticas"
+        className="flex items-center justify-between gap-3 rounded-lg border-2 border-accent/30 bg-accent/5 p-3 transition hover:border-accent hover:bg-accent/10"
+      >
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
+            ¿No encontrás el fuelle?
+          </p>
+          <p className="text-sm font-black text-primary">Fuelle Universal de Transmisión</p>
+          <p className="mt-0.5 text-[11px] text-gray-600">
+            Kit que se adapta a una amplia variedad de vehículos.
+          </p>
+        </div>
+        <span className="text-lg font-bold text-primary">→</span>
+      </Link>
+
+      <button
+        type="button"
+        onClick={onOpenTreboles}
+        className="flex items-center justify-between gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3 text-left transition hover:border-primary hover:bg-primary/10"
+      >
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+            Guía visual
+          </p>
+          <p className="text-sm font-black text-primary">Medidas de Tréboles</p>
+          <p className="mt-0.5 text-[11px] text-gray-600">
+            Grilla visual con los códigos y medidas de cada trébol.
+          </p>
+        </div>
+        <span className="text-lg font-bold text-primary">⊕</span>
+      </button>
+    </div>
   );
 }
 
@@ -791,7 +848,7 @@ function MeasureRowView({
   onImageClick: (src: string, alt: string) => void;
 }) {
   return (
-    <tr className="border-b border-gray-50 transition hover:bg-primary/5">
+    <tr className="group border-b border-gray-50 transition hover:bg-primary/5">
       <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMenor || "—"}</td>
       <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMayor || "—"}</td>
       <td className="px-3 py-2 text-[#0a2b3d]">{row.largo || "—"}</td>
@@ -803,22 +860,40 @@ function MeasureRowView({
           {row.code}
         </Link>
       </td>
-      <td className="px-3 py-1.5 text-right">
+      <td className="relative px-3 py-1.5 text-right">
         {row.imageUrl ? (
-          <button
-            type="button"
-            onClick={() => onImageClick(row.imageUrl!, row.productName || row.code)}
-            aria-label={`Ampliar foto del producto ${row.code}`}
-            className="inline-block overflow-hidden rounded border border-gray-200 bg-white p-1 transition hover:border-accent hover:shadow-sm"
-          >
-            <Image
-              src={row.imageUrl}
-              alt={row.productName || row.code}
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
-            />
-          </button>
+          <div className="group/img relative inline-block">
+            <button
+              type="button"
+              onClick={() => onImageClick(row.imageUrl!, row.productName || row.code)}
+              aria-label={`Ampliar foto del producto ${row.code}`}
+              className="inline-block overflow-hidden rounded border border-gray-200 bg-white p-1 transition hover:border-accent hover:shadow-sm"
+            >
+              <Image
+                src={row.imageUrl}
+                alt={row.productName || row.code}
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+              />
+            </button>
+            {/* Preview flotante al hover — desktop only. Aparece a la izquierda
+                para no salirse del viewport en la columna final. */}
+            <div
+              className="pointer-events-none absolute right-full top-1/2 z-30 mr-2 hidden -translate-y-1/2 group-hover/img:block"
+              aria-hidden
+            >
+              <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-2xl">
+                <Image
+                  src={row.imageUrl}
+                  alt=""
+                  width={200}
+                  height={200}
+                  className="h-48 w-48 object-contain"
+                />
+              </div>
+            </div>
+          </div>
         ) : (
           <span className="text-[10px] text-gray-300">—</span>
         )}
