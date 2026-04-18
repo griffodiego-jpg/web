@@ -151,60 +151,220 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 - `/cuenta/*`: **portal B2B en modo demo** (datos mock). Ver sección
   "Portal B2B (/cuenta/*)" más abajo.
 
-## Portal B2B (`/cuenta/*`)
+## Portal B2B (`/cuenta/*`) + carrito + integración con ERP
 
 Portal para clientes mayoristas (~80 distribuidores). Consume la API
 del ERP Griffo (middleware sobre Bejerman) documentada en
 `reference/bejerman/`. Cliente HTTP en `src/lib/api/bejerman.ts`,
 tipos en `src/types/bejerman.ts`.
 
-### Estado actual
+### Resumen ejecutivo del estado (2026-04-17)
 
-**Scaffolding armado, auth real pendiente.** Todas las páginas se
-renderizan con datos mock (`src/data/mock-b2b.ts`) para que la
-cliente valide diseño y flujo. Cuando haya:
+- **Scaffolding armado, auth real pendiente.** El portal se ve
+  completo visualmente con datos mock. Al conectar auth + ERP,
+  todo muestra datos reales.
+- **API del ERP**: la hizo un técnico propio de Griffo (no
+  Promotive, que originalmente iba a consumirla). Griffo es dueña
+  del código. Si el técnico se va, hay que conseguir el repo antes.
+- **URL base**: `http://intranet.remotogriffo.com.ar:86/api`
+  (cambió desde `griffo.stidns.net:86` el 2026-04-17). HTTP sin TLS
+  — el técnico debería habilitar HTTPS antes de producción.
+- **Credenciales del PDF** (`mpinero@promotive.la` / `password`)
+  devuelven 401 "Credenciales inválidas" — eran de ejemplo. La
+  cliente lo pide al técnico el lunes siguiente.
+- **Firebase**: decisión de la cliente fue **proyecto nuevo
+  dedicado** (no reusar `griffo-app` de la app mobile). Pendiente
+  de crear.
+- **Alta de usuarios B2B**: autoservicio validando contra el ERP
+  (opción C). Ver pendientes abajo para detalles.
 
-1. Credenciales válidas del ERP cargadas en Vercel
-   (`BEJERMAN_EMAIL` / `BEJERMAN_PASSWORD`).
-2. Proyecto Firebase nuevo creado y configurado (no reusar
-   `griffo-app` — decisión de la cliente el 2026-04-17).
-3. Vínculo user Firebase ↔ `client_id` de Bejerman (matcheo por email
-   contra `GET /ERP/Clients`).
+### API del ERP Griffo (middleware sobre Bejerman)
 
-se reemplazan los imports de `mock-b2b.ts` por llamadas a las
-funciones de `src/lib/api/bejerman.ts` y el portal empieza a mostrar
-datos reales. Los shapes ya coinciden 1:1 con los tipos del ERP.
+Docs completas: `reference/bejerman/README.md` + PDF
+`Documentación API ERP Griffo v3.pdf` (unificado por Claude, va a
+estar en la carpeta `reference/bejerman/` incluso si la cliente
+pide limpiar versiones viejas).
 
-### Estructura de rutas
+6 endpoints disponibles:
 
-- `/cuenta/login` — form de login (sin auth real, submit redirige a
-  `/cuenta`). Route group `/cuenta/login/` fuera del grupo portal
-  para tener chrome propio.
+1. `POST /Auth/login` → JWT Bearer. Body `{email, password,
+   twoFactorCode, twoFactorRecoveryCode}`.
+2. `POST /Auth/change_password` — cambia la contraseña del usuario
+   API (no la de clientes B2B).
+3. `GET /ERP/Clients` — lista de clientes con depósitos.
+4. `POST /ERP/prices` — cotiza precios + stock por
+   cliente+depósito+códigos.
+5. `POST /ERP/order` — crea pedido.
+6. `GET /ERP/orders/{erp_order_id}` — estado del pedido.
+7. `GET /ERP/ClientAccountStatus/{client_code}` — cuenta corriente
+   (comprobantes con debe/haber, sale cuenta corriente Y lista de
+   facturas filtrando por `comp === "FC"`).
+8. `GET /ERP/GetComprobante?Comp=...&PuntoVenta=...&CompNro=...&CodCliente=...`
+   — descarga PDF de un comprobante. Los params salen 1:1 de un
+   item de ClientAccountStatus.
+
+Cliente HTTP: `src/lib/api/bejerman.ts`. Server-only. JWT cacheado
+55 min, re-auth automático en 401, dedup de logins en vuelo.
+`getComprobantePdf()` devuelve `{buffer, contentType}` para
+streamear el PDF al usuario.
+
+**Env vars** (Vercel → los 3 scopes):
+```
+BEJERMAN_API_URL=http://intranet.remotogriffo.com.ar:86/api
+BEJERMAN_EMAIL=           # usuario API provisto por el técnico
+BEJERMAN_PASSWORD=        # password del usuario API
+```
+
+**Gaps de la API** (no existen endpoints, workarounds):
+- Lista de precios descargable como PDF/XLSX → generamos nosotros
+  iterando `/ERP/prices` con todos los códigos del catálogo.
+- Crear/editar cliente desde la web → alta manual por Griffo en
+  Bejerman, la web sólo lee.
+
+### Estructura de rutas `/cuenta/*`
+
+Uso de route groups para separar chrome del login vs chrome del
+portal:
+
+- `/cuenta/login/page.tsx` → URL `/cuenta/login`. Form con email +
+  password, sin subtítulo (a pedido de la cliente). Submit hace
+  login mock (setea `griffo:b2b:session` en localStorage con
+  `{email, loggedAt}`) y redirige a `/cuenta`. Cuando Firebase
+  esté activo, se reemplaza el submit por `signInWithEmailAndPassword`.
 - `/cuenta/(portal)/layout.tsx` — encabezado con nombre del cliente +
-  sub-nav (`PortalNav` client component) + botón "Cerrar sesión".
-- `/cuenta/(portal)/page.tsx` → URL `/cuenta` — dashboard con KPIs,
-  accesos rápidos y últimos 3 pedidos.
-- `/cuenta/(portal)/pedidos/page.tsx` — tabla de pedidos.
-- `/cuenta/(portal)/facturas/page.tsx` — lista de FC con botón PDF.
-- `/cuenta/(portal)/cuenta-corriente/page.tsx` — KPIs + tabla de
-  movimientos con saldo running.
+  badge "🚧 Modo demo" + `CerrarSesionButton` + `PortalNav`.
+- `/cuenta/(portal)/page.tsx` → URL `/cuenta` — **Resumen**
+  (renombrado desde "Dashboard" el 2026-04-17). 3 KPI cards
+  (saldo, facturas 12 meses, pedidos activos) + accesos rápidos +
+  últimos 3 pedidos. Sin saludo "Hola, X" — fuera a pedido de la
+  cliente.
+- `/cuenta/(portal)/pedidos/page.tsx` — tabla con ERP ID, ref web,
+  fecha, estado, ítems, total.
+- `/cuenta/(portal)/facturas/page.tsx` — lista de FC con botón PDF
+  deshabilitado (se habilita al conectar `/ERP/GetComprobante`).
+- `/cuenta/(portal)/cuenta-corriente/page.tsx` — 3 KPIs (saldo /
+  total debe / total haber) + tabla con saldo running.
 - `/cuenta/(portal)/listas/page.tsx` — cards de descarga PDF/XLSX.
+- `/cuenta/(portal)/perfil/page.tsx` — **3 secciones**:
+  * **Datos de cuenta**: razón social + código readonly (los
+    maneja Griffo), email editable.
+  * **Cambiar contraseña**: actual + nueva + repetir, validación
+    mínima 8 chars + match.
+  * **Visualización de precios**: toggle `compra`/`PVP` + input
+    de margen (deshabilitado en modo compra) + ejemplo vivo con
+    "+ IVA" en los dos modos.
+- `/carrito/page.tsx` → URL `/carrito`. Usa `CartContent`.
 
-### Acceso desde el sitio público
+### Componentes clave del portal
 
-CTA "Acceso clientes" en el header (`components/Header.tsx`) — pill
-amarilla accent al final del nav, linkea a `/cuenta/login`.
+- `components/cuenta/PortalNav.tsx` — tabs del sub-nav
+  (Resumen / Mis pedidos / Facturas / Cuenta corriente / Lista de
+  precios / Mi perfil).
+- `components/cuenta/PerfilForm.tsx` — client component con las 3
+  secciones del perfil.
+- `components/cuenta/CerrarSesionButton.tsx` — logout del mock.
+- `components/cart/CartIndicator.tsx` — ícono + badge con `count`
+  del carrito. Siempre visible en el header (también en mobile,
+  fuera del hamburger).
+- `components/cart/CartContent.tsx` — tabla de items con precio
+  unitario + subtotal + total + "+ IVA" + contador por modo.
+- `components/catalog/AddToCartButton.tsx` — 3 estados:
+  * Sin items: botón azul "Agregar".
+  * Expandido: [− N +] + OK / ×.
+  * Con items: badge verde "Agregado" (texto completo en detalle
+    del producto, sólo tilde ● en la card compact) + `[− N +]`
+    verde esmeralda.
+- `components/catalog/ProductPrice.tsx` — muestra compra o PVP
+  según `useB2BPreferences()`, siempre con "+ IVA". Acepta
+  `compraPrice?: number` para cuando haya precios reales del
+  ERP; por defecto usa `getMockCompraPrice()`.
 
-### Badges y comentarios "🚧 Modo demo"
+### Hooks / libs del portal
 
-Cada página tiene una línea al pie que indica qué endpoint de
-Bejerman la va a alimentar. Quitar cuando se haga el swap.
+- `src/lib/mock-session.ts` — `useMockSession()`. Persiste
+  `{email, loggedAt}` en `localStorage["griffo:b2b:session"]`.
+  Expone `login(email)`, `logout()`, `isLoggedIn`, `ready`.
+  Dispara event `b2b-session-change` para sincronizar entre
+  pestañas/componentes. **Se reemplaza por Firebase Auth cuando
+  esté listo** — la API del hook queda igual.
+- `src/lib/cart.ts` — `useCart()`. Persiste items en
+  `localStorage["griffo:cart"]`. API: `items`, `count`, `ready`,
+  `getQuantity`, `addItem`, `setQuantity`, `removeItem`, `clear`.
+  Dispara `cart-change` para sincronizar. Cuando haya auth real,
+  migrar a Redis por user.
+- `src/lib/b2b-preferences.ts` — `useB2BPreferences()`. Persiste
+  `{priceMode, marginPct}` en `localStorage["griffo:b2b:prefs"]`.
+  Defaults: `compra`, 30%. El margen se aplica sólo en modo
+  `pvp`. Helper `displayPrice(base, prefs)`. Dispara
+  `b2b-prefs-change`.
+- `src/lib/mock-prices.ts` — `getMockCompraPrice(code)` hash
+  determinístico → precio en ARS entre $8k y $180k, redondeado a
+  $100. `formatARSNeto(value)` → `"$12.345,00 + IVA"`. Cuando
+  `/ERP/prices` esté activo, pasar `compraPrice` real como prop
+  a `ProductPrice` y el mock se ignora.
+
+### Datos mock para demo
+
+`src/data/mock-b2b.ts` exporta:
+- `mockCurrentClient: BejermanClient` (shape 1:1 con la API).
+- `mockAccountStatus: BejermanAccountStatusItem[]` — 7
+  comprobantes mezclados FC/NC/RE con fechas recientes.
+- `mockOrders: MockOrder[]` — 5 pedidos en varios estados.
+- `mockPriceLists` — 2 entradas (PDF + XLSX).
+- Helpers: `computeSaldo`, `formatARS`, `formatDate`.
+
+### Header — estado logueado vs no logueado
+
+`components/Header.tsx` usa `useMockSession()`:
+
+- **No logueado**: pill accent amarilla `Acceso clientes` →
+  `/cuenta/login`.
+- **Logueado**: pill verde esmeralda con ícono + `mockCurrentClient.name`
+  arriba de "Entrar al portal" → `/cuenta`. Feedback visual
+  inequívoco.
+
+`CartIndicator` siempre visible, al lado de la hamburguesa en mobile
+y al lado del CTA de cliente en desktop.
+
+### Integración en el catálogo público
+
+Cada `ProductCard` muestra:
+- Precio (compra o PVP según prefs) + "+ IVA".
+- `AddToCartButton compact` (siempre visible, sin
+  depender de login — cualquiera puede armar un carrito).
+
+El detalle `/catalogo/[slug]` tiene un panel arriba del fold con
+precio grande + `AddToCartButton` no-compact + MercadoLibre como
+CTA secundario si el producto lo tiene.
 
 ### Admin `/admin/clientes`
 
 Server component que lee `getClients()` del ERP y los lista en una
-tabla. Protegido por el proxy admin estándar. Renderiza un error
-amigable si faltan `BEJERMAN_EMAIL`/`PASSWORD`.
+tabla (código, razón social, email, nro de depósitos). Protegido
+por el proxy admin estándar. Si faltan `BEJERMAN_EMAIL`/`PASSWORD`
+renderiza un instructivo con los pasos para cargarlas en Vercel.
+
+### Qué falta para activar end-to-end
+
+1. Recibir credenciales API reales del técnico (mail ya redactado
+   en `reference/bejerman/mail-al-proveedor.md`).
+2. Crear proyecto Firebase nuevo + config + Authentication con
+   Email/Password habilitado.
+3. Cargar en Vercel las env vars:
+   - `BEJERMAN_EMAIL`, `BEJERMAN_PASSWORD`
+   - `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_CREDENTIALS`
+4. Reemplazar:
+   - `useMockSession` por Firebase Auth (misma API pública).
+   - `mock-b2b.ts` por llamadas a `src/lib/api/bejerman.ts` en
+     cada server component del portal.
+   - Mock prices en `ProductPrice`/`CartContent` por resultados
+     de `getPrices({clientId, warehouseId, items})`.
+5. Mover carrito de localStorage a Redis por user.
+6. Conectar `/api/b2b/checkout` → `createOrder(...)` en el botón
+   "Confirmar pedido" de `CartContent`.
+7. Conectar botón PDF de `/cuenta/facturas` →
+   `getComprobantePdf(...)` y streamear al usuario.
+8. Pedirle al técnico habilitar HTTPS antes de producción.
 
 ## Catálogo de productos (SpecParts)
 
