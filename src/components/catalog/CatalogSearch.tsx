@@ -30,10 +30,11 @@ import {
 import { FiltersSidebar } from "./FiltersSidebar";
 import { ImageLightbox } from "./ImageLightbox";
 import { ProductCard } from "./ProductCard";
+import { StatusBadge, type CatalogStatus } from "./StatusBadge";
 
 type TabKey = "palabra" | "patente" | "vehiculo" | "codigo" | "medidas";
 
-type Props = { products: CatalogProduct[] };
+type Props = { products: CatalogProduct[]; status?: CatalogStatus };
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "palabra", label: "Palabra" },
@@ -133,7 +134,7 @@ function buildQueryString(state: {
   return p.toString();
 }
 
-export function CatalogSearch({ products }: Props) {
+export function CatalogSearch({ products, status }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -317,20 +318,23 @@ export function CatalogSearch({ products }: Props) {
                 o medidas
               </p>
             </div>
-            {showSidebar ? (
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary lg:hidden"
-              >
-                <FilterIcon /> Filtros
-                {activeFilters > 0 ? (
-                  <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
-                    {activeFilters}
-                  </span>
-                ) : null}
-              </button>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {status ? <StatusBadge status={status} /> : null}
+              {showSidebar ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary lg:hidden"
+                >
+                  <FilterIcon /> Filtros
+                  {activeFilters > 0 ? (
+                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
+                      {activeFilters}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <nav

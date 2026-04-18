@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
+import type { CatalogStatus } from "@/components/catalog/StatusBadge";
 import { listCatalog } from "@/lib/api/specparts";
 import type { CatalogProduct } from "@/types/specparts";
 
@@ -19,6 +20,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Esperamos al menos este número de productos para considerar el catálogo
+// "sano". Menos indica que la API devolvió parcial o hay algo raro.
+const HEALTHY_MIN_PRODUCTS = 300;
+
 export default async function CatalogoPage() {
   let products: CatalogProduct[] = [];
   let loadError: string | null = null;
@@ -27,6 +32,18 @@ export default async function CatalogoPage() {
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Error al cargar el catálogo";
   }
+
+  const status: CatalogStatus = {
+    level: loadError
+      ? "down"
+      : products.length >= HEALTHY_MIN_PRODUCTS
+        ? "ok"
+        : products.length > 0
+          ? "slow"
+          : "down",
+    productCount: products.length,
+    checkedAt: new Date().toISOString(),
+  };
 
   if (loadError) {
     return (
@@ -47,7 +64,7 @@ export default async function CatalogoPage() {
 
   return (
     <Suspense>
-      <CatalogSearch products={products} />
+      <CatalogSearch products={products} status={status} />
     </Suspense>
   );
 }
