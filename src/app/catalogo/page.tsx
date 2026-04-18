@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { CatalogSearch } from "@/components/catalog/CatalogSearch";
 import type { CatalogStatus } from "@/components/catalog/StatusBadge";
 import { listCatalog } from "@/lib/api/specparts";
+import { resolveImageUrl } from "@/lib/catalogo-imagenes-store";
 import type { CatalogProduct } from "@/types/specparts";
 
 export const revalidate = 1800;
@@ -62,9 +63,11 @@ export default async function CatalogoPage() {
     );
   }
 
+  const trebolesUrl = await resolveImageUrl("medidas-treboles").catch(() => undefined);
+
   return (
     <Suspense>
-      <CatalogSearch products={products} status={status} />
+      <CatalogSearch products={products} status={status} trebolesUrl={trebolesUrl} />
     </Suspense>
   );
 }

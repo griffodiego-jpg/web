@@ -34,7 +34,12 @@ import { StatusBadge, type CatalogStatus } from "./StatusBadge";
 
 type TabKey = "palabra" | "patente" | "vehiculo" | "codigo" | "medidas";
 
-type Props = { products: CatalogProduct[]; status?: CatalogStatus };
+type Props = {
+  products: CatalogProduct[];
+  status?: CatalogStatus;
+  /** URL de la imagen 'Medidas de Tréboles'. Si no hay, el botón queda deshabilitado. */
+  trebolesUrl?: string;
+};
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "palabra", label: "Palabra" },
@@ -138,7 +143,7 @@ function buildQueryString(state: {
   return p.toString();
 }
 
-export function CatalogSearch({ products, status }: Props) {
+export function CatalogSearch({ products, status, trebolesUrl }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -407,7 +412,7 @@ export function CatalogSearch({ products, status }: Props) {
       {/* ---------------- Área de resultados ---------------- */}
       {tab === "medidas" ? (
         <div className="px-4 py-6 lg:px-6">
-          <MeasuresTable products={products} type={measureType} />
+          <MeasuresTable products={products} type={measureType} trebolesUrl={trebolesUrl} />
         </div>
       ) : (
         <div
@@ -703,11 +708,15 @@ function EmptyState({ message }: { message: string }) {
 
 type SortCol = "diamMenor" | "diamMayor" | "largo" | "code";
 
-// Path de la imagen estática "Medidas de tréboles". Si el archivo existe
-// en /public, el botón está activo; si no, queda deshabilitado.
-const TREBOLES_IMAGE = "/catalogo/medidas-treboles.png";
-
-function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: MeasureType }) {
+function MeasuresTable({
+  products,
+  type,
+  trebolesUrl,
+}: {
+  products: CatalogProduct[];
+  type: MeasureType;
+  trebolesUrl?: string;
+}) {
   const [sortCol, setSortCol] = useState<SortCol>("diamMenor");
   const [sortAsc, setSortAsc] = useState(true);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
@@ -747,7 +756,10 @@ function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: M
         {/* Llamadores del tab Transmisión: accesos rápidos a Fuelle Universal
             y a la grilla de Tréboles. Replica la convención del sitio viejo. */}
         {type === "transmision" ? (
-          <TransmisionShortcuts onOpenTreboles={() => setTrebolesOpen(true)} />
+          <TransmisionShortcuts
+            trebolesUrl={trebolesUrl}
+            onOpenTreboles={() => setTrebolesOpen(true)}
+          />
         ) : null}
 
         <p className="text-xs text-gray-500">
@@ -790,9 +802,9 @@ function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: M
       {lightbox ? (
         <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
       ) : null}
-      {trebolesOpen ? (
+      {trebolesOpen && trebolesUrl ? (
         <ImageLightbox
-          src={TREBOLES_IMAGE}
+          src={trebolesUrl}
           alt="Medidas de tréboles — catálogo Griffo"
           onClose={() => setTrebolesOpen(false)}
         />
@@ -801,7 +813,14 @@ function MeasuresTable({ products, type }: { products: CatalogProduct[]; type: M
   );
 }
 
-function TransmisionShortcuts({ onOpenTreboles }: { onOpenTreboles: () => void }) {
+function TransmisionShortcuts({
+  trebolesUrl,
+  onOpenTreboles,
+}: {
+  trebolesUrl?: string;
+  onOpenTreboles: () => void;
+}) {
+  const trebolesDisabled = !trebolesUrl;
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       <Link
@@ -809,32 +828,53 @@ function TransmisionShortcuts({ onOpenTreboles }: { onOpenTreboles: () => void }
         className="flex items-center justify-between gap-3 rounded-lg border-2 border-accent/30 bg-accent/5 p-3 transition hover:border-accent hover:bg-accent/10"
       >
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
-            ¿No encontrás el fuelle?
+          <p className="text-sm font-black text-primary">
+            ¿No encontraste el fuelle que buscabas?
           </p>
-          <p className="text-sm font-black text-primary">Fuelle Universal de Transmisión</p>
-          <p className="mt-0.5 text-[11px] text-gray-600">
-            Kit que se adapta a una amplia variedad de vehículos.
+          <p className="mt-0.5 text-[13px] font-semibold text-[#0a2b3d]">
+            Mirá el Fuelle Universal →
           </p>
         </div>
-        <span className="text-lg font-bold text-primary">→</span>
       </Link>
 
       <button
         type="button"
         onClick={onOpenTreboles}
-        className="flex items-center justify-between gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3 text-left transition hover:border-primary hover:bg-primary/10"
+        disabled={trebolesDisabled}
+        title={trebolesDisabled ? "Imagen aún no cargada" : undefined}
+        className={[
+          "flex items-center justify-between gap-3 rounded-lg border-2 p-3 text-left transition",
+          trebolesDisabled
+            ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+            : "border-primary/20 bg-primary/5 hover:border-primary hover:bg-primary/10",
+        ].join(" ")}
       >
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+          <p
+            className={[
+              "text-[10px] font-bold uppercase tracking-widest",
+              trebolesDisabled ? "text-gray-400" : "text-primary",
+            ].join(" ")}
+          >
             Guía visual
           </p>
-          <p className="text-sm font-black text-primary">Medidas de Tréboles</p>
-          <p className="mt-0.5 text-[11px] text-gray-600">
-            Grilla visual con los códigos y medidas de cada trébol.
+          <p
+            className={[
+              "text-sm font-black",
+              trebolesDisabled ? "text-gray-400" : "text-primary",
+            ].join(" ")}
+          >
+            Medidas de Tréboles
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-500">
+            {trebolesDisabled
+              ? "Próximamente"
+              : "Grilla visual con los códigos y medidas de cada trébol."}
           </p>
         </div>
-        <span className="text-lg font-bold text-primary">⊕</span>
+        <span className={trebolesDisabled ? "text-lg text-gray-400" : "text-lg font-bold text-primary"}>
+          ⊕
+        </span>
       </button>
     </div>
   );
