@@ -3,7 +3,12 @@
  * Ported de la app mobile (app.griffo.com.ar v2.11).
  */
 
-import type { CatalogProduct, IndexedProduct, SpecPartsProduct } from "@/types/specparts";
+import type {
+  CatalogProduct,
+  IndexedProduct,
+  SpecPartsProduct,
+  SpecPartsVehicle,
+} from "@/types/specparts";
 
 /** Marcas que se excluyen del filtro de "Por Vehículo" (no se venden en AR). */
 const EXCLUDED_VEHICLE_BRANDS = new Set(["AGRALE", "IVECO", "UNIVERSAL"]);
@@ -174,6 +179,8 @@ export type MeasureVersion = {
   description: string;
   productSlug: string;
   imageUrl: string | null;
+  /** Vehículos compatibles (para mostrar el resumen 'FORD (KUGA - RANGER)...'). */
+  vehicles: SpecPartsVehicle[];
 };
 
 export type MeasureRow = {
@@ -291,6 +298,7 @@ function toMeasureVersion(p: SpecPartsProduct): MeasureVersion {
     description: p.description || "",
     productSlug: p.slug,
     imageUrl: p.pictures?.[0]?.image_url ?? null,
+    vehicles: p.vehicles ?? [],
   };
 }
 

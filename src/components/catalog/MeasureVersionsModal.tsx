@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import type { MeasureVersion } from "@/lib/catalog/utils";
+import type { SpecPartsVehicle } from "@/types/specparts";
 
 type Props = {
   open: boolean;
@@ -98,6 +99,12 @@ export function MeasureVersionsModal({ open, onClose, baseCode, versions }: Prop
                         {v.description}
                       </p>
                     ) : null}
+                    {v.vehicles.length > 0 ? (
+                      <VehicleSummary
+                        vehicles={v.vehicles}
+                        totalCount={v.vehicles.length}
+                      />
+                    ) : null}
                     <p className="mt-1 text-[11px] font-bold text-accent">Ver detalle →</p>
                   </div>
                 </Link>
@@ -106,6 +113,48 @@ export function MeasureVersionsModal({ open, onClose, baseCode, versions }: Prop
           </ul>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Resumen compacto de vehículos con la marca en negrita, igual que en
+ * la ProductCard del catálogo: 'FORD (KUGA - RANGER), CHEVROLET (S-10)'.
+ * Se clampa a 2 líneas; si quedan afuera, aparece un texto '+N más'.
+ */
+function VehicleSummary({
+  vehicles,
+  totalCount,
+}: {
+  vehicles: SpecPartsVehicle[];
+  totalCount: number;
+}) {
+  const byBrand = new Map<string, Set<string>>();
+  for (const v of vehicles) {
+    const brand = (v.brand || "").trim().toUpperCase();
+    if (!brand) continue;
+    const model = (v.master_model || v.model || "").trim().toUpperCase();
+    if (!model) continue;
+    if (!byBrand.has(brand)) byBrand.set(brand, new Set());
+    byBrand.get(brand)!.add(model);
+  }
+  const entries = Array.from(byBrand.entries());
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="mt-1">
+      <p className="text-[10px] leading-snug text-gray-600 line-clamp-2">
+        {entries.map(([brand, models], i) => (
+          <span key={brand}>
+            <strong className="font-bold text-[#0a2b3d]">{brand}</strong>
+            {` (${Array.from(models).sort().join(" - ")})`}
+            {i < entries.length - 1 ? ", " : ""}
+          </span>
+        ))}
+      </p>
+      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+        {totalCount} {totalCount === 1 ? "vehículo compatible" : "vehículos compatibles"}
+      </p>
     </div>
   );
 }
