@@ -101,14 +101,19 @@ export default async function AdminDashboard() {
         </p>
       </header>
 
-      {/* HEALTH — semáforos */}
+      {/* HEALTH — semáforos, agrupados por sitio / B2B */}
       <section>
         <SectionTitle>Estado de servicios</SectionTitle>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-          {health.map((h) => (
-            <HealthTile key={h.id} check={h} />
-          ))}
-        </div>
+        <HealthGroup
+          title="Datos del sitio público"
+          subtitle="Servicios que alimentan griffo.com.ar y el admin."
+          checks={health.filter((h) => h.group === "sitio")}
+        />
+        <HealthGroup
+          title="Portal B2B (clientes mayoristas)"
+          subtitle="Servicios del área /cuenta/* — en modo demo hasta recibir credenciales reales del técnico."
+          checks={health.filter((h) => h.group === "b2b")}
+        />
       </section>
 
       {/* ALERTAS */}
@@ -396,6 +401,33 @@ function EmptyRow({ children }: { children: React.ReactNode }) {
   );
 }
 
+function HealthGroup({
+  title,
+  subtitle,
+  checks,
+}: {
+  title: string;
+  subtitle: string;
+  checks: HealthCheck[];
+}) {
+  if (checks.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <div className="mb-2">
+        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+          {title}
+        </p>
+        <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {checks.map((h) => (
+          <HealthTile key={h.id} check={h} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HealthTile({ check }: { check: HealthCheck }) {
   const cfg = {
     ok: { bg: "bg-green-50", border: "border-green-200", dot: "bg-green-500", text: "text-green-800" },
@@ -404,18 +436,34 @@ function HealthTile({ check }: { check: HealthCheck }) {
   }[check.status];
   return (
     <div
-      className={`rounded-lg border ${cfg.border} ${cfg.bg} p-4`}
+      className={`rounded-lg border ${cfg.border} ${cfg.bg} p-4 flex flex-col h-full`}
       title={check.detail}
     >
       <div className="flex items-center gap-2">
         <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} aria-hidden />
-        <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
+        <p className="text-xs font-bold uppercase tracking-wide text-gray-700">
           {check.label}
         </p>
       </div>
       <p className={`mt-1 text-sm font-semibold ${cfg.text}`}>
         {check.message}
       </p>
+      <p className="mt-2 text-[11px] text-gray-500 leading-snug flex-1">
+        {check.purpose}
+      </p>
+      {check.detail && (
+        <p
+          className={`mt-2 text-[11px] leading-snug ${
+            check.status === "error"
+              ? "text-red-700"
+              : check.status === "warn"
+                ? "text-amber-700"
+                : "text-gray-500"
+          }`}
+        >
+          {check.detail}
+        </p>
+      )}
     </div>
   );
 }

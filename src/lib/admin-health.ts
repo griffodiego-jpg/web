@@ -4,75 +4,119 @@ import { getRedis } from "@/lib/kv";
 /**
  * Health checks de los servicios externos que el sitio usa. Cada check
  * devuelve `ok` (verde), `warn` (amarillo) o `error` (rojo) + un
- * mensaje corto para el dashboard.
+ * mensaje corto en lenguaje común para la cliente + detail técnico.
  *
  * Se corren en paralelo con Promise.allSettled para que un servicio
  * caído no rompa la verificación del resto.
+ *
+ * Agrupados en 2 secciones:
+ *   - `sitio`: servicios que alimentan el sitio público + admin.
+ *   - `b2b`: servicios del portal de clientes mayoristas (/cuenta/*).
  */
 
 export type HealthStatus = "ok" | "warn" | "error";
+export type HealthGroup = "sitio" | "b2b";
 
 export type HealthCheck = {
   id: string;
   label: string;
+  /** Explicación corta: qué alimenta este servicio. */
+  purpose: string;
+  /** Grupo para agrupar en la UI. */
+  group: HealthGroup;
   status: HealthStatus;
   message: string;
-  /** Detalle opcional para mostrar en hover/tooltip. */
+  /** Detalle técnico opcional para mostrar en hover/tooltip. */
   detail?: string;
 };
 
 export async function runHealthChecks(): Promise<HealthCheck[]> {
-  const [sp, redis, blob, resend] = await Promise.allSettled([
+  const [sp, redis, blob, resend, bejerman] = await Promise.allSettled([
     checkSpecParts(),
     checkRedis(),
     checkBlob(),
     checkResend(),
+    checkBejerman(),
   ]);
 
   return [
-    settledToCheck("specparts", "SpecParts API", sp),
-    settledToCheck("redis", "Upstash Redis", redis),
-    settledToCheck("blob", "Vercel Blob", blob),
-    settledToCheck("resend", "Resend (email)", resend),
+    settledToCheck(
+      "specparts",
+      "Catálogo de productos",
+      "Alimenta el catálogo y las novedades con los 370+ productos Griffo",
+      "sitio",
+      sp
+    ),
+    settledToCheck(
+      "redis",
+      "Base de datos",
+      "Guarda los leads de formularios, sesiones del admin, novedades y links de descargas",
+      "sitio",
+      redis
+    ),
+    settledToCheck(
+      "blob",
+      "Subida de archivos",
+      "Permite subir catálogos PDF, flyers, videos y banco de imágenes desde el admin",
+      "sitio",
+      blob
+    ),
+    settledToCheck(
+      "resend",
+      "Envío de emails",
+      "Notifica por email cuando un cliente completa un formulario de contacto, garantía, etc.",
+      "sitio",
+      resend
+    ),
+    settledToCheck(
+      "bejerman",
+      "ERP de Griffo",
+      "Conexión con el sistema interno (Bejerman) — alimenta el portal de clientes mayoristas con precios, pedidos y cuenta corriente",
+      "b2b",
+      bejerman
+    ),
   ];
 }
 
 function settledToCheck(
   id: string,
   label: string,
-  res: PromiseSettledResult<HealthCheck>
+  purpose: string,
+  group: HealthGroup,
+  res: PromiseSettledResult<Omit<HealthCheck, "id" | "label" | "purpose" | "group">>
 ): HealthCheck {
-  if (res.status === "fulfilled") return res.value;
+  if (res.status === "fulfilled") {
+    return { id, label, purpose, group, ...res.value };
+  }
   return {
     id,
     label,
+    purpose,
+    group,
     status: "error",
-    message: "Crash en el check",
+    message: "Error inesperado",
     detail: String(res.reason),
   };
 }
 
-async function checkSpecParts(): Promise<HealthCheck> {
+type CheckResult = Omit<HealthCheck, "id" | "label" | "purpose" | "group">;
+
+async function checkSpecParts(): Promise<CheckResult> {
   if (!process.env.SPECPARTS_CLIENT_ID || !process.env.SPECPARTS_CLIENT_SECRET) {
     return {
-      id: "specparts",
-      label: "SpecParts API",
       status: "error",
-      message: "Faltan credenciales (SPECPARTS_CLIENT_ID/SECRET)",
+      message: "No configurado",
+      detail: "Faltan las env vars SPECPARTS_CLIENT_ID / SPECPARTS_CLIENT_SECRET",
     };
   }
   try {
     const products = await listCatalog();
     return {
-      id: "specparts",
-      label: "SpecParts API",
       status: "ok",
-      message: `OK — ${products.length} productos en cache`,
+      message: `Funcionando — ${products.length} productos`,
     };
   } catch (e) {
     return {
-      id: "specparts",
-      label: "SpecParts API",
       status: "error",
       message: "No responde",
       detail: e instanceof Error ? e.message : String(e),
@@ -80,36 +124,26 @@ async function checkSpecParts(): Promise<HealthCheck> {
   }
 }
 
-async function checkRedis(): Promise<HealthCheck> {
+async function checkRedis(): Promise<CheckResult> {
   const redis = getRedis();
   if (!redis) {
     return {
-      id: "redis",
-      label: "Upstash Redis",
       status: "error",
-      message: "Env vars faltantes (KV_REST_API_URL/TOKEN)",
+      message: "No configurado",
+      detail: "Faltan las env vars KV_REST_API_URL / KV_REST_API_TOKEN",
     };
   }
   try {
     const res = await redis.ping();
     if (res === "PONG") {
-      return {
-        id: "redis",
-        label: "Upstash Redis",
-        status: "ok",
-        message: "OK — conectado",
-      };
+      return { status: "ok", message: "Conectado" };
     }
     return {
-      id: "redis",
-      label: "Upstash Redis",
       status: "warn",
       message: `Respuesta inesperada: ${String(res)}`,
     };
   } catch (e) {
     return {
-      id: "redis",
-      label: "Upstash Redis",
       status: "error",
       message: "No responde",
       detail: e instanceof Error ? e.message : String(e),
@@ -117,44 +151,102 @@ async function checkRedis(): Promise<HealthCheck> {
   }
 }
 
-async function checkBlob(): Promise<HealthCheck> {
+async function checkBlob(): Promise<CheckResult> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return {
-      id: "blob",
-      label: "Vercel Blob",
       status: "warn",
-      message:
-        "Env var BLOB_READ_WRITE_TOKEN no seteada — uploads desde admin no funcionan",
+      message: "No configurado",
+      detail:
+        "Falta BLOB_READ_WRITE_TOKEN — los uploads del admin no van a funcionar",
     };
   }
   return {
-    id: "blob",
-    label: "Vercel Blob",
     status: "ok",
-    message: "Token presente",
+    message: "Configurado",
     detail:
-      "No hacemos ping real (no hay endpoint barato) — solo chequeo de configuración",
+      "No se hace ping real (no hay endpoint barato). Solo chequeo de configuración.",
   };
 }
 
-async function checkResend(): Promise<HealthCheck> {
+async function checkResend(): Promise<CheckResult> {
   if (!process.env.RESEND_API_KEY) {
     return {
-      id: "resend",
-      label: "Resend (email)",
       status: "error",
-      message: "RESEND_API_KEY no seteada — los forms no mandan email",
+      message: "No configurado",
+      detail: "Falta RESEND_API_KEY — los forms no mandan email",
     };
   }
-  const sender = "onboarding@resend.dev";
-  // Si hay dominio propio configurado, la cliente lo puede verificar
-  // en Resend. Mientras tanto warning.
   return {
-    id: "resend",
-    label: "Resend (email)",
     status: "warn",
-    message: `Funciona, pero sender = ${sender}`,
+    message: "Funcionando (dominio sin verificar)",
     detail:
-      "Verificar griffo.com.ar en Resend para mandar desde contacto@griffo.com.ar",
+      "Hoy los mails salen desde onboarding@resend.dev. Verificar griffo.com.ar en Resend para mandar desde contacto@griffo.com.ar.",
   };
+}
+
+async function checkBejerman(): Promise<CheckResult> {
+  const hasUrl = !!process.env.BEJERMAN_API_URL;
+  const hasCreds = !!(process.env.BEJERMAN_EMAIL && process.env.BEJERMAN_PASSWORD);
+  if (!hasCreds) {
+    return {
+      status: "error",
+      message: "No configurado",
+      detail:
+        "Faltan BEJERMAN_EMAIL / BEJERMAN_PASSWORD — el portal B2B usa datos mock. Pedirle al técnico las credenciales reales (ver reference/bejerman/).",
+    };
+  }
+  // Intentamos login. Usamos un timeout de 5s para no bloquear el
+  // dashboard si el ERP es lento o está caído.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const url = process.env.BEJERMAN_API_URL ?? "http://intranet.remotogriffo.com.ar:86/api";
+    const res = await fetch(`${url}/Auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: process.env.BEJERMAN_EMAIL,
+        password: process.env.BEJERMAN_PASSWORD,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      return {
+        status: hasUrl ? "ok" : "warn",
+        message: hasUrl ? "Conectado" : "Conectado (URL default)",
+        detail: hasUrl
+          ? undefined
+          : "Usando URL default — setear BEJERMAN_API_URL explícitamente en Vercel",
+      };
+    }
+    if (res.status === 401) {
+      return {
+        status: "error",
+        message: "Credenciales inválidas (401)",
+        detail:
+          "Login rechazado por el ERP. Verificar BEJERMAN_EMAIL y BEJERMAN_PASSWORD con el técnico.",
+      };
+    }
+    return {
+      status: "error",
+      message: `HTTP ${res.status}`,
+      detail: `El ERP respondió ${res.status} ${res.statusText}`,
+    };
+  } catch (e) {
+    clearTimeout(timeout);
+    const err = e instanceof Error ? e.message : String(e);
+    if (err.includes("abort")) {
+      return {
+        status: "error",
+        message: "Timeout (5s)",
+        detail: "El ERP no respondió a tiempo. Quizás está caído o la URL es incorrecta.",
+      };
+    }
+    return {
+      status: "error",
+      message: "No responde",
+      detail: err,
+    };
+  }
 }
