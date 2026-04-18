@@ -7,10 +7,10 @@ piezas de caucho moldeado desde 1968. La cliente se comunica en **español
 argentino** — respondele en el mismo registro.
 
 **Objetivo del proyecto**: replicar el sitio público actual
-(`app-griffo.n0mupxh3sq-zqy3j8n516kg.p.temp-site.link`) y mejorarlo. `Novedades`
-por ahora queda pendiente. **El catálogo se construyó nativo en `/catalogo`**
-(reemplaza el externo `griffo.specparts.shop`), consumiendo la misma API de
-SpecParts que ya usa `app.griffo.com.ar`. Ver sección "Catálogo de productos".
+(`app-griffo.n0mupxh3sq-zqy3j8n516kg.p.temp-site.link`) y mejorarlo.
+**El catálogo se construyó nativo en `/catalogo`** (reemplaza el externo
+`griffo.specparts.shop`), consumiendo la misma API de SpecParts que ya
+usa `app.griffo.com.ar`. Ver sección "Catálogo de productos".
 
 ## Coordinación multi-sesión
 
@@ -791,22 +791,30 @@ Por fila:
 ## Leads y forms
 
 `src/lib/leads.ts` — guarda cada submit en una lista Redis (LPUSH).
-Tipos: `contacto`, `newsletter`, `descarga`. `saveLead()` envuelve todo
-en try/catch para no afectar la respuesta del form aunque Redis falle.
+Tipos: `contacto`, `newsletter`, `descarga`, `garantia`. `saveLead()`
+envuelve todo en try/catch para no afectar la respuesta del form
+aunque Redis falle.
 
 Cada form tiene su endpoint en `/api/*/route.ts`:
 - `/api/contacto` → email con Resend + lead Redis.
 - `/api/newsletter` → lead Redis + email.
-- `/api/garantia` → email Resend.
-- `/api/desarrollo` → email + lead.
+- `/api/garantia` → email + lead Redis (GarantiaLead con N° serie,
+  fecha de compra, lugar, domicilio, ubicación completa).
+- `/api/desarrollo` → email Resend.
 - `/api/descargas/registro` → captura registro antes de dar link.
 
-**Tolerancia a fallos**: los tres endpoints de leads públicos
-(`contacto`, `newsletter`, `descargas/registro`) envuelven la llamada
-a Resend en try/catch separado. Si el email falla (API key mal
-configurada, sender no verificado, etc.) el lead igual quedó en
+**Tolerancia a fallos**: todos los endpoints de forms envuelven la
+llamada a Resend en try/catch separado. Si el email falla (API key
+mal configurada, sender no verificado, etc.) el lead igual quedó en
 Redis, el endpoint devuelve `ok: true` y el usuario ve verde. El
 admin ve el lead en `/admin/leads` aunque no haya recibido el email.
+
+**Nota sobre sender**: el sender actual es `onboarding@resend.dev`
+(sandbox). Resend en sandbox solo acepta enviar a la dirección dueña
+de la cuenta, por eso todos los forms mandan a `contacto@griffo.com.ar`.
+Cuando la cliente verifique el dominio `griffo.com.ar` en Resend,
+cambiar el sender a `contacto@griffo.com.ar` y cada form puede volver
+a tener su destinatario natural (ej. garantía → `garantia@`).
 
 **Errores de validación** (ej. email sin punto) devuelven 400 con
 `{ error: "Email inválido" }`. Los forms del front muestran el mensaje
