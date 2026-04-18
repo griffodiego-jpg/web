@@ -36,7 +36,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/productos", label: "Productos destacados", icon: "box" },
       { href: "/admin/cobertura", label: "Cobertura", icon: "grid" },
-      { href: "/admin/catalogo-imagenes", label: "Imágenes del catálogo", icon: "image" },
+      { href: "/admin/catalogo-imagenes", label: "Imagen tréboles", icon: "image" },
       { href: "/admin/cache", label: "Cache de imágenes", icon: "zap" },
     ],
   },

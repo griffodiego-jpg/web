@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -157,7 +165,32 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
 
   const [tab, setTab] = useState<TabKey>(initial.tab);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [trebolesOpen, setTrebolesOpen] = useState(false);
   const [filters, setFilters] = useState<CatalogFilters>(initial.filters);
+
+  // Ref al sticky bar: se usa un ResizeObserver para exponer su altura
+  // efectiva (+ top del header del sitio) como CSS variable. El thead de
+  // la tabla de medidas la lee para quedar sticky justo debajo, sin
+  // necesidad de un scroll interno (que generaba doble scrollbar).
+  const stickyBarRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = stickyBarRef.current;
+    if (!node) return;
+    const update = () => {
+      const height = node.getBoundingClientRect().height;
+      document.documentElement.style.setProperty(
+        "--catalog-header-bottom",
+        `${60 + height}px`,
+      );
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty("--catalog-header-bottom");
+    };
+  }, []);
 
   const [keyword, setKeyword] = useState(initial.keyword);
   const [plate, setPlate] = useState(initial.plate);
@@ -315,7 +348,10 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
   return (
     <>
       {/* ---------------- Sticky header con tabs + form ---------------- */}
-      <div className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}>
+      <div
+        ref={stickyBarRef}
+        className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}
+      >
         <div className="px-4 py-3 lg:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -403,7 +439,14 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
             ) : null}
             {tab === "codigo" ? <CodeForm value={code} onChange={setCode} /> : null}
             {tab === "medidas" ? (
-              <MeasuresSelector value={measureType} onChange={setMeasureType} />
+              <div className="flex flex-col gap-2">
+                <MeasuresSelector value={measureType} onChange={setMeasureType} />
+                <MedidaShortcuts
+                  measureType={measureType}
+                  trebolesUrl={trebolesUrl}
+                  onOpenTreboles={() => setTrebolesOpen(true)}
+                />
+              </div>
             ) : null}
           </div>
         </div>
@@ -412,7 +455,13 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
       {/* ---------------- Área de resultados ---------------- */}
       {tab === "medidas" ? (
         <div className="px-4 py-6 lg:px-6">
-          <MeasuresTable products={products} type={measureType} trebolesUrl={trebolesUrl} />
+          <MeasuresTable
+            products={products}
+            type={measureType}
+            trebolesUrl={trebolesUrl}
+            trebolesOpen={trebolesOpen}
+            onCloseTreboles={() => setTrebolesOpen(false)}
+          />
         </div>
       ) : (
         <div
@@ -712,15 +761,18 @@ function MeasuresTable({
   products,
   type,
   trebolesUrl,
+  trebolesOpen,
+  onCloseTreboles,
 }: {
   products: CatalogProduct[];
   type: MeasureType;
   trebolesUrl?: string;
+  trebolesOpen: boolean;
+  onCloseTreboles: () => void;
 }) {
   const [sortCol, setSortCol] = useState<SortCol>("diamMenor");
   const [sortAsc, setSortAsc] = useState(true);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
-  const [trebolesOpen, setTrebolesOpen] = useState(false);
 
   const rows = useMemo(() => buildMeasureRows(products, type), [products, type]);
   const sorted = useMemo(() => {
@@ -753,22 +805,16 @@ function MeasuresTable({
   return (
     <>
       <div className="flex flex-col gap-3">
-        {/* Llamadores del tab Transmisión: accesos rápidos a Fuelle Universal
-            y a la grilla de Tréboles. Replica la convención del sitio viejo. */}
-        {type === "transmision" ? (
-          <TransmisionShortcuts
-            trebolesUrl={trebolesUrl}
-            onOpenTreboles={() => setTrebolesOpen(true)}
-          />
-        ) : null}
-
         <p className="text-xs text-gray-500">
           <span className="font-bold text-[#0a2b3d]">{sorted.length}</span>{" "}
           {sorted.length === 1 ? "producto" : "productos"}
         </p>
-        <div className="overflow-auto rounded-lg border border-gray-100 max-h-[70vh]">
+        <div className="rounded-lg border border-gray-100 overflow-visible">
           <table className="min-w-full text-xs">
-            <thead className="sticky top-0 z-10 bg-primary text-white shadow-sm">
+            <thead
+              className="sticky z-10 bg-primary text-white shadow-sm"
+              style={{ top: "var(--catalog-header-bottom, 200px)" }}
+            >
               <tr>
                 <Th onClick={() => onSort("diamMenor")} active={sortCol === "diamMenor"} asc={sortAsc}>
                   Diám. Menor
@@ -806,76 +852,79 @@ function MeasuresTable({
         <ImageLightbox
           src={trebolesUrl}
           alt="Medidas de tréboles — catálogo Griffo"
-          onClose={() => setTrebolesOpen(false)}
+          onClose={onCloseTreboles}
         />
       ) : null}
     </>
   );
 }
 
-function TransmisionShortcuts({
+/**
+ * Llamadores compactos dentro del sticky bar. Se muestran según el sub-tipo
+ * de medidas activo:
+ *   - Dirección   → solo 'Fuelle Universal de Dirección'
+ *   - Transmisión → 'Fuelle Universal de Transmisión' + 'Medidas de Tréboles'
+ *   - Tope        → ninguno (no hay universal de topes)
+ *
+ * Pills horizontales de 1 línea para que la cabecera no crezca demasiado.
+ */
+function MedidaShortcuts({
+  measureType,
   trebolesUrl,
   onOpenTreboles,
 }: {
+  measureType: MeasureType;
   trebolesUrl?: string;
   onOpenTreboles: () => void;
 }) {
-  const trebolesDisabled = !trebolesUrl;
-  return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      <Link
-        href="/productos/kit-de-fuelles-universales-para-homocineticas"
-        className="flex items-center justify-between gap-3 rounded-lg border-2 border-accent/30 bg-accent/5 p-3 transition hover:border-accent hover:bg-accent/10"
-      >
-        <div>
-          <p className="text-sm font-black text-primary">
-            ¿No encontraste el fuelle que buscabas?
-          </p>
-          <p className="mt-0.5 text-[13px] font-semibold text-[#0a2b3d]">
-            Mirá el Fuelle Universal →
-          </p>
-        </div>
-      </Link>
+  const showUniversal = measureType === "direccion" || measureType === "transmision";
+  const showTreboles = measureType === "transmision";
 
-      <button
-        type="button"
-        onClick={onOpenTreboles}
-        disabled={trebolesDisabled}
-        title={trebolesDisabled ? "Imagen aún no cargada" : undefined}
-        className={[
-          "flex items-center justify-between gap-3 rounded-lg border-2 p-3 text-left transition",
-          trebolesDisabled
-            ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
-            : "border-primary/20 bg-primary/5 hover:border-primary hover:bg-primary/10",
-        ].join(" ")}
-      >
-        <div>
-          <p
+  if (!showUniversal && !showTreboles) return null;
+
+  const universalHref =
+    measureType === "direccion"
+      ? "/productos/fuelle-universal-de-direccion"
+      : "/productos/kit-de-fuelles-universales-para-homocineticas";
+  const trebolesDisabled = !trebolesUrl;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {showUniversal ? (
+        <Link
+          href={universalHref}
+          className="inline-flex items-center gap-2 rounded-md border border-accent/40 bg-accent/10 px-3 py-1.5 text-[11px] font-bold text-primary transition hover:border-accent hover:bg-accent/20"
+        >
+          <span className="text-[9px] uppercase tracking-widest text-accent">
+            ¿No lo encontrás?
+          </span>
+          Fuelle Universal →
+        </Link>
+      ) : null}
+      {showTreboles ? (
+        <button
+          type="button"
+          onClick={onOpenTreboles}
+          disabled={trebolesDisabled}
+          title={trebolesDisabled ? "Imagen aún no cargada" : undefined}
+          className={[
+            "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-[11px] font-bold transition",
+            trebolesDisabled
+              ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+              : "border-primary/30 bg-primary/10 text-primary hover:border-primary hover:bg-primary/20",
+          ].join(" ")}
+        >
+          <span
             className={[
-              "text-[10px] font-bold uppercase tracking-widest",
+              "text-[9px] uppercase tracking-widest",
               trebolesDisabled ? "text-gray-400" : "text-primary",
             ].join(" ")}
           >
             Guía visual
-          </p>
-          <p
-            className={[
-              "text-sm font-black",
-              trebolesDisabled ? "text-gray-400" : "text-primary",
-            ].join(" ")}
-          >
-            Medidas de Tréboles
-          </p>
-          <p className="mt-0.5 text-[11px] text-gray-500">
-            {trebolesDisabled
-              ? "Próximamente"
-              : "Grilla visual con los códigos y medidas de cada trébol."}
-          </p>
-        </div>
-        <span className={trebolesDisabled ? "text-lg text-gray-400" : "text-lg font-bold text-primary"}>
-          ⊕
-        </span>
-      </button>
+          </span>
+          Medidas de Tréboles {trebolesDisabled ? "(próximamente)" : "⊕"}
+        </button>
+      ) : null}
     </div>
   );
 }

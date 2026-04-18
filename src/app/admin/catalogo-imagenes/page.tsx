@@ -7,7 +7,7 @@ import {
 } from "@/lib/catalogo-imagenes-store";
 
 export const metadata: Metadata = {
-  title: "Imágenes del catálogo",
+  title: "Imagen tréboles",
 };
 
 export const dynamic = "force-dynamic";
@@ -26,11 +26,11 @@ export default async function CatalogoImagenesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-black text-[#0a2b3d]">Imágenes del catálogo</h1>
+        <h1 className="text-3xl font-black text-[#0a2b3d]">Imagen tréboles</h1>
         <p className="mt-2 max-w-2xl text-sm text-gray-500">
-          Gestioná las imágenes visuales que se muestran dentro del catálogo
-          público. Se suben a Vercel Blob y se guardan en Redis como
-          override del archivo default del repo.
+          Gestioná la imagen 'Medidas de Tréboles' que aparece en el catálogo
+          público (tab Medidas → Fuelle Transmisión → botón 'Medidas de
+          Tréboles'). Se sube a Vercel Blob y se guarda en Redis.
         </p>
       </div>
 
