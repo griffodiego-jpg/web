@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
+import { logAdminError } from "@/lib/admin-log";
+import { escapeHtml, escapeHtmlMultiline } from "@/lib/escape";
 import { getResend } from "@/lib/resend";
+import {
+  checkFieldLength,
+  isValidEmail,
+  MAX_MESSAGE_LEN,
+} from "@/lib/validate";
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +27,18 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const lenErr =
+      checkFieldLength(nombre, "Nombre") ||
+      checkFieldLength(empresa, "Empresa") ||
+      checkFieldLength(email, "Email") ||
+      checkFieldLength(telefono, "Teléfono") ||
+      checkFieldLength(industria, "Industria") ||
+      checkFieldLength(cantidad, "Cantidad") ||
+      checkFieldLength(descripcion, "Descripción", MAX_MESSAGE_LEN);
+    if (lenErr) {
+      return NextResponse.json({ error: lenErr }, { status: 400 });
+    }
+    if (!isValidEmail(email)) {
       return NextResponse.json(
         { error: "Email inválido" },
         { status: 400 }
@@ -56,22 +74,23 @@ export async function POST(request: Request) {
       html: `
         <h2>Nueva consulta de desarrollo a medida</h2>
         <table style="border-collapse:collapse;width:100%">
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Nombre</td><td style="padding:6px;border-bottom:1px solid #eee">${nombre}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Empresa</td><td style="padding:6px;border-bottom:1px solid #eee">${empresa}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:6px;border-bottom:1px solid #eee">${email}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Teléfono</td><td style="padding:6px;border-bottom:1px solid #eee">${telefono}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Industria</td><td style="padding:6px;border-bottom:1px solid #eee">${industria}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Cantidad estimada</td><td style="padding:6px;border-bottom:1px solid #eee">${cantidad}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Nombre</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(nombre)}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Empresa</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(empresa)}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(email)}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Teléfono</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(telefono)}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Industria</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(industria)}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Cantidad estimada</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(cantidad)}</td></tr>
         </table>
         <h3 style="margin-top:20px">Descripción de la pieza</h3>
-        <p>${descripcion.replace(/\n/g, "<br>")}</p>
-        ${attachments.length > 0 ? `<p style="margin-top:15px;color:#666">📎 Archivo adjunto: ${archivo!.name}</p>` : ""}
+        <p>${escapeHtmlMultiline(descripcion)}</p>
+        ${attachments.length > 0 ? `<p style="margin-top:15px;color:#666">📎 Archivo adjunto: ${escapeHtml(archivo!.name)}</p>` : ""}
       `,
     });
 
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[desarrollo] error:", e);
+    await logAdminError("resend", e);
     return NextResponse.json({ error: "Error al enviar" }, { status: 500 });
   }
 }

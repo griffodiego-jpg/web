@@ -37,8 +37,15 @@ function LoginForm() {
         return;
       }
 
-      const from = searchParams.get("from") || "/admin";
-      router.push(from);
+      // Validamos que `from` sea un path relativo seguro — rechazamos
+      // URLs absolutas (https://evil.com) y protocol-relative (//evil.com)
+      // para evitar open redirect después del login.
+      const fromRaw = searchParams.get("from");
+      const safeFrom =
+        fromRaw && fromRaw.startsWith("/") && !fromRaw.startsWith("//")
+          ? fromRaw
+          : "/admin";
+      router.push(safeFrom);
       router.refresh();
     } catch {
       setError("Error de conexión");

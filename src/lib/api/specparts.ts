@@ -136,9 +136,55 @@ async function fetchAllProducts(): Promise<CatalogProduct[]> {
   return all;
 }
 
+const REDIS_CACHE_KEY = "specparts:products-cache";
+const REDIS_CACHE_TTL_SEC = 30 * 60;
+
 /**
- * Devuelve los ~370 productos GRIFFO enriquecidos con `_searchText`.
- * Cachea 30 min en memoria. Deduplica requests concurrentes.
+ * Cache secundario en Redis (Upstash) para supervivir los cold starts
+ * de Vercel — el cache en memoria se pierde cada vez que la función
+ * se recicla. Redis mantiene los ~370 productos por 30 min, y cada
+ * nueva instancia puede levantarlos en una sola request.
+ */
+async function tryLoadFromRedis(): Promise<CatalogProduct[] | null> {
+  const { getRedis } = await import("@/lib/kv");
+  const redis = getRedis();
+  if (!redis) return null;
+  try {
+    const raw = await redis.get<CatalogProduct[] | string>(REDIS_CACHE_KEY);
+    if (!raw) return null;
+    // Upstash puede devolver el JSON ya parseado o un string.
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw) as CatalogProduct[];
+      } catch {
+        return null;
+      }
+    }
+    return raw as CatalogProduct[];
+  } catch {
+    return null;
+  }
+}
+
+async function trySaveToRedis(products: CatalogProduct[]): Promise<void> {
+  const { getRedis } = await import("@/lib/kv");
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.set(REDIS_CACHE_KEY, JSON.stringify(products), {
+      ex: REDIS_CACHE_TTL_SEC,
+    });
+  } catch {
+    // Fallos de Redis son no-críticos — el cache en memoria sigue.
+  }
+}
+
+/**
+ * Devuelve los ~370 productos GRIFFO. Cache en 3 niveles:
+ *   1. Memoria del proceso (30 min) — más rápido, se pierde en cold start.
+ *   2. Redis (30 min) — sobrevive cold starts, shared entre instancias.
+ *   3. Fetch a SpecParts — la fuente real.
+ * Deduplica requests concurrentes con `inflightProducts`.
  */
 export async function listCatalog(): Promise<CatalogProduct[]> {
   if (productsCache && Date.now() < productsCache.expiresAt) {
@@ -146,22 +192,28 @@ export async function listCatalog(): Promise<CatalogProduct[]> {
   }
   if (inflightProducts) return inflightProducts;
 
-  inflightProducts = fetchAllProducts()
-    .then((products) => {
+  inflightProducts = (async () => {
+    // Nivel 2: intentar Redis antes de pegarle a SpecParts.
+    const fromRedis = await tryLoadFromRedis();
+    if (fromRedis && fromRedis.length > 0) {
+      productsCache = { products: fromRedis, expiresAt: Date.now() + CACHE_TTL_MS };
+      return fromRedis;
+    }
+    // Nivel 3: fetch real.
+    try {
+      const products = await fetchAllProducts();
       productsCache = { products, expiresAt: Date.now() + CACHE_TTL_MS };
+      // Save en Redis (no bloqueante para el caller).
+      trySaveToRedis(products).catch(() => {});
       return products;
-    })
-    .catch(async (err) => {
-      // Loguear el fallo para que aparezca en el dashboard admin.
-      // Import lazy para evitar ciclos (admin-log → kv → nada circular,
-      // pero por consistencia con otros lazy imports en el proyecto).
+    } catch (err) {
       const { logAdminError } = await import("@/lib/admin-log");
       await logAdminError("specparts", err);
       throw err;
-    })
-    .finally(() => {
-      inflightProducts = null;
-    });
+    }
+  })().finally(() => {
+    inflightProducts = null;
+  });
 
   return inflightProducts;
 }

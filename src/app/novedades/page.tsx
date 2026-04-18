@@ -9,9 +9,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/novedades" },
 };
 
-// Dynamic: las novedades vienen de Redis + SpecParts y pueden cambiar
-// en cualquier momento desde el admin.
-export const dynamic = "force-dynamic";
+// ISR: la lista de novedades publicadas cambia poco en el día a día.
+// Revalidamos cada 5 minutos — suficiente para reflejar publicaciones
+// del admin razonablemente rápido sin pegarle a Redis/SpecParts en
+// cada request. Si se necesita refresh inmediato, agregar
+// `revalidateTag('novedades')` en el endpoint del admin que publica.
+export const revalidate = 300;
 export const runtime = "nodejs";
 
 export default async function NovedadesPage() {

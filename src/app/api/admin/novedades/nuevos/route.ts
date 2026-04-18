@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { setNuevosVehiculos } from "@/lib/novedades";
 
@@ -20,6 +21,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Falta code" }, { status: 400 });
     }
     await setNuevosVehiculos(code, Array.isArray(keys) ? keys : []);
+    revalidatePath("/novedades");
+    revalidatePath(`/novedades/${encodeURIComponent(code)}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[admin/novedades/nuevos] error:", e);

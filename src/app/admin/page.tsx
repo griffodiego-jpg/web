@@ -18,40 +18,60 @@ import { readOverrides } from "@/lib/descargas-store";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+/** Helper: devuelve el valor de un settled o un default si fue rejected. */
+function settled<T>(res: PromiseSettledResult<T>, fallback: T): T {
+  return res.status === "fulfilled" ? res.value : fallback;
+}
+
 export default async function AdminDashboard() {
-  // Todo en paralelo para que un servicio lento no bloquee el resto.
+  // Todo en paralelo con allSettled — si uno falla, el dashboard igual
+  // renderiza el resto (antes un reject rompía toda la página).
   const [
-    health,
-    alerts,
-    catalog,
-    novedades,
-    errors,
-    leadsCounts,
-    leadsRecent,
-    descargasOverrides,
-  ] = await Promise.all([
+    healthR,
+    alertsR,
+    catalogR,
+    novedadesR,
+    errorsR,
+    cContactoR,
+    cNewsletterR,
+    cDescargaR,
+    cGarantiaR,
+    lContactoR,
+    lNewsletterR,
+    lDescargaR,
+    lGarantiaR,
+    descargasOverridesR,
+  ] = await Promise.allSettled([
     runHealthChecks(),
     Promise.resolve(findConfigAlerts()),
     getCatalogSummary(),
-    listNovedadesIncludingHidden().catch(() => [] as Novedad[]),
+    listNovedadesIncludingHidden(),
     readAdminErrors(20),
-    Promise.all([
-      countLeads("contacto"),
-      countLeads("newsletter"),
-      countLeads("descarga"),
-      countLeads("garantia"),
-    ]),
-    Promise.all([
-      listLeads<Lead>("contacto"),
-      listLeads<Lead>("newsletter"),
-      listLeads<Lead>("descarga"),
-      listLeads<Lead>("garantia"),
-    ]),
-    readOverrides().catch(() => ({} as Record<string, string>)),
+    countLeads("contacto"),
+    countLeads("newsletter"),
+    countLeads("descarga"),
+    countLeads("garantia"),
+    listLeads<Lead>("contacto"),
+    listLeads<Lead>("newsletter"),
+    listLeads<Lead>("descarga"),
+    listLeads<Lead>("garantia"),
+    readOverrides(),
   ]);
 
-  const [cContacto, cNewsletter, cDescarga, cGarantia] = leadsCounts;
-  const [lContacto, lNewsletter, lDescarga, lGarantia] = leadsRecent;
+  const health = settled<HealthCheck[]>(healthR, []);
+  const alerts = settled<Alert[]>(alertsR, []);
+  const catalog = settled(catalogR, null);
+  const novedades = settled<Novedad[]>(novedadesR, []);
+  const errors = settled(errorsR, []);
+  const cContacto = settled(cContactoR, 0);
+  const cNewsletter = settled(cNewsletterR, 0);
+  const cDescarga = settled(cDescargaR, 0);
+  const cGarantia = settled(cGarantiaR, 0);
+  const lContacto = settled<Lead[]>(lContactoR, []);
+  const lNewsletter = settled<Lead[]>(lNewsletterR, []);
+  const lDescarga = settled<Lead[]>(lDescargaR, []);
+  const lGarantia = settled<Lead[]>(lGarantiaR, []);
+  const descargasOverrides = settled(descargasOverridesR, {} as Record<string, string>);
 
   const ultimos7dTs = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const last7 = {

@@ -10,7 +10,7 @@ import { getNovedad } from "@/lib/novedades";
 
 type Params = Promise<{ code: string }>;
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 export const runtime = "nodejs";
 
 export async function generateMetadata({

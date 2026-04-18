@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getProductByCode } from "@/lib/api/specparts";
 import { setTipo, type TipoNovedad } from "@/lib/novedades";
@@ -40,6 +41,12 @@ export async function POST(request: Request) {
     }
 
     await setTipo(product.code, body.tipo);
+    // Refrescamos las páginas públicas que muestran la novedad para que
+    // el ISR refleje el cambio inmediatamente.
+    revalidatePath("/novedades");
+    revalidatePath("/novedades/lanzamientos");
+    revalidatePath("/novedades/aplicaciones");
+    revalidatePath(`/novedades/${encodeURIComponent(product.code)}`);
     return NextResponse.json({ ok: true, code: product.code });
   } catch (e) {
     console.error("[admin/novedades/publicar] error:", e);

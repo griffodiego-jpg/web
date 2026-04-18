@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
+import { escapeHtml, escapeHtmlMultiline } from "@/lib/escape";
+import { logAdminError } from "@/lib/admin-log";
 import { saveLead } from "@/lib/leads";
 import { getResend } from "@/lib/resend";
+import {
+  checkFieldLength,
+  isValidEmail,
+  MAX_MESSAGE_LEN,
+} from "@/lib/validate";
 
 export async function POST(request: Request) {
   try {
@@ -17,7 +24,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+    const lenErr =
+      checkFieldLength(body.nombre, "Nombre") ||
+      checkFieldLength(body.email, "Email") ||
+      (body.telefono && checkFieldLength(body.telefono, "Teléfono")) ||
+      checkFieldLength(body.mensaje, "Mensaje", MAX_MESSAGE_LEN);
+    if (lenErr) {
+      return NextResponse.json({ error: lenErr }, { status: 400 });
+    }
+    if (!isValidEmail(body.email)) {
       return NextResponse.json(
         { error: "Email inválido" },
         { status: 400 }
@@ -41,18 +56,19 @@ export async function POST(request: Request) {
         subject: `Consulta web de ${body.nombre}`,
         html: `
           <h2>Nueva consulta desde la web</h2>
-          <p><strong>Nombre:</strong> ${body.nombre}</p>
-          <p><strong>Email:</strong> ${body.email}</p>
-          <p><strong>Teléfono:</strong> ${body.telefono || "No proporcionado"}</p>
+          <p><strong>Nombre:</strong> ${escapeHtml(body.nombre)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(body.email)}</p>
+          <p><strong>Teléfono:</strong> ${escapeHtml(body.telefono || "No proporcionado")}</p>
           <hr />
           <p><strong>Mensaje:</strong></p>
-          <p>${body.mensaje.replace(/\n/g, "<br>")}</p>
+          <p>${escapeHtmlMultiline(body.mensaje)}</p>
         `,
       });
     } catch (e) {
       // Si Resend falla (API key faltante, sender no verificado, etc.)
       // el lead igual quedó guardado en Redis, así que devolvemos OK.
       console.error("[contacto] error enviando email:", e);
+      await logAdminError("resend", e);
     }
 
     return NextResponse.json({ ok: true });

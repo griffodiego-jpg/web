@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
   clearTipoOverride,
@@ -31,6 +32,10 @@ export async function POST(request: Request) {
     } else {
       await hideNovedad(code);
     }
+    revalidatePath("/novedades");
+    revalidatePath("/novedades/lanzamientos");
+    revalidatePath("/novedades/aplicaciones");
+    revalidatePath(`/novedades/${encodeURIComponent(code)}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[admin/novedades/despublicar] error:", e);

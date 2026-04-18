@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { escapeCsvCell } from "@/lib/escape";
 import {
   listLeads,
   type ContactoLead,
@@ -88,13 +89,10 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
     return [fecha, n.email];
   });
 
-  const escape = (val: string) => {
-    if (/[",\n\r]/.test(val)) return `"${val.replace(/"/g, '""')}"`;
-    return val;
-  };
-
+  // escapeCsvCell previene tanto el quoting para caracteres especiales
+  // de CSV como la inyección de fórmula (prefija `=+-@\t\r` con `'`).
   const body = [header, ...rows]
-    .map((row) => row.map((v) => escape(String(v))).join(","))
+    .map((row) => row.map((v) => escapeCsvCell(v)).join(","))
     .join("\n");
 
   // BOM para que Excel abra con encoding UTF-8 correcto

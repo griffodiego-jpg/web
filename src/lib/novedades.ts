@@ -25,6 +25,8 @@ import type { CatalogProduct } from "@/types/specparts";
  */
 
 const TIPO_KEY_PREFIX = "novedades:tipo:"; // código → "lanzamiento" (si override)
+/** Set de códigos que tienen override de tipo, para evitar `keys *` scan. */
+const TIPO_INDEX_KEY = "novedades:tipo-index";
 const HIDDEN_KEY = "novedades:hidden"; // set de códigos ocultos
 /** Set de claves de vehículos marcados como "nuevos" por el admin. */
 const NUEVOS_KEY_PREFIX = "novedades:nuevos:"; // código → set de "BRAND:MODEL"
@@ -56,11 +58,21 @@ async function migrateLegacyIfNeeded(): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   try {
+    // Paso 1: migrar la lista vieja si todavía existe.
     const raw = await redis.lrange(OLD_PUBLICADAS_KEY, 0, -1);
     if (!raw || raw.length === 0) {
+      // No hay data vieja, pero igual reconciliamos el índice de tipo
+      // por si hay tipo-keys que no están en el índice (pueden venir
+      // de un deploy anterior al índice). Es un one-shot keys() — el
+      // costo se paga 1 vez por ciclo del proceso.
+      await reconcileTipoIndex(redis);
       migrationDone = true;
       return;
     }
+    // Migración: escribimos tanto la key individual como el índice
+    // (consistencia con el modelo nuevo). Pipeline para atomicidad.
+    const pipe = redis.multi();
+    let migrated = 0;
     for (const entry of raw) {
       try {
         const obj =
@@ -68,20 +80,52 @@ async function migrateLegacyIfNeeded(): Promise<void> {
             ? (JSON.parse(entry) as { code?: string; tipo?: TipoNovedad })
             : (entry as { code?: string; tipo?: TipoNovedad });
         if (obj?.code && obj?.tipo) {
-          await redis.set(TIPO_KEY_PREFIX + obj.code, obj.tipo);
+          pipe.set(TIPO_KEY_PREFIX + obj.code, obj.tipo);
+          pipe.sadd(TIPO_INDEX_KEY, obj.code);
+          migrated++;
         }
       } catch {
         // entry mal formateado — skip
       }
     }
-    await redis.del(OLD_PUBLICADAS_KEY);
+    pipe.del(OLD_PUBLICADAS_KEY);
+    await pipe.exec();
     console.log(
-      `[novedades] migración completa: ${raw.length} overrides migrados del modelo viejo`
+      `[novedades] migración completa: ${migrated} overrides migrados del modelo viejo`
     );
     migrationDone = true;
   } catch (e) {
     console.error("[novedades] error en migración:", e);
     // No seteamos migrationDone para reintentar en la próxima request.
+  }
+}
+
+/**
+ * Reconcilia el set `novedades:tipo-index` con las keys reales en Redis.
+ * Se usa una única vez por ciclo de proceso — si detectamos tipo-keys
+ * sin su entrada en el index (venidas de antes de que existiera), las
+ * sumamos. Si el index ya está poblado, es un no-op cheap.
+ */
+async function reconcileTipoIndex(redis: ReturnType<typeof getRedis>): Promise<void> {
+  if (!redis) return;
+  try {
+    const existing = (await redis.smembers(TIPO_INDEX_KEY)) as
+      | string[]
+      | null;
+    const existingSet = new Set(existing ?? []);
+    // Si el index tiene entries, asumimos que está OK.
+    if (existingSet.size > 0) return;
+    const keys = await redis.keys(`${TIPO_KEY_PREFIX}*`);
+    if (!keys || keys.length === 0) return;
+    const codes = keys.map((k) => k.slice(TIPO_KEY_PREFIX.length));
+    if (codes.length > 0) {
+      await redis.sadd(TIPO_INDEX_KEY, codes[0], ...codes.slice(1));
+      console.log(
+        `[novedades] reconciliación de índice: ${codes.length} tipos sumados`
+      );
+    }
+  } catch (e) {
+    console.error("[novedades] error reconciliando índice:", e);
   }
 }
 
@@ -147,20 +191,24 @@ function windowStart(): Date {
   return d;
 }
 
-/** Lee los overrides de tipo: mapa de código → "lanzamiento". */
+/**
+ * Lee los overrides de tipo: mapa de código → "lanzamiento" / "aplicacion".
+ *
+ * Antes usaba `redis.keys('novedades:tipo:*')` que hace un SCAN completo —
+ * O(N) sobre el keyspace total. Ahora mantenemos un set paralelo
+ * `novedades:tipo-index` con los códigos publicados. Una sola lectura
+ * al set + mget por los valores = 2 roundtrips, sin escaneo.
+ */
 async function readTipoOverrides(): Promise<Map<string, TipoNovedad>> {
   const redis = getRedis();
   if (!redis) return new Map();
   try {
-    // Usamos un scan de keys con prefijo — más simple que mantener
-    // un índice paralelo. Como son pocos overrides (decenas max), es
-    // barato.
-    const keys = await redis.keys(`${TIPO_KEY_PREFIX}*`);
-    if (keys.length === 0) return new Map();
+    const codes = (await redis.smembers(TIPO_INDEX_KEY)) as string[] | null;
+    if (!codes || codes.length === 0) return new Map();
+    const keys = codes.map((c) => TIPO_KEY_PREFIX + c);
     const values = await redis.mget<(TipoNovedad | null)[]>(...keys);
     const map = new Map<string, TipoNovedad>();
-    keys.forEach((k, i) => {
-      const code = k.slice(TIPO_KEY_PREFIX.length);
+    codes.forEach((code, i) => {
       const v = values[i];
       if (v === "lanzamiento" || v === "aplicacion") map.set(code, v);
     });
@@ -184,18 +232,26 @@ async function readHidden(): Promise<Set<string>> {
   }
 }
 
-/** Override manual del tipo de una novedad. */
+/** Override manual del tipo de una novedad. Mantiene el index al día. */
 export async function setTipo(code: string, tipo: TipoNovedad): Promise<void> {
   const redis = getRedis();
   if (!redis) throw new Error("Redis no configurado");
-  await redis.set(TIPO_KEY_PREFIX + code, tipo);
+  // Atomicidad via pipeline: si algo falla en la transacción, ninguna
+  // escritura queda aplicada (Redis `multi` garantiza all-or-nothing).
+  const pipe = redis.multi();
+  pipe.set(TIPO_KEY_PREFIX + code, tipo);
+  pipe.sadd(TIPO_INDEX_KEY, code);
+  await pipe.exec();
 }
 
 /** Borra el override de tipo (vuelve al default "aplicacion"). */
 export async function clearTipoOverride(code: string): Promise<void> {
   const redis = getRedis();
   if (!redis) throw new Error("Redis no configurado");
-  await redis.del(TIPO_KEY_PREFIX + code);
+  const pipe = redis.multi();
+  pipe.del(TIPO_KEY_PREFIX + code);
+  pipe.srem(TIPO_INDEX_KEY, code);
+  await pipe.exec();
 }
 
 /** Oculta una novedad del feed público. */
@@ -227,7 +283,41 @@ async function readNuevosVehiculos(code: string): Promise<string[]> {
   }
 }
 
-/** Reemplaza el set de vehículos "nuevos" para un código. */
+/**
+ * Batch: lee los sets de múltiples códigos en un solo pipeline.
+ * Devuelve un Map code → string[] solo con los que tienen valores.
+ */
+async function readNuevosVehiculosBatch(
+  codes: string[]
+): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>();
+  if (codes.length === 0) return result;
+  const redis = getRedis();
+  if (!redis) return result;
+  try {
+    const pipe = redis.multi();
+    for (const code of codes) {
+      pipe.smembers(NUEVOS_KEY_PREFIX + code);
+    }
+    const out = (await pipe.exec()) as (string[] | null)[];
+    codes.forEach((code, i) => {
+      const list = out[i];
+      if (Array.isArray(list) && list.length > 0) {
+        result.set(code, list);
+      }
+    });
+    return result;
+  } catch (e) {
+    console.error("[novedades] error en batch nuevos:", e);
+    return result;
+  }
+}
+
+/**
+ * Reemplaza atómicamente el set de vehículos "nuevos" para un código.
+ * Antes eran dos calls separados (del + sadd) — si dos requests concurrentes
+ * llegaban entre medio, una perdía sus cambios. Ahora usa pipeline.
+ */
 export async function setNuevosVehiculos(
   code: string,
   keys: string[]
@@ -235,11 +325,12 @@ export async function setNuevosVehiculos(
   const redis = getRedis();
   if (!redis) throw new Error("Redis no configurado");
   const setKey = NUEVOS_KEY_PREFIX + code;
-  // Rewrite completo: borramos y reescribimos. Más simple que un diff.
-  await redis.del(setKey);
+  const pipe = redis.multi();
+  pipe.del(setKey);
   if (keys.length > 0) {
-    await redis.sadd(setKey, keys[0], ...keys.slice(1));
+    pipe.sadd(setKey, keys[0], ...keys.slice(1));
   }
+  await pipe.exec();
 }
 
 function firstPictureUrl(p: CatalogProduct): string | null {
@@ -318,16 +409,11 @@ export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
     import("@/data/featured-products"),
   ]);
 
-  // Traemos los sets de "nuevos vehículos" en paralelo para todos los
-  // códigos candidatos — una llamada a Redis por cada código. Si hay
-  // muchos podríamos batchear, pero con ~370 productos y N candidatos
-  // (típicamente <50) va bien.
-  const nuevosPorCodigo = new Map<string, string[]>();
-  await Promise.all(
-    candidates.map(async (p) => {
-      const list = await readNuevosVehiculos(p.code);
-      if (list.length > 0) nuevosPorCodigo.set(p.code, list);
-    })
+  // Batch de los sets de "nuevos vehículos" en un solo pipeline de
+  // Redis. Antes hacíamos N roundtrips (uno por candidato) = ~300 ms
+  // en el dashboard con 50 candidatos. Con pipeline: 1 roundtrip.
+  const nuevosPorCodigo = await readNuevosVehiculosBatch(
+    candidates.map((p) => p.code)
   );
 
   const enriched = candidates.map((p) => {
