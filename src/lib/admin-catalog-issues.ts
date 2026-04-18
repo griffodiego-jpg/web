@@ -1,0 +1,127 @@
+import { listCatalog } from "@/lib/api/specparts";
+import type { CatalogProduct } from "@/types/specparts";
+
+/**
+ * Calidad de datos del catálogo de SpecParts. Detecta productos que
+ * no tienen los datos necesarios para lucir bien en el sitio público.
+ *
+ * Todas las calls se derivan del mismo `listCatalog()` cacheado —
+ * una sola llamada a SpecParts por render del dashboard.
+ */
+
+export type CatalogSummary = {
+  total: number;
+  byLinea: Record<string, number>;
+  byTipo: Record<string, number>;
+  /** Productos con al menos 1 foto no-blueprint. */
+  conFoto: number;
+  sinFoto: number;
+  sinVehiculos: number;
+  sinAttributes: number;
+  sinDescripcion: number;
+  discontinuadosPeroEnabled: number;
+  updatedUltimos30d: number;
+  updatedUltimos90d: number;
+  /** Productos con problemas específicos (para la lista). */
+  issues: CatalogIssue[];
+};
+
+export type CatalogIssue = {
+  code: string;
+  titulo: string;
+  problemas: string[]; // ej. ["sin foto", "sin vehículos"]
+};
+
+export async function getCatalogSummary(): Promise<CatalogSummary | null> {
+  let products: CatalogProduct[];
+  try {
+    products = await listCatalog();
+  } catch {
+    return null;
+  }
+
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const thirty = now - 30 * day;
+  const ninety = now - 90 * day;
+
+  const byLinea: Record<string, number> = {};
+  const byTipo: Record<string, number> = {};
+  let conFoto = 0;
+  let sinFoto = 0;
+  let sinVehiculos = 0;
+  let sinAttributes = 0;
+  let sinDescripcion = 0;
+  let discontinuadosPeroEnabled = 0;
+  let updatedUltimos30d = 0;
+  let updatedUltimos90d = 0;
+  const issues: CatalogIssue[] = [];
+
+  for (const p of products) {
+    const linea = p.category || "Sin línea";
+    byLinea[linea] = (byLinea[linea] ?? 0) + 1;
+
+    const tipo = p.product || "Sin tipo";
+    byTipo[tipo] = (byTipo[tipo] ?? 0) + 1;
+
+    const hasFoto = p.pictures.some((x) => !x.is_blueprint);
+    if (hasFoto) conFoto++;
+    else sinFoto++;
+
+    const hasVehiculos = p.vehicles.length > 0;
+    const hasAttrs = p.attributes.length > 0;
+    const hasDesc = (p.description ?? "").trim().length > 0;
+    const discontEnabled = p.discontinued === 1 && p.enabled === 1;
+
+    if (!hasVehiculos) sinVehiculos++;
+    if (!hasAttrs) sinAttributes++;
+    if (!hasDesc) sinDescripcion++;
+    if (discontEnabled) discontinuadosPeroEnabled++;
+
+    if (p.updated_at) {
+      const ts = new Date(p.updated_at).getTime();
+      if (ts >= thirty) updatedUltimos30d++;
+      if (ts >= ninety) updatedUltimos90d++;
+    }
+
+    // Armamos la lista de problemas del producto — solo para productos
+    // enabled (los disabled no importan).
+    if (p.enabled === 1 && !p.discontinued) {
+      const problemas: string[] = [];
+      if (!hasFoto) problemas.push("sin foto");
+      if (!hasVehiculos) problemas.push("sin vehículos");
+      if (!hasAttrs) problemas.push("sin atributos");
+      if (!hasDesc) problemas.push("sin descripción");
+      if (problemas.length > 0) {
+        issues.push({
+          code: p.code,
+          titulo: p.product || p.description || p.code,
+          problemas,
+        });
+      }
+    }
+  }
+
+  // Ordenamos los issues: más problemas primero, después por código.
+  issues.sort((a, b) => {
+    if (a.problemas.length !== b.problemas.length) {
+      return b.problemas.length - a.problemas.length;
+    }
+    return a.code.localeCompare(b.code);
+  });
+
+  return {
+    total: products.length,
+    byLinea,
+    byTipo,
+    conFoto,
+    sinFoto,
+    sinVehiculos,
+    sinAttributes,
+    sinDescripcion,
+    discontinuadosPeroEnabled,
+    updatedUltimos30d,
+    updatedUltimos90d,
+    issues,
+  };
+}

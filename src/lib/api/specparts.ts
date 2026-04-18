@@ -151,6 +151,14 @@ export async function listCatalog(): Promise<CatalogProduct[]> {
       productsCache = { products, expiresAt: Date.now() + CACHE_TTL_MS };
       return products;
     })
+    .catch(async (err) => {
+      // Loguear el fallo para que aparezca en el dashboard admin.
+      // Import lazy para evitar ciclos (admin-log → kv → nada circular,
+      // pero por consistencia con otros lazy imports en el proyecto).
+      const { logAdminError } = await import("@/lib/admin-log");
+      await logAdminError("specparts", err);
+      throw err;
+    })
     .finally(() => {
       inflightProducts = null;
     });

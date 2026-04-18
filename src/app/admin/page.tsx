@@ -1,92 +1,498 @@
 import Link from "next/link";
-import { distribuidores } from "@/data/distribuidores";
-import { productosDetalle } from "@/data/productos";
+import { ErrorsLog } from "@/components/admin/ErrorsLog";
+import { findConfigAlerts, type Alert } from "@/lib/admin-alerts";
+import { getCatalogSummary } from "@/lib/admin-catalog-issues";
+import { runHealthChecks, type HealthCheck } from "@/lib/admin-health";
+import { readAdminErrors } from "@/lib/admin-log";
+import {
+  countLeads,
+  listLeads,
+  type Lead,
+} from "@/lib/leads";
+import {
+  listNovedadesIncludingHidden,
+  type Novedad,
+} from "@/lib/novedades";
+import { readOverrides } from "@/lib/descargas-store";
 
-export default function AdminDashboard() {
-  const totalDist = distribuidores.length;
-  const totalProd = Object.keys(productosDetalle).length;
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export default async function AdminDashboard() {
+  // Todo en paralelo para que un servicio lento no bloquee el resto.
+  const [
+    health,
+    alerts,
+    catalog,
+    novedades,
+    errors,
+    leadsCounts,
+    leadsRecent,
+    descargasOverrides,
+  ] = await Promise.all([
+    runHealthChecks(),
+    Promise.resolve(findConfigAlerts()),
+    getCatalogSummary(),
+    listNovedadesIncludingHidden().catch(() => [] as Novedad[]),
+    readAdminErrors(20),
+    Promise.all([
+      countLeads("contacto"),
+      countLeads("newsletter"),
+      countLeads("descarga"),
+      countLeads("garantia"),
+    ]),
+    Promise.all([
+      listLeads<Lead>("contacto"),
+      listLeads<Lead>("newsletter"),
+      listLeads<Lead>("descarga"),
+      listLeads<Lead>("garantia"),
+    ]),
+    readOverrides().catch(() => ({} as Record<string, string>)),
+  ]);
+
+  const [cContacto, cNewsletter, cDescarga, cGarantia] = leadsCounts;
+  const [lContacto, lNewsletter, lDescarga, lGarantia] = leadsRecent;
+
+  const ultimos7dTs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const last7 = {
+    contacto: lContacto.filter((l) => l.ts >= ultimos7dTs).length,
+    newsletter: lNewsletter.filter((l) => l.ts >= ultimos7dTs).length,
+    descarga: lDescarga.filter((l) => l.ts >= ultimos7dTs).length,
+    garantia: lGarantia.filter((l) => l.ts >= ultimos7dTs).length,
+  };
+
+  const novPublicadas = novedades.filter((n) => n.published && !n.hidden).length;
+  const novSinPublicar = novedades.filter((n) => !n.published && !n.hidden).length;
+  const novOcultas = novedades.filter((n) => n.hidden).length;
+  const novLanz = novedades.filter((n) => n.published && !n.hidden && n.tipo === "lanzamiento").length;
+  const novApl = novedades.filter((n) => n.published && !n.hidden && n.tipo === "aplicacion").length;
+
+  // Descargas: contar cuántos overrides hay vs total de slots esperados.
+  // Total teórico: 1 catálogo + 5*2 productos + 2 gated = 13
+  const TOTAL_SLOTS = 13;
+  const descargasConfiguradas = Object.keys(descargasOverrides).length;
 
   return (
-    <div>
-      <h1 className="text-3xl font-black text-[#0a2b3d]">Dashboard</h1>
-      <p className="mt-2 text-gray-500">
-        Panel de administración de Griffo
-      </p>
+    <div className="space-y-10">
+      <header>
+        <h1 className="text-3xl font-black text-[#0a2b3d]">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Estado general del sitio, servicios conectados y contenido.
+        </p>
+      </header>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          label="Distribuidores"
-          value={totalDist}
-          href="/admin/distribuidores"
-          color="bg-primary"
-        />
-        <StatCard
-          label="Productos con detalle"
-          value={totalProd}
-          href="/admin/productos"
-          color="bg-primary-dark"
-        />
-        <StatCard
-          label="Banners"
-          value="—"
-          href="/admin/banners"
-          color="bg-accent"
-        />
-      </div>
-
-      <div className="mt-12 bg-white rounded-lg shadow p-6">
-        <h2 className="font-bold text-lg text-[#0a2b3d] mb-4">
-          Acciones rápidas
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/admin/distribuidores"
-            className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition"
-          >
-            + Agregar distribuidor
-          </Link>
-          <Link
-            href="/admin/productos"
-            className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition"
-          >
-            Editar links de compra
-          </Link>
-          <Link
-            href="/"
-            target="_blank"
-            className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-300 transition"
-          >
-            Ver sitio público ↗
-          </Link>
+      {/* HEALTH — semáforos */}
+      <section>
+        <SectionTitle>Estado de servicios</SectionTitle>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+          {health.map((h) => (
+            <HealthTile key={h.id} check={h} />
+          ))}
         </div>
-      </div>
+      </section>
+
+      {/* ALERTAS */}
+      <section>
+        <SectionTitle>
+          Alertas{" "}
+          {alerts.length > 0 && (
+            <span className="ml-2 text-xs rounded-full bg-amber-100 text-amber-700 px-2 py-0.5">
+              {alerts.length}
+            </span>
+          )}
+        </SectionTitle>
+        <div className="mt-3 space-y-2">
+          {alerts.length === 0 ? (
+            <EmptyRow>No hay alertas de configuración. ✨</EmptyRow>
+          ) : (
+            alerts.map((a) => <AlertRow key={a.id} alert={a} />)
+          )}
+        </div>
+      </section>
+
+      {/* WIDGETS — LEADS + NOVEDADES + DESCARGAS */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Card>
+          <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+            Formularios (últimos 7 días)
+          </h3>
+          <ul className="space-y-1 text-sm">
+            <Metric label="Descargas" current={last7.descarga} total={cDescarga} />
+            <Metric label="Contacto" current={last7.contacto} total={cContacto} />
+            <Metric label="Garantía" current={last7.garantia} total={cGarantia} />
+            <Metric label="Newsletter" current={last7.newsletter} total={cNewsletter} />
+          </ul>
+          <Link
+            href="/admin/leads"
+            className="mt-4 inline-flex items-center gap-1 text-xs text-primary font-bold hover:gap-2 transition-all"
+          >
+            Ver leads <ArrowIcon />
+          </Link>
+        </Card>
+
+        <Card>
+          <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+            Novedades
+          </h3>
+          <ul className="space-y-1 text-sm">
+            <li className="flex items-center justify-between">
+              <span className="text-gray-700">Publicadas</span>
+              <span className="font-bold text-[#0a2b3d]">{novPublicadas}</span>
+            </li>
+            <li className="flex items-center justify-between text-xs text-gray-500 pl-3">
+              <span>Lanzamientos</span>
+              <span>{novLanz}</span>
+            </li>
+            <li className="flex items-center justify-between text-xs text-gray-500 pl-3">
+              <span>Nuevas aplicaciones</span>
+              <span>{novApl}</span>
+            </li>
+            <li className="flex items-center justify-between mt-1">
+              <span className="text-gray-700">Sin publicar</span>
+              <span className="font-bold text-gray-600">{novSinPublicar}</span>
+            </li>
+            <li className="flex items-center justify-between">
+              <span className="text-gray-700">Ocultas</span>
+              <span className="font-bold text-gray-600">{novOcultas}</span>
+            </li>
+          </ul>
+          <Link
+            href="/admin/novedades"
+            className="mt-4 inline-flex items-center gap-1 text-xs text-primary font-bold hover:gap-2 transition-all"
+          >
+            Administrar novedades <ArrowIcon />
+          </Link>
+        </Card>
+
+        <Card>
+          <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+            Descargas
+          </h3>
+          <p className="text-2xl font-black text-[#0a2b3d]">
+            {descargasConfiguradas}
+            <span className="text-sm font-normal text-gray-400">
+              {" "}
+              / {TOTAL_SLOTS} slots con archivo
+            </span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Subidos vía admin (Vercel Blob). Slots sin configurar caen al
+            default en /public si existe.
+          </p>
+          <Link
+            href="/admin/descargas"
+            className="mt-4 inline-flex items-center gap-1 text-xs text-primary font-bold hover:gap-2 transition-all"
+          >
+            Administrar descargas <ArrowIcon />
+          </Link>
+        </Card>
+      </section>
+
+      {/* CATÁLOGO - dashboard de calidad de datos */}
+      <section>
+        <SectionTitle>Catálogo (SpecParts)</SectionTitle>
+        {catalog === null ? (
+          <EmptyRow>
+            No se pudo cargar el catálogo (ver alertas y log de errores).
+          </EmptyRow>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Stat label="Total de productos" value={catalog.total} />
+              <Stat
+                label="Con foto"
+                value={`${catalog.conFoto}`}
+                detail={`${catalog.sinFoto} sin foto`}
+                color={catalog.sinFoto > 0 ? "warn" : "ok"}
+              />
+              <Stat
+                label="Con vehículos"
+                value={`${catalog.total - catalog.sinVehiculos}`}
+                detail={`${catalog.sinVehiculos} sin vehículos`}
+                color={catalog.sinVehiculos > 0 ? "warn" : "ok"}
+              />
+              <Stat
+                label="Actualizados últimos 30 días"
+                value={catalog.updatedUltimos30d}
+              />
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Card>
+                <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+                  Por línea
+                </h3>
+                <ul className="space-y-1 text-sm">
+                  {Object.entries(catalog.byLinea)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([linea, count]) => (
+                      <li key={linea} className="flex items-center justify-between">
+                        <span className="text-gray-700">{linea}</span>
+                        <span className="font-bold text-[#0a2b3d]">{count}</span>
+                      </li>
+                    ))}
+                </ul>
+              </Card>
+
+              <Card>
+                <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+                  Problemas detectados
+                </h3>
+                <ul className="space-y-1 text-sm">
+                  <li className="flex items-center justify-between">
+                    <span className="text-gray-700">Sin foto</span>
+                    <span
+                      className={`font-bold ${catalog.sinFoto > 0 ? "text-amber-600" : "text-gray-500"}`}
+                    >
+                      {catalog.sinFoto}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-gray-700">Sin vehículos</span>
+                    <span
+                      className={`font-bold ${catalog.sinVehiculos > 0 ? "text-amber-600" : "text-gray-500"}`}
+                    >
+                      {catalog.sinVehiculos}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-gray-700">Sin atributos técnicos</span>
+                    <span
+                      className={`font-bold ${catalog.sinAttributes > 0 ? "text-amber-600" : "text-gray-500"}`}
+                    >
+                      {catalog.sinAttributes}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-gray-700">Sin descripción</span>
+                    <span
+                      className={`font-bold ${catalog.sinDescripcion > 0 ? "text-amber-600" : "text-gray-500"}`}
+                    >
+                      {catalog.sinDescripcion}
+                    </span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-gray-700">
+                      Discontinuados pero activos
+                    </span>
+                    <span
+                      className={`font-bold ${catalog.discontinuadosPeroEnabled > 0 ? "text-red-600" : "text-gray-500"}`}
+                    >
+                      {catalog.discontinuadosPeroEnabled}
+                    </span>
+                  </li>
+                </ul>
+              </Card>
+            </div>
+
+            {catalog.issues.length > 0 && (
+              <div className="mt-4">
+                <Card>
+                  <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+                    Productos con problemas ({catalog.issues.length})
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Lista de productos <strong>activos</strong> a los que les
+                    falta algún dato. Los primeros 10:
+                  </p>
+                  <ul className="divide-y divide-gray-100">
+                    {catalog.issues.slice(0, 10).map((issue) => (
+                      <li
+                        key={issue.code}
+                        className="py-2 flex flex-wrap items-center gap-3 text-sm"
+                      >
+                        <span className="font-mono font-bold text-primary w-24 shrink-0">
+                          {issue.code}
+                        </span>
+                        <span className="flex-1 min-w-0 truncate text-[#0a2b3d]">
+                          {issue.titulo}
+                        </span>
+                        <ul className="flex flex-wrap gap-1">
+                          {issue.problemas.map((p) => (
+                            <li
+                              key={p}
+                              className="inline-flex text-[10px] bg-amber-50 border border-amber-200 text-amber-800 rounded px-2 py-0.5 uppercase tracking-wide font-bold"
+                            >
+                              {p}
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                  </ul>
+                  {catalog.issues.length > 10 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      …y {catalog.issues.length - 10} más.
+                    </p>
+                  )}
+                </Card>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* LOG DE ERRORES */}
+      <section>
+        <SectionTitle>
+          Log de errores{" "}
+          {errors.length > 0 && (
+            <span className="ml-2 text-xs rounded-full bg-red-100 text-red-700 px-2 py-0.5">
+              {errors.length}
+            </span>
+          )}
+        </SectionTitle>
+        <div className="mt-3">
+          <ErrorsLog initialErrors={errors} />
+        </div>
+      </section>
     </div>
   );
 }
 
-function StatCard({
+/* ---------- sub-componentes ---------- */
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-lg font-bold text-[#0a2b3d] uppercase tracking-wide border-l-4 border-accent pl-3 flex items-center">
+      {children}
+    </h2>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      {children}
+    </div>
+  );
+}
+
+function EmptyRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-lg border border-dashed border-gray-200 p-5 text-sm text-gray-500">
+      {children}
+    </div>
+  );
+}
+
+function HealthTile({ check }: { check: HealthCheck }) {
+  const cfg = {
+    ok: { bg: "bg-green-50", border: "border-green-200", dot: "bg-green-500", text: "text-green-800" },
+    warn: { bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-500", text: "text-amber-800" },
+    error: { bg: "bg-red-50", border: "border-red-200", dot: "bg-red-500", text: "text-red-800" },
+  }[check.status];
+  return (
+    <div
+      className={`rounded-lg border ${cfg.border} ${cfg.bg} p-4`}
+      title={check.detail}
+    >
+      <div className="flex items-center gap-2">
+        <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} aria-hidden />
+        <p className="text-xs font-bold uppercase tracking-wide text-gray-600">
+          {check.label}
+        </p>
+      </div>
+      <p className={`mt-1 text-sm font-semibold ${cfg.text}`}>
+        {check.message}
+      </p>
+    </div>
+  );
+}
+
+function AlertRow({ alert }: { alert: Alert }) {
+  const cfg = {
+    info: { bg: "bg-sky-50", border: "border-sky-200", badge: "bg-sky-100 text-sky-800", icon: "ℹ" },
+    warn: { bg: "bg-amber-50", border: "border-amber-200", badge: "bg-amber-100 text-amber-800", icon: "⚠" },
+    error: { bg: "bg-red-50", border: "border-red-200", badge: "bg-red-100 text-red-800", icon: "✕" },
+  }[alert.severity];
+  return (
+    <div
+      className={`rounded-lg border ${cfg.border} ${cfg.bg} p-4 flex flex-wrap items-start gap-3`}
+    >
+      <span
+        className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${cfg.badge} text-sm font-black shrink-0`}
+      >
+        {cfg.icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-sm text-[#0a2b3d]">{alert.title}</p>
+        <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">
+          {alert.description}
+        </p>
+      </div>
+      {alert.actionHref && (
+        <Link
+          href={alert.actionHref}
+          className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:gap-2 transition-all shrink-0"
+        >
+          {alert.actionLabel ?? "Resolver"}
+          <ArrowIcon />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function Stat({
   label,
   value,
-  href,
+  detail,
   color,
 }: {
   label: string;
-  value: number | string;
-  href: string;
-  color: string;
+  value: string | number;
+  detail?: string;
+  color?: "ok" | "warn";
 }) {
+  const dot =
+    color === "warn" ? "bg-amber-500" : color === "ok" ? "bg-green-500" : null;
   return (
-    <Link
-      href={href}
-      className="block bg-white rounded-lg shadow hover:shadow-lg transition p-6 group"
-    >
-      <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-2">
+        {dot && <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden />}
         {label}
       </p>
-      <p className="mt-2 text-4xl font-black text-[#0a2b3d]">{value}</p>
-      <div
-        className={`mt-4 h-1 w-12 ${color} rounded-full group-hover:w-20 transition-all`}
-      />
-    </Link>
+      <p className="mt-2 text-2xl font-black text-[#0a2b3d]">{value}</p>
+      {detail && <p className="mt-1 text-xs text-gray-500">{detail}</p>}
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  current,
+  total,
+}: {
+  label: string;
+  current: number;
+  total: number;
+}) {
+  return (
+    <li className="flex items-center justify-between">
+      <span className="text-gray-700">{label}</span>
+      <span className="text-[#0a2b3d]">
+        <span className="font-bold">{current}</span>
+        <span className="text-gray-400 text-xs"> / {total} total</span>
+      </span>
+    </li>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
   );
 }
