@@ -32,6 +32,7 @@ const EXEMPT_PATHS = [
   "/admin/login",
   "/api/admin/login",
   "/api/admin/descargas/upload",
+  "/api/admin/banners/upload",
 ];
 
 function isExempt(pathname: string): boolean {
