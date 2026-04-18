@@ -166,16 +166,34 @@ export function filterByPlateVehicle(
 
 export type MeasureType = "direccion" | "transmision" | "tope";
 
-export type MeasureRow = {
+export type MeasureVersion = {
   code: string;
+  /** Nombre del producto (ej. 'FUELLE SEMIEJE', 'KIT FUELLE SEMIEJE'). */
+  product: string;
+  /** Descripción corta del producto. */
+  description: string;
+  productSlug: string;
+  imageUrl: string | null;
+};
+
+export type MeasureRow = {
+  /** Código mostrado: base si isGrouped (ej. '162'), completo si no (ej. '054-122-03'). */
+  code: string;
+  /** True si esta fila agrupa más de un producto con el mismo código base. */
+  isGrouped: boolean;
+  /** Lista de versiones. Si no está agrupada, tiene 1 elemento. */
+  versions: MeasureVersion[];
   diamMenor: string;
   diamMayor: string;
   largo: string;
   diamMenorNum: number | null;
   diamMayorNum: number | null;
   largoNum: number | null;
+  /** Slug del primer producto — para retrocompat de llamadas single-click. */
   productSlug: string;
+  /** Imagen representativa (la del primer producto del grupo). */
   imageUrl: string | null;
+  /** Nombre del primer producto — usado como alt de imagen, etc. */
   productName: string;
 };
 
@@ -266,21 +284,45 @@ function toNumber(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function buildMeasureRow(p: SpecPartsProduct, codeOverride?: string): MeasureRow {
-  const diamMayor = getAttrValue(p, "boca mayor") || getAttrValue(p, "diámetro mayor");
-  const diamMenor = getAttrValue(p, "boca menor") || getAttrValue(p, "diámetro menor");
-  const largo = getAttrValue(p, "largo");
+function toMeasureVersion(p: SpecPartsProduct): MeasureVersion {
   return {
-    code: codeOverride ?? p.code ?? "",
+    code: p.code ?? "",
+    product: p.product || "",
+    description: p.description || "",
+    productSlug: p.slug,
+    imageUrl: p.pictures?.[0]?.image_url ?? null,
+  };
+}
+
+function buildMeasureRow(
+  representative: SpecPartsProduct,
+  opts?: { codeOverride?: string; versions?: SpecPartsProduct[] },
+): MeasureRow {
+  const diamMayor =
+    getAttrValue(representative, "boca mayor") ||
+    getAttrValue(representative, "diámetro mayor");
+  const diamMenor =
+    getAttrValue(representative, "boca menor") ||
+    getAttrValue(representative, "diámetro menor");
+  const largo = getAttrValue(representative, "largo");
+  const productsInRow = opts?.versions ?? [representative];
+  const versions = productsInRow.map(toMeasureVersion);
+  const isGrouped = versions.length > 1;
+  return {
+    // Si está agrupada y hay codeOverride, mostramos el base.
+    // Si es única, mostramos el código completo real.
+    code: isGrouped ? opts?.codeOverride ?? representative.code ?? "" : representative.code ?? "",
+    isGrouped,
+    versions,
     diamMayor,
     diamMenor,
     largo,
     diamMayorNum: toNumber(diamMayor),
     diamMenorNum: toNumber(diamMenor),
     largoNum: toNumber(largo),
-    productSlug: p.slug,
-    imageUrl: p.pictures?.[0]?.image_url ?? null,
-    productName: p.product || p.description || "",
+    productSlug: representative.slug,
+    imageUrl: representative.pictures?.[0]?.image_url ?? null,
+    productName: representative.product || representative.description || "",
   };
 }
 
@@ -289,14 +331,30 @@ export function buildMeasureRows(
   type: MeasureType,
 ): MeasureRow[] {
   if (type === "transmision") {
-    const seen = new Set<string>();
-    const rows: MeasureRow[] = [];
+    // Agrupamos por código base (ej. '162' agrupa 162-12, 162-32, 162-32A...).
+    // Si el grupo tiene 1 solo producto, la fila muestra el código completo.
+    // Si tiene varios, muestra el base + se abre modal con las versiones.
+    const byBase = new Map<string, SpecPartsProduct[]>();
     for (const p of products) {
       if (!isFuelleTransmision(p)) continue;
       const base = getBaseCode(p.code);
-      if (seen.has(base)) continue;
-      seen.add(base);
-      rows.push(buildMeasureRow(p, base));
+      if (!byBase.has(base)) byBase.set(base, []);
+      byBase.get(base)!.push(p);
+    }
+    const rows: MeasureRow[] = [];
+    for (const [base, prods] of byBase.entries()) {
+      if (prods.length === 0) continue;
+      // Ordenamos versiones por código (con sufijos). FUELLE solo suele ser -12
+      // y kits -32/-32A/-32B. Al ordenar por código, el -12 queda primero, lo
+      // cual es útil porque sus medidas son las más 'canonicas' del fuelle.
+      prods.sort((a, b) => (a.code ?? "").localeCompare(b.code ?? ""));
+      const representative = prods[0];
+      rows.push(
+        buildMeasureRow(representative, {
+          codeOverride: base,
+          versions: prods,
+        }),
+      );
     }
     return rows;
   }

@@ -37,6 +37,7 @@ import {
 
 import { FiltersSidebar } from "./FiltersSidebar";
 import { ImageLightbox } from "./ImageLightbox";
+import { MeasureVersionsModal } from "./MeasureVersionsModal";
 import { ProductCard } from "./ProductCard";
 import { StatusBadge, type CatalogStatus } from "./StatusBadge";
 
@@ -773,6 +774,7 @@ function MeasuresTable({
   const [sortCol, setSortCol] = useState<SortCol>("diamMenor");
   const [sortAsc, setSortAsc] = useState(true);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [versionsRow, setVersionsRow] = useState<MeasureRow | null>(null);
 
   const rows = useMemo(() => buildMeasureRows(products, type), [products, type]);
   const sorted = useMemo(() => {
@@ -839,6 +841,7 @@ function MeasuresTable({
                   key={`${type}-${row.code}`}
                   row={row}
                   onImageClick={(src, alt) => setLightbox({ src, alt })}
+                  onVersionsClick={() => setVersionsRow(row)}
                 />
               ))}
             </tbody>
@@ -847,6 +850,14 @@ function MeasuresTable({
       </div>
       {lightbox ? (
         <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
+      ) : null}
+      {versionsRow ? (
+        <MeasureVersionsModal
+          open={!!versionsRow}
+          onClose={() => setVersionsRow(null)}
+          baseCode={versionsRow.code}
+          versions={versionsRow.versions}
+        />
       ) : null}
       {trebolesOpen && trebolesUrl ? (
         <ImageLightbox
@@ -932,9 +943,11 @@ function MedidaShortcuts({
 function MeasureRowView({
   row,
   onImageClick,
+  onVersionsClick,
 }: {
   row: MeasureRow;
   onImageClick: (src: string, alt: string) => void;
+  onVersionsClick: () => void;
 }) {
   return (
     <tr className="group border-b border-gray-50 transition hover:bg-primary/5">
@@ -942,12 +955,25 @@ function MeasureRowView({
       <td className="px-3 py-2 text-[#0a2b3d]">{row.diamMayor || "—"}</td>
       <td className="px-3 py-2 text-[#0a2b3d]">{row.largo || "—"}</td>
       <td className="px-3 py-2">
-        <Link
-          href={`/catalogo/${row.productSlug}`}
-          className="font-black text-primary hover:text-primary-dark"
-        >
-          {row.code}
-        </Link>
+        {row.isGrouped ? (
+          <button
+            type="button"
+            onClick={onVersionsClick}
+            className="inline-flex items-center gap-1 font-black text-primary hover:text-primary-dark"
+          >
+            {row.code}
+            <span className="text-[10px] font-bold uppercase tracking-wide text-accent">
+              · ver versiones ({row.versions.length})
+            </span>
+          </button>
+        ) : (
+          <Link
+            href={`/catalogo/${row.productSlug}`}
+            className="font-black text-primary hover:text-primary-dark"
+          >
+            {row.code}
+          </Link>
+        )}
       </td>
       <td className="relative px-3 py-1.5 text-right">
         {row.imageUrl ? (
