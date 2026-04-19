@@ -116,7 +116,7 @@ function MarcarCargadoForm({
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition text-sm"
       >
-        ✓ Marcar como cargado en Bejerman
+        ✓ Marcar como cargado (con nº de Bejerman)
       </button>
     );
   }
@@ -129,15 +129,16 @@ function MarcarCargadoForm({
       <div>
         <h3 className="font-bold text-blue-900">Marcar como cargado en Bejerman</h3>
         <p className="text-xs text-blue-800 mt-1">
-          Ingresá el nº de nota de pedido que te devolvió Bejerman al
-          cargar el pedido manualmente. Esto pasa el pedido a "En
-          preparación" y avisa al cliente por mail.
+          Ingresá el <b>nº de pedido que te devolvió Bejerman</b> al
+          cargar el pedido manualmente. Queda linkeado al pedido web y
+          permite que en el futuro traigamos automáticamente la fecha
+          de entrega y la factura asociada.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-blue-900 mb-1 uppercase tracking-wider">
-            Nº de nota de pedido (ERP) *
+            Nº de pedido en Bejerman *
           </label>
           <input
             type="text"
@@ -145,8 +146,13 @@ function MarcarCargadoForm({
             onChange={(e) => setErpOrderNumber(e.target.value)}
             placeholder="Ej: PED-23900"
             required
-            className="w-full px-4 py-2 border border-blue-300 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-white"
+            autoFocus
+            className="w-full px-4 py-2 border-2 border-blue-400 rounded-lg text-sm font-mono focus:border-blue-600 focus:ring-2 focus:ring-blue-200 outline-none bg-white"
           />
+          <p className="text-[10px] text-blue-700 mt-1">
+            Obligatorio. Es el ID que Bejerman asigna al pedido al
+            guardarlo en el ERP.
+          </p>
         </div>
         <div>
           <label className="block text-xs font-semibold text-blue-900 mb-1 uppercase tracking-wider">
@@ -159,8 +165,8 @@ function MarcarCargadoForm({
             className="w-full px-4 py-2 border border-blue-300 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none bg-white"
           />
           <p className="text-[10px] text-blue-700 mt-1">
-            Opcional. Cuando el técnico extienda la API, se va a traer
-            automáticamente de Bejerman.
+            Opcional. Cuando el técnico extienda la API, se va a
+            traer automáticamente desde Bejerman.
           </p>
         </div>
       </div>
