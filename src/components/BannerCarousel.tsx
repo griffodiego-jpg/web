@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BuscadorPatenteBanner } from "@/components/BuscadorPatenteBanner";
 import type { Banner } from "@/lib/banners-store";
-import { siteConfig } from "@/lib/site-config";
+
+// BuscadorPatenteBanner YA es un <Link href="/catalogo"> internamente,
+// así que cuando es slide del carousel lo renderizamos directo — sin
+// wrapper adicional — para evitar anidar <a> (HTML inválido, browsers
+// cancelan el click).
 
 const AUTOPLAY_MS = 6000;
 
@@ -143,17 +147,7 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
 
 function BannerSlide({ banner }: { banner: Banner }) {
   if (banner.tipo === "patente") {
-    return (
-      <a
-        href={siteConfig.externalCatalog}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Nuevo buscador por patente — Ir al catálogo"
-        className="block"
-      >
-        <BuscadorPatenteBanner />
-      </a>
-    );
+    return <BuscadorPatenteBanner />;
   }
 
   const content = (

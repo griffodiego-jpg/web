@@ -2,7 +2,6 @@ import Link from "next/link";
 import { BannerCarousel } from "@/components/BannerCarousel";
 import { TrustStrip } from "@/components/TrustStrip";
 import { listActiveBanners } from "@/lib/banners-store";
-import { siteConfig } from "@/lib/site-config";
 
 // ISR — el carousel cambia cuando el admin edita banners. Las APIs de
 // save/delete/reorder hacen revalidatePath("/") para refresh inmediato.
@@ -26,13 +25,12 @@ const featureCards: FeatureCard[] = [
   {
     title: "Catálogo",
     image: "/products/catalogo-card.jpg",
-    href: siteConfig.externalCatalogLogin,
+    href: "/catalogo",
     cta: "Ir al catálogo",
-    external: true,
   },
   {
     title: "Lanzamientos",
-    image: "/products/lanzamiento-card.jpg",
+    image: "/products/lanzamiento-card.webp",
     href: "/novedades",
     cta: "Ver todos",
   },

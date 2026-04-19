@@ -26,8 +26,6 @@ export const siteConfig = {
     facebook: "https://www.facebook.com/griffoarg",
     youtube: "https://www.youtube.com/channel/UCQZHmbT5rzKeypFTc0rWcVQ",
   },
-  externalCatalog: "https://griffo.specparts.shop/",
-  externalCatalogLogin: "https://griffo.specparts.shop/login",
 };
 
 export type NavItem = {

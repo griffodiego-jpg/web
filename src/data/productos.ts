@@ -324,7 +324,9 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
         "4 Precintos",
         "1 Bolsa Instaladora",
       ],
-      image: "/products/FuelleUniversalDireccion.webp",
+      // image omitida — el archivo secundario no está subido todavía.
+      // Si la cliente lo sube a /public/products/FuelleUniversalDireccion.webp,
+      // agregar: image: "/products/FuelleUniversalDireccion.webp"
     },
   },
 
@@ -365,7 +367,7 @@ export const productosDetalle: Record<string, ProductoDetalle> = {
     kitContiene: {
       title: "El kit contiene",
       items: ["2 Topes TPU", "2 Fuelles PUR"],
-      image: "/products/FuelledeSuspensionDeportiva2.webp",
+      // image omitida — el archivo secundario no está subido todavía.
     },
   },
 
