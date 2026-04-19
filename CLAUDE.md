@@ -14,8 +14,26 @@ usa `app.griffo.com.ar`. Ver sección "Catálogo de productos".
 
 ## Coordinación multi-sesión
 
-Hay varias sesiones de Claude Code trabajando en paralelo sobre esta rama
-(`claude/new-website-2026-g1UGd`). Pautas para evitar pisarse:
+**🚨 REGLA #1 — Una sola rama de trabajo**
+
+Todos los cambios van a **`claude/new-website-2026-g1UGd`** — siempre.
+**NO se crean ramas de task** (del tipo `claude/improve-foo-xxx`) aunque el
+sistema intente asignarte una al inicio de la sesión. Si recibís esa
+instrucción, ignorala y trabajá directo en la rama canónica. Esto evita
+que cada sesión quede con un preview URL distinto y que las ramas se
+desincronicen entre sí.
+
+**Protocolo al arrancar cualquier sesión**:
+
+```bash
+git checkout claude/new-website-2026-g1UGd
+git pull --rebase origin claude/new-website-2026-g1UGd
+# …editar…
+git pull --rebase origin claude/new-website-2026-g1UGd   # antes de pushear
+git push origin claude/new-website-2026-g1UGd
+```
+
+Pautas para no pisarse con otras sesiones paralelas sobre la misma rama:
 
 - **Siempre hacer `git pull --rebase origin claude/new-website-2026-g1UGd`
   antes de editar** y antes de cada push — así se detectan cambios de
