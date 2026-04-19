@@ -65,7 +65,7 @@ export function AdminPedidoActions({ pedido }: { pedido: Pedido }) {
 /* Marcar como cargado (procesando → en_preparacion)                          */
 /* -------------------------------------------------------------------------- */
 
-function MarcarCargadoForm({
+export function MarcarCargadoForm({
   pedidoId,
   onDone,
 }: {
@@ -201,7 +201,7 @@ function MarcarCargadoForm({
 /* Marcar como entregado (en_preparacion → entregado)                         */
 /* -------------------------------------------------------------------------- */
 
-function MarcarEntregadoForm({
+export function MarcarEntregadoForm({
   pedidoId,
   onDone,
 }: {
@@ -362,7 +362,7 @@ function MarcarEntregadoForm({
 /* Cancelar (desde admin)                                                     */
 /* -------------------------------------------------------------------------- */
 
-function AdminCancelarForm({
+export function AdminCancelarForm({
   pedidoId,
   onDone,
 }: {

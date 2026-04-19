@@ -2,7 +2,7 @@ import type { PedidoStatus } from "@/types/pedido";
 
 const STYLES: Record<PedidoStatus, { label: string; cls: string }> = {
   procesando: {
-    label: "Procesando",
+    label: "Pendiente de carga",
     cls: "bg-amber-50 text-amber-800 border-amber-200",
   },
   en_preparacion: {
