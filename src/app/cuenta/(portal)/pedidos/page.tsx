@@ -1,16 +1,24 @@
 import Link from "next/link";
-import { formatARS, formatDate, mockOrders } from "@/data/mock-b2b";
+import { listPedidosByClient } from "@/lib/pedidos";
+import { mockCurrentClient, formatARS, formatDate } from "@/data/mock-b2b";
+import { PedidoStatusPill } from "@/components/cuenta/PedidoStatusPill";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Mis pedidos" };
 
-export default function PedidosPage() {
+export default async function PedidosPage() {
+  /* Hoy el clientId viene del mock. Cuando Firebase Auth esté vivo,
+     sale del token del usuario → mapeo email → /ERP/Clients → client_id. */
+  const clientId = mockCurrentClient.client_id;
+  const pedidos = await listPedidosByClient(clientId, 200);
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h2 className="text-2xl font-black text-[#0a2b3d]">Mis pedidos</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Historial completo de pedidos enviados al ERP.
+            Historial completo de pedidos que armaste desde la web.
           </p>
         </div>
         <Link
@@ -21,70 +29,68 @@ export default function PedidosPage() {
         </Link>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
-            <tr>
-              <th className="px-4 py-3 font-semibold">ERP ID</th>
-              <th className="px-4 py-3 font-semibold">Ref. web</th>
-              <th className="px-4 py-3 font-semibold">Fecha</th>
-              <th className="px-4 py-3 font-semibold">Estado</th>
-              <th className="px-4 py-3 font-semibold text-right">Ítems</th>
-              <th className="px-4 py-3 font-semibold text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {mockOrders.map((o) => (
-              <tr key={o.platformOrderId} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-xs text-gray-700">
-                  {o.erpOrderId}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                  {o.platformOrderId}
-                </td>
-                <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                  {formatDate(o.createdAt)}
-                </td>
-                <td className="px-4 py-3">
-                  <StatusPill status={o.status} />
-                </td>
-                <td className="px-4 py-3 text-right text-gray-700">
-                  {o.itemCount}
-                </td>
-                <td className="px-4 py-3 text-right font-semibold text-[#0a2b3d] whitespace-nowrap">
-                  {formatARS(o.total)}
-                </td>
+      {pedidos.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
+          <p className="text-[#0a2b3d] font-bold">No tenés pedidos todavía.</p>
+          <p className="text-sm text-gray-600 mt-1 mb-5">
+            Armá tu primer pedido desde el catálogo.
+          </p>
+          <Link
+            href="/catalogo"
+            className="inline-block px-5 py-2 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition"
+          >
+            Ir al catálogo
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Pedido</th>
+                <th className="px-4 py-3 font-semibold">Nº nota ERP</th>
+                <th className="px-4 py-3 font-semibold">Fecha</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold text-right">Ítems</th>
+                <th className="px-4 py-3 font-semibold text-right">Total</th>
+                <th className="px-4 py-3"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-4 text-xs text-gray-500">
-        🚧 Los pedidos reales se van a crear cuando esté activa la
-        integración con Bejerman. Por ahora son datos de ejemplo.
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {pedidos.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-mono text-xs text-[#0a2b3d]">
+                    {p.id}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-600">
+                    {p.erpOrderNumber ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {formatDate(p.createdAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <PedidoStatusPill status={p.status} />
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-700">
+                    {p.items.reduce((a, x) => a + x.quantity, 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-[#0a2b3d] whitespace-nowrap">
+                    {formatARS(p.total)} <span className="text-[10px] text-gray-500">+ IVA</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/cuenta/pedidos/${p.id}`}
+                      className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                    >
+                      Ver detalle →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  const palette: Record<string, string> = {
-    Pendiente: "bg-gray-100 text-gray-700",
-    "Pendiente de aprobación": "bg-amber-50 text-amber-800 border-amber-200",
-    Aprobado: "bg-blue-50 text-blue-800 border-blue-200",
-    "En preparación": "bg-blue-50 text-blue-800 border-blue-200",
-    Despachado: "bg-indigo-50 text-indigo-800 border-indigo-200",
-    Entregado: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    Cancelado: "bg-red-50 text-red-800 border-red-200",
-    Confirmado: "bg-blue-50 text-blue-800 border-blue-200",
-  };
-  const cls = palette[status] ?? "bg-gray-100 text-gray-700";
-  return (
-    <span
-      className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold border ${cls}`}
-    >
-      {status}
-    </span>
   );
 }

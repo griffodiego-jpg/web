@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useMockSession } from "@/lib/mock-session";
 import { useB2BPreferences } from "@/lib/b2b-preferences";
 import { formatARS, formatARSNeto, getMockCompraPrice } from "@/lib/mock-prices";
+import { mockCurrentClient } from "@/data/mock-b2b";
 
 export function CartContent() {
+  const router = useRouter();
   const { items, ready, setQuantity, removeItem, clear, count } = useCart();
   const { isLoggedIn } = useMockSession();
   const { prefs, ready: prefsReady } = useB2BPreferences();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!ready) {
     return (
@@ -53,6 +59,50 @@ export function CartContent() {
         </div>
       </div>
     );
+  }
+
+  async function handleConfirmarPedido() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const itemsPayload = items.map((it) => {
+        const compra = getMockCompraPrice(it.productCode);
+        return {
+          productCode: it.productCode,
+          slug: it.slug,
+          name: it.name,
+          image: it.image,
+          quantity: it.quantity,
+          // El ERP va a facturar con sus precios reales; en el pedido
+          // guardamos el de compra neto (congelado al momento del
+          // confirm) para referencia del cliente.
+          unitPrice: compra,
+        };
+      });
+      const res = await fetch("/api/b2b/pedidos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: mockCurrentClient.client_id,
+          clientName: mockCurrentClient.name,
+          clientEmail: mockCurrentClient.email,
+          items: itemsPayload,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        pedido?: { id: string };
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.pedido) {
+        throw new Error(data.error ?? `Error ${res.status}`);
+      }
+      clear();
+      router.push(`/cuenta/pedidos/${data.pedido.id}?nuevo=1`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al confirmar pedido");
+      setSubmitting(false);
+    }
   }
 
   // Precios por item según preferencias del usuario.
@@ -222,11 +272,11 @@ export function CartContent() {
           {isLoggedIn ? (
             <button
               type="button"
-              disabled
-              title="Disponible cuando esté activa la integración con Bejerman"
-              className="px-5 py-2 bg-primary text-white font-bold rounded-lg text-sm opacity-60 cursor-not-allowed"
+              onClick={handleConfirmarPedido}
+              disabled={submitting}
+              className="px-5 py-2 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Confirmar pedido
+              {submitting ? "Confirmando…" : "Confirmar pedido"}
             </button>
           ) : (
             <Link
@@ -239,11 +289,16 @@ export function CartContent() {
         </div>
       </div>
 
+      {error && (
+        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+          {error}
+        </p>
+      )}
+
       <p className="text-xs text-gray-500">
-        🚧 Los precios son referenciales hasta que la integración con el ERP
-        esté activa. Cuando se confirme el pedido, el botón dispara{" "}
-        <code className="px-1 py-0.5 bg-gray-100 rounded">POST /ERP/order</code>{" "}
-        con los precios reales del cliente.
+        Al confirmar, el pedido queda en estado <b>Procesando</b>. Griffo lo
+        carga en Bejerman y te va avisando por email cuando cambie de
+        estado. Los precios son referenciales hasta que Griffo facture.
       </p>
     </div>
   );
