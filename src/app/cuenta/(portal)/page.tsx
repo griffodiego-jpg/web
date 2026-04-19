@@ -51,16 +51,14 @@ export default function ResumenPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ActionCard
             title="Armar un pedido"
-            description="Buscá productos por código, vehículo o medida."
-            href="/catalogo"
+            description="Por código, pegar lista o subir Excel."
+            href="/cuenta/armar-pedido"
             accent
           />
           <ActionCard
-            title="Importar pedido desde Excel"
-            description="Cargá un archivo con código + cantidad."
-            href="/cuenta/pedidos/importar"
-            disabled
-            disabledHint="Próximamente"
+            title="Buscar en catálogo"
+            description="Buscá por código, vehículo, patente o medidas."
+            href="/catalogo"
           />
           <ActionCard
             title="Bajar lista de precios"
