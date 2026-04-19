@@ -47,6 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Portal B2B",
     items: [
+      { href: "/admin/pedidos", label: "Pedidos", icon: "inbox" },
       { href: "/admin/clientes", label: "Clientes", icon: "users" },
     ],
   },
