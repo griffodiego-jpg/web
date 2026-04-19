@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listPedidosAll, listPedidosByStatus } from "@/lib/pedidos";
 import type { PedidoStatus } from "@/types/pedido";
 import { AdminPedidoRow } from "@/components/admin/AdminPedidoRow";
+import { PedidosNotifEmailBox } from "@/components/admin/PedidosNotifEmailBox";
+import { getPedidosNotificationEmail } from "@/lib/b2b-config";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pedidos B2B" };
@@ -22,20 +24,24 @@ export default async function AdminPedidosPage({
   const { estado } = await searchParams;
   const activeStatus = STATUS_TABS.find((t) => t.key === estado)?.key ?? "todos";
 
-  const pedidos =
+  const [pedidos, notifEmail] = await Promise.all([
     activeStatus === "todos"
-      ? await listPedidosAll(500)
-      : await listPedidosByStatus(activeStatus, 500);
+      ? listPedidosAll(500)
+      : listPedidosByStatus(activeStatus, 500),
+    getPedidosNotificationEmail(),
+  ]);
 
   return (
     <div>
-      <header className="mb-6">
+      <header className="mb-5">
         <h1 className="text-2xl font-black text-[#0a2b3d]">Pedidos B2B</h1>
         <p className="text-sm text-gray-600 mt-1">
           Pedidos que los clientes armaron desde el portal. Acá los cargás
           en Bejerman, ponés el nº de nota y actualizás el estado.
         </p>
       </header>
+
+      <PedidosNotifEmailBox current={notifEmail} />
 
       {/* Tabs de filtro por estado */}
       <nav className="flex gap-1 mb-5 overflow-x-auto border-b border-gray-200">

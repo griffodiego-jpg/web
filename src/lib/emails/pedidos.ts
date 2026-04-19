@@ -1,5 +1,6 @@
 import { getResend } from "@/lib/resend";
 import { SITE_URL } from "@/lib/site-url";
+import { getPedidosNotificationEmail } from "@/lib/b2b-config";
 import type { Pedido } from "@/types/pedido";
 
 /**
@@ -8,11 +9,12 @@ import type { Pedido } from "@/types/pedido";
  * y seguimos — el pedido ya quedó en Redis y el admin lo ve igual.
  *
  * Cuando se verifique `griffo.com.ar` en Resend, cambiar el sender.
+ *
+ * El destinatario del mail "nuevo pedido" sale de `b2b-config`
+ * (editable desde /admin/pedidos). Default: ventas@griffo.com.ar.
  */
 
 const SENDER = "Griffo <onboarding@resend.dev>";
-const ADMIN_EMAIL =
-  process.env.GRIFFO_ADMIN_EMAIL ?? "josedgriffo@gmail.com";
 
 function formatARS(value: number): string {
   return value.toLocaleString("es-AR", {
@@ -96,9 +98,10 @@ export async function sendPedidoCreadoAlCliente(pedido: Pedido): Promise<void> {
 
 export async function sendPedidoCreadoAGriffo(pedido: Pedido): Promise<void> {
   try {
+    const to = await getPedidosNotificationEmail();
     await getResend().emails.send({
       from: SENDER,
-      to: ADMIN_EMAIL,
+      to,
       subject: `🆕 Nuevo pedido ${pedido.id} · ${pedido.clientName}`,
       html: `
         <div style="font-family:Arial,sans-serif;color:#0a2b3d;max-width:700px;margin:0 auto;">
