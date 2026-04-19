@@ -26,8 +26,6 @@ export const siteConfig = {
     facebook: "https://www.facebook.com/griffoarg",
     youtube: "https://www.youtube.com/channel/UCQZHmbT5rzKeypFTc0rWcVQ",
   },
-  externalCatalog: "https://griffo.specparts.shop/",
-  externalCatalogLogin: "https://griffo.specparts.shop/login",
 };
 
 export type NavItem = {
@@ -39,19 +37,8 @@ export type NavItem = {
 
 export const navigation: NavItem[] = [
   { label: "Empresa", href: "/empresa" },
-  {
-    label: "Novedades",
-    href: "/novedades",
-    children: [
-      { label: "Lanzamientos", href: "/novedades/lanzamientos" },
-      { label: "Nuevas aplicaciones", href: "/novedades/aplicaciones" },
-    ],
-  },
-  {
-    label: "Catálogo",
-    href: "https://griffo.specparts.shop/",
-    external: true,
-  },
+  { label: "Novedades", href: "/novedades" },
+  { label: "Catálogo online", href: "/catalogo" },
   { label: "Descargas", href: "/catalogo/download" },
   {
     label: "Productos destacados",

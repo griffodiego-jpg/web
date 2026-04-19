@@ -5,16 +5,33 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { navigation, type NavItem } from "@/lib/site-config";
 import { Logo } from "@/components/Logo";
+import { CartIndicator } from "@/components/cart/CartIndicator";
+import { useMockSession } from "@/lib/mock-session";
+import { mockCurrentClient } from "@/data/mock-b2b";
 
 /**
  * Determina si un item del nav está activo según el pathname actual.
  * Matchea exacto, rutas anidadas (/productos/foo → Productos) y padres
  * con children activos.
+ *
+ * Ante rutas anidadas entre items del nav (ej. /catalogo/download cae
+ * bajo /catalogo), el más específico gana: un item solo se considera
+ * activo por startsWith si ningún otro item del nav tiene un href más
+ * largo que matchee el pathname.
  */
 function isItemActive(item: NavItem, pathname: string): boolean {
   if (item.external) return false;
   if (pathname === item.href) return true;
-  if (item.href !== "/" && pathname.startsWith(item.href + "/")) return true;
+  if (item.href !== "/" && pathname.startsWith(item.href + "/")) {
+    const hasMoreSpecific = navigation.some(
+      (other) =>
+        other !== item &&
+        !other.external &&
+        other.href.length > item.href.length &&
+        (pathname === other.href || pathname.startsWith(other.href + "/"))
+    );
+    if (!hasMoreSpecific) return true;
+  }
   if (item.children) {
     return item.children.some(
       (c) => pathname === c.href || pathname.startsWith(c.href + "/")
@@ -27,6 +44,7 @@ export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const { isLoggedIn, ready } = useMockSession();
 
   // Cierra el menú mobile al cambiar a desktop.
   useEffect(() => {
@@ -59,30 +77,43 @@ export function Header() {
         </span>
       </Link>
 
-      {/* Hamburger */}
-      <button
-        type="button"
-        aria-label={open ? "Cerrar menú" : "Abrir menú"}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="lg:hidden flex flex-col justify-center items-center w-10 h-10 border-0 bg-transparent focus:outline-none"
-      >
-        <span
-          className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
-            open ? "translate-y-2 rotate-45" : ""
-          }`}
-        />
-        <span
-          className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
-            open ? "opacity-0" : ""
-          }`}
-        />
-        <span
-          className={`block w-7 h-0.5 bg-primary transition-all ${
-            open ? "-translate-y-2 -rotate-45" : ""
-          }`}
-        />
-      </button>
+      {/* Controles del extremo derecho — carrito SIEMPRE visible,
+          hamburguesa solo en mobile. Quedan en el orden inverso al
+          natural (order-last) porque en el JSX vienen antes del nav
+          para que en desktop justify-between los ubique al final. */}
+      <div className="flex items-center gap-2 order-last lg:order-none">
+        {/* Cart mobile: solo visible fuera del menú cuando estás en
+            mobile. En desktop la otra instancia dentro del nav se
+            encarga para que quede al lado de "Acceso clientes". */}
+        <span className="lg:hidden">
+          <CartIndicator mobile />
+        </span>
+
+        {/* Hamburger — mobile only */}
+        <button
+          type="button"
+          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="lg:hidden flex flex-col justify-center items-center w-10 h-10 border-0 bg-transparent focus:outline-none"
+        >
+          <span
+            className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
+              open ? "translate-y-2 rotate-45" : ""
+            }`}
+          />
+          <span
+            className={`block w-7 h-0.5 bg-primary mb-1.5 transition-all ${
+              open ? "opacity-0" : ""
+            }`}
+          />
+          <span
+            className={`block w-7 h-0.5 bg-primary transition-all ${
+              open ? "-translate-y-2 -rotate-45" : ""
+            }`}
+          />
+        </button>
+      </div>
 
       <nav
         id="navbar"
@@ -114,31 +145,32 @@ export function Header() {
                   onMouseEnter={() => setOpenDropdown(item.label)}
                   onMouseLeave={() => setOpenDropdown(null)}
                 >
-                  {/* El texto es un link que navega a la página resumen.
-                      El dropdown se abre por hover (desktop) o por click
-                      en la flechita (mobile). */}
-                  <div className={`${linkCls} flex items-center gap-1`}>
-                    <Link
-                      href={item.href}
-                      onClick={() => {
-                        setOpen(false);
-                        setOpenDropdown(null);
-                      }}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      {item.label}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenDropdown((v) =>
-                          v === item.label ? null : item.label
-                        )
-                      }
-                      aria-expanded={isOpen}
-                      aria-label={`Desplegar ${item.label}`}
-                      className="lg:hidden p-1 cursor-pointer"
-                    >
+                  {/* Link principal con exactamente el mismo shape que los
+                      items sin hijos — así el baseline queda alineado.
+                      El botón del chevron se muestra solo en mobile,
+                      posicionado absolute para no romper el flujo. */}
+                  <Link
+                    href={item.href}
+                    onClick={() => {
+                      setOpen(false);
+                      setOpenDropdown(null);
+                    }}
+                    aria-current={active ? "page" : undefined}
+                    className={linkCls}
+                  >
+                    {item.label}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenDropdown((v) =>
+                        v === item.label ? null : item.label
+                      )
+                    }
+                    aria-expanded={isOpen}
+                    aria-label={`Desplegar ${item.label}`}
+                    className="lg:hidden absolute right-0 top-0 p-1 cursor-pointer text-white"
+                  >
                     <svg
                       width="12"
                       height="12"
@@ -156,8 +188,7 @@ export function Header() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    </button>
-                  </div>
+                  </button>
                   {/* pt-3 en desktop: padding transparente que actúa como "puente"
                       entre el botón y el dropdown — evita que onMouseLeave dispare
                       al mover el mouse en el gap. El bg del dropdown empieza en
@@ -214,6 +245,45 @@ export function Header() {
               </li>
             );
           })}
+          {/* CTAs de B2B: si está logueado muestra nombre del cliente
+              linkeado al portal; sino, botón 'Acceso clientes'. Carrito
+              siempre al lado. */}
+          <li className="lg:ml-3 flex items-center gap-2">
+            {ready && isLoggedIn ? (
+              <Link
+                href="/cuenta"
+                onClick={() => setOpen(false)}
+                title="Entrar al portal"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 border-2 border-emerald-500 text-emerald-800 hover:bg-emerald-500 hover:text-white font-black text-sm transition whitespace-nowrap max-w-[220px]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span className="flex flex-col items-start leading-none gap-0.5">
+                  <span className="text-[9px] uppercase tracking-wider font-bold opacity-80">
+                    Entrar al portal
+                  </span>
+                  <span className="text-xs font-black truncate max-w-[160px]">
+                    {mockCurrentClient.name}
+                  </span>
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/cuenta/login"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border-2 border-accent bg-accent lg:bg-transparent lg:hover:bg-accent text-primary hover:text-white font-black text-sm uppercase tracking-wide transition whitespace-nowrap"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Acceso clientes
+              </Link>
+            )}
+            <CartIndicator onClick={() => setOpen(false)} />
+          </li>
         </ul>
       </nav>
     </header>

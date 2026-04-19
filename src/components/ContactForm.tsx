@@ -6,6 +6,7 @@ type Status = "idle" | "loading" | "ok" | "error";
 
 export function ContactForm() {
   const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [data, setData] = useState({
     nombre: "",
     email: "",
@@ -16,16 +17,21 @@ export function ContactForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/contacto", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Hubo un error");
+      }
       setStatus("ok");
       setData({ nombre: "", email: "", telefono: "", mensaje: "" });
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Hubo un error");
       setStatus("error");
     }
   }
@@ -97,7 +103,7 @@ export function ContactForm() {
       )}
       {status === "error" && (
         <p className="text-red-700 font-semibold">
-          Hubo un error. Probá de nuevo en unos minutos.
+          {errorMsg ?? "Hubo un error."} Revisá los datos y probá de nuevo.
         </p>
       )}
     </form>

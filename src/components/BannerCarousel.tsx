@@ -1,266 +1,237 @@
 "use client";
 
-import { useEffect, useState } from "react";
+/* eslint-disable @next/next/no-img-element */
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BuscadorPatenteBanner } from "@/components/BuscadorPatenteBanner";
+import type { Banner } from "@/lib/banners-store";
+
+// BuscadorPatenteBanner YA es un <Link href="/catalogo"> internamente,
+// así que cuando es slide del carousel lo renderizamos directo — sin
+// wrapper adicional — para evitar anidar <a> (HTML inválido, browsers
+// cancelan el click).
+
+const AUTOPLAY_MS = 6000;
 
 /**
- * Fuente responsive para un banner. Replica el patrón `<picture srcset>`
- * del sitio original de Griffo: distintos archivos por breakpoint.
+ * Carousel del home. Rota entre los banners activos. Soporta 3 tipos
+ * de slide:
+ *   - imagen: <img> de fondo + overlay con título/subtítulo/CTA
+ *   - video: <video autoplay muted loop playsinline> de fondo + overlay
+ *   - patente: el componente built-in BuscadorPatenteBanner
+ *
+ * Pausa el autoplay on hover en desktop. Soporta swipe en mobile con
+ * touch events simples.
  */
-export type ResponsiveImage = {
-  /** Imagen por defecto (desktop grande). */
-  default: string;
-  /** Imagen para pantallas hasta 1024px (desktop chico / landscape tablet). */
-  lg?: string;
-  /** Imagen para pantallas hasta 768px (tablet). */
-  md?: string;
-  /** Imagen para pantallas hasta 414px (mobile). */
-  sm?: string;
-  alt: string;
-  width?: number;
-  height?: number;
-};
-
-export type Banner = {
-  id: string | number;
-  href: string;
-  alt: string;
-  /** Imagen estática (string) o set responsive. */
-  image?: string | ResponsiveImage;
-  external?: boolean;
-  /** Hero de texto (fallback si no hay imagen). */
-  title?: string;
-  subtitle?: string;
-};
-
-export function BannerCarousel({
-  banners,
-  intervalMs = 5000,
-}: {
-  banners: Banner[];
-  intervalMs?: number;
-}) {
-  const [index, setIndex] = useState(0);
+export function BannerCarousel({ banners }: { banners: Banner[] }) {
+  const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
+  // Normalizar: si no hay banners, render solo el buscador de patente.
+  const slides: Banner[] =
+    banners.length > 0
+      ? banners
+      : [
+          {
+            id: "_default_patente",
+            tipo: "patente",
+            activo: true,
+            orden: 0,
+          },
+        ];
+
+  const next = useCallback(() => {
+    setIdx((i) => (i + 1) % slides.length);
+  }, [slides.length]);
+
+  const prev = useCallback(() => {
+    setIdx((i) => (i - 1 + slides.length) % slides.length);
+  }, [slides.length]);
+
+  // Autoplay — solo si hay más de un slide y no está pausado.
   useEffect(() => {
-    if (banners.length < 2 || paused) return;
-    const t = setInterval(
-      () => setIndex((i) => (i + 1) % banners.length),
-      intervalMs
-    );
-    return () => clearInterval(t);
-  }, [banners.length, intervalMs, paused]);
+    if (slides.length <= 1 || paused) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(next, AUTOPLAY_MS);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [idx, paused, slides.length, next]);
 
-  if (banners.length === 0) return null;
+  // Corregir idx si la lista se achica.
+  useEffect(() => {
+    if (idx >= slides.length) setIdx(0);
+  }, [slides.length, idx]);
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0) next();
+      else prev();
+    }
+    touchStartX.current = null;
+  }
+
+  const current = slides[idx];
 
   return (
     <section
-      id="banners"
-      className="relative overflow-hidden"
+      className="relative w-full overflow-hidden bg-primary"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      aria-roledescription="carousel"
     >
-      <h1 className="sr-only">Griffo</h1>
-      <div
-        className="flex transition-transform duration-500 ease-in-out"
-        style={{ transform: `translateX(-${index * 100}%)` }}
-      >
-        {banners.map((b) => (
-          <BannerSlide key={b.id} banner={b} />
+      <div className="relative w-full">
+        {slides.map((s, i) => (
+          <div
+            key={s.id}
+            className={`${
+              i === idx ? "relative opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
+            } transition-opacity duration-700`}
+            aria-hidden={i !== idx}
+          >
+            <BannerSlide banner={s} />
+          </div>
         ))}
       </div>
 
-      {banners.length > 1 && (
-        <div className="carousel-dots absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-          {banners.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              data-active={i === index}
-              onClick={(e) => {
-                e.preventDefault();
-                setIndex(i);
-              }}
-              aria-label={`Ir al slide ${i + 1}`}
-            />
-          ))}
-        </div>
+      {/* Controles (solo si hay más de uno) */}
+      {slides.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={prev}
+            aria-label="Slide anterior"
+            className="absolute left-2 lg:left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center text-primary font-bold transition cursor-pointer"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            aria-label="Slide siguiente"
+            className="absolute right-2 lg:right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center text-primary font-bold transition cursor-pointer"
+          >
+            ›
+          </button>
+
+          {/* Dots */}
+          <div className="absolute bottom-3 left-0 right-0 z-10 flex items-center justify-center gap-2">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIdx(i)}
+                aria-label={`Ir al slide ${i + 1}`}
+                className={`h-2 rounded-full transition-all cursor-pointer ${
+                  i === idx ? "bg-white w-8" : "bg-white/50 w-2 hover:bg-white/80"
+                }`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </section>
   );
 }
 
+/* ---------- Slide individual según tipo ---------- */
+
 function BannerSlide({ banner }: { banner: Banner }) {
-  const [imgFailed, setImgFailed] = useState(false);
-
-  const showImage = banner.image && !imgFailed;
-
-  const content = showImage ? (
-    <BannerImage
-      image={banner.image!}
-      onError={() => setImgFailed(true)}
-    />
-  ) : (
-    <TextHero title={banner.title} subtitle={banner.subtitle} />
-  );
-
-  const common = {
-    className: "shrink-0 w-full block",
-    "aria-label": banner.alt,
-  };
-
-  return banner.external ? (
-    <a
-      href={banner.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      {...common}
-    >
-      {content}
-    </a>
-  ) : (
-    <a href={banner.href} {...common}>
-      {content}
-    </a>
-  );
-}
-
-/**
- * Renderiza <picture> con srcset adaptativo. Mismos breakpoints que
- * el sitio original (414 / 768 / 1024 / default).
- */
-function BannerImage({
-  image,
-  onError,
-}: {
-  image: string | ResponsiveImage;
-  onError?: () => void;
-}) {
-  if (typeof image === "string") {
-    // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={image}
-        alt=""
-        className="w-full h-auto block"
-        loading="eager"
-        onError={onError}
-      />
-    );
+  if (banner.tipo === "patente") {
+    return <BuscadorPatenteBanner />;
   }
 
-  return (
-    <picture>
-      {image.sm && (
-        <source srcSet={image.sm} media="(max-width: 414px)" />
-      )}
-      {image.md && (
-        <source srcSet={image.md} media="(max-width: 768px)" />
-      )}
-      {image.lg && (
-        <source srcSet={image.lg} media="(max-width: 1024px)" />
-      )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={image.default}
-        alt={image.alt}
-        width={image.width}
-        height={image.height}
-        className="w-full h-auto block"
-        loading="eager"
-        onError={onError}
-      />
-    </picture>
-  );
-}
-
-/**
- * Hero de texto usado como fallback hasta tener los banners finales.
- * Reproduce la composición del banner "Buscador por Patente" del sitio original.
- */
-function TextHero({
-  title,
-  subtitle,
-}: {
-  title?: string;
-  subtitle?: string;
-}) {
-  return (
-    <div className="w-full bg-gradient-to-br from-[#e6f1fa] via-[#f4f9fd] to-[#dce9f5] relative overflow-hidden">
-      <svg
-        className="absolute inset-0 w-full h-full opacity-30"
-        preserveAspectRatio="none"
-        viewBox="0 0 1200 400"
-        aria-hidden
-      >
-        <path
-          d="M0,300 Q300,200 600,260 T1200,220"
-          stroke="var(--color-accent-value)"
-          strokeWidth="1.5"
-          fill="none"
+  const content = (
+    <div className="relative w-full aspect-[2.4/1] bg-gray-900 overflow-hidden">
+      {banner.tipo === "video" && banner.fileUrl ? (
+        <video
+          src={banner.fileUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
         />
-        <path
-          d="M0,200 Q300,100 600,160 T1200,120"
-          stroke="var(--color-accent-value)"
-          strokeWidth="1.5"
-          fill="none"
+      ) : banner.fileUrl ? (
+        <img
+          src={banner.fileUrl}
+          alt={banner.titulo ?? ""}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
         />
-      </svg>
+      ) : null}
 
-      <div className="relative container mx-auto max-w-6xl px-6 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-[auto_1fr] items-center gap-10">
-        <div className="hidden lg:flex justify-center">
-          <svg width="220" height="200" viewBox="0 0 220 200" aria-hidden>
-            <rect
-              x="20"
-              y="20"
-              width="180"
-              height="140"
-              rx="10"
-              fill="#f3f4f6"
-              stroke="var(--color-primary-value)"
-              strokeWidth="3"
-            />
-            <line
-              x1="20"
-              y1="55"
-              x2="200"
-              y2="55"
-              stroke="var(--color-primary-value)"
-              strokeWidth="2"
-            />
-            <circle
-              cx="150"
-              cy="130"
-              r="34"
-              fill="none"
-              stroke="#111"
-              strokeWidth="6"
-            />
-            <line
-              x1="174"
-              y1="154"
-              x2="200"
-              y2="180"
-              stroke="#111"
-              strokeWidth="7"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
+      {/* Overlay oscurecido para legibilidad del texto */}
+      {(banner.titulo || banner.ctaText) && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+      )}
 
-        <div className="text-center lg:text-left">
-          {title && (
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#1a2a33] leading-tight">
-              {title}
-            </h2>
-          )}
-          {subtitle && (
-            <p className="mt-4 text-lg lg:text-xl text-[#1a2a33]/80 max-w-2xl mx-auto lg:mx-0">
-              {subtitle}
-            </p>
-          )}
+      {/* Texto + CTA centrados en un contenedor safe-area (60% del ancho) */}
+      {(banner.titulo || banner.subtitulo || banner.ctaText) && (
+        <div className="absolute inset-0 flex flex-col items-center justify-end text-center px-6 pb-12 lg:pb-16">
+          <div className="max-w-2xl mx-auto text-white">
+            {banner.titulo && (
+              <h2 className="text-2xl lg:text-4xl font-black uppercase drop-shadow-lg">
+                {banner.titulo}
+              </h2>
+            )}
+            {banner.subtitulo && (
+              <p className="mt-2 text-sm lg:text-base opacity-90 drop-shadow">
+                {banner.subtitulo}
+              </p>
+            )}
+            {banner.ctaText && banner.ctaHref && (
+              <span className="mt-4 inline-flex items-center gap-2 px-6 py-2.5 uppercase bg-white text-primary font-bold text-sm rounded-full hover:bg-accent hover:text-white transition">
+                {banner.ctaText}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
+
+  // Si hay CTA con link interno o externo, envolvemos el slide.
+  if (banner.ctaHref) {
+    const isExternal = /^https?:\/\//.test(banner.ctaHref);
+    if (isExternal) {
+      return (
+        <a
+          href={banner.ctaHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          {content}
+        </a>
+      );
+    }
+    return (
+      <Link href={banner.ctaHref} className="block">
+        {content}
+      </Link>
+    );
+  }
+  return content;
 }

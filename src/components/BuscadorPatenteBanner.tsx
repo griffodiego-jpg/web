@@ -1,11 +1,20 @@
+import Link from "next/link";
+
 /**
  * Banner "Buscador por Patente" — reconstrucción vectorial del banner
  * original de Griffo. Full-width, adaptativo a mobile / tablet / desktop
  * con un solo componente (no hace falta múltiples imágenes por breakpoint).
+ *
+ * Todo el banner es clickeable y linkea al catálogo (`/catalogo`), que es
+ * donde vive el buscador por patente/vehículo/código/palabra/medidas.
  */
 export function BuscadorPatenteBanner() {
   return (
-    <div className="relative w-full overflow-hidden bg-[#e4e7ea]">
+    <Link
+      href="/catalogo"
+      aria-label="Ir al buscador de productos"
+      className="relative block w-full overflow-hidden bg-[#e4e7ea] transition hover:brightness-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
       {/* Curvas decorativas del fondo (líneas celestes muy suaves) */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
@@ -28,7 +37,7 @@ export function BuscadorPatenteBanner() {
         <Illustration />
         <TextBlock />
       </div>
-    </div>
+    </Link>
   );
 }
 

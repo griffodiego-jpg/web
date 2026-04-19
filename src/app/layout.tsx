@@ -66,9 +66,9 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   manifest: "/manifest.webmanifest",
-  verification: {
-    // TODO: agregar verification tokens cuando se registre en Search Console
-  },
+  // Search Console: la cliente tiene una Domain property de griffo.com.ar
+  // verificada por DNS TXT record (NIC Argentina). No hace falta meta
+  // tag — Domain property cubre www, subdominios y cualquier protocolo.
 };
 
 /**

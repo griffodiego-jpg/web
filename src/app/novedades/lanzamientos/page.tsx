@@ -1,8 +1,18 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/PageHero";
+import { NovedadesHub } from "@/components/novedades/NovedadesHub";
+import { listNovedades } from "@/lib/novedades";
 
-export const metadata: Metadata = { title: "Lanzamientos" };
+export const metadata: Metadata = {
+  title: "Lanzamientos",
+  description:
+    "Lanzamientos de nuevos productos Griffo para la industria automotriz.",
+  alternates: { canonical: "/novedades/lanzamientos" },
+};
 
-export default function LanzamientosPage() {
-  return <ComingSoon title="Próximamente" />;
+export const revalidate = 300;
+export const runtime = "nodejs";
+
+export default async function LanzamientosPage() {
+  const novedades = await listNovedades();
+  return <NovedadesHub novedades={novedades} initialTipo="lanzamiento" />;
 }

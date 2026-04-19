@@ -170,6 +170,42 @@ export function WebSiteJsonLd() {
   return <JsonLdScript data={data} />;
 }
 
+/**
+ * ItemList genérico — para páginas que listan N entidades del mismo
+ * tipo (ej. grilla de productos destacados en /presentacion y /productos).
+ * Google lo usa para entender la página como un listado y mostrar
+ * rich snippets con los items.
+ */
+export function ItemListJsonLd({
+  name,
+  description,
+  items,
+}: {
+  name: string;
+  description?: string;
+  items: { name: string; url: string; image?: string }[];
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name,
+    description,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      url: item.url.startsWith("http") ? item.url : `${SITE_URL}${item.url}`,
+      ...(item.image && {
+        image: item.image.startsWith("http")
+          ? item.image
+          : `${SITE_URL}${item.image}`,
+      }),
+    })),
+  };
+  return <JsonLdScript data={data} />;
+}
+
 /** Helper: renderiza un <script> JSON-LD de forma segura. */
 function JsonLdScript({ data }: { data: Record<string, unknown> }) {
   return (

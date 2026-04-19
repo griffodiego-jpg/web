@@ -15,7 +15,6 @@
  *   - /pdfs/catalogo-griffo.pdf
  *   - /downloads/productos/<slug>/flyer.pdf
  *   - /downloads/productos/<slug>/video-rrss.mp4
- *   - /downloads/productos/<slug>/video-pantalla.mp4
  *   - /downloads/banco-de-imagenes.zip
  *   - /downloads/base-de-datos-productos.xlsx
  *
@@ -27,7 +26,6 @@ export type MaterialProducto = {
   slug: string;
   flyer?: string;
   videoRrss?: string;
-  videoPantalla?: string;
 };
 
 export type RecursoGated = {
@@ -49,8 +47,6 @@ export const materialPorProducto: MaterialProducto[] = [
     flyer: "/downloads/productos/maquina-montadora-de-fuelles/flyer.pdf",
     videoRrss:
       "/downloads/productos/maquina-montadora-de-fuelles/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/maquina-montadora-de-fuelles/video-pantalla.mp4",
   },
   {
     slug: "kit-de-fuelles-universales-para-homocineticas",
@@ -58,47 +54,23 @@ export const materialPorProducto: MaterialProducto[] = [
       "/downloads/productos/kit-de-fuelles-universales-para-homocineticas/flyer.pdf",
     videoRrss:
       "/downloads/productos/kit-de-fuelles-universales-para-homocineticas/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/kit-de-fuelles-universales-para-homocineticas/video-pantalla.mp4",
   },
   {
     slug: "extractor-de-juntas-homocineticas",
     flyer: "/downloads/productos/extractor-de-juntas-homocineticas/flyer.pdf",
     videoRrss:
       "/downloads/productos/extractor-de-juntas-homocineticas/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/extractor-de-juntas-homocineticas/video-pantalla.mp4",
   },
   {
     slug: "pinza-para-abrazaderas",
     flyer: "/downloads/productos/pinza-para-abrazaderas/flyer.pdf",
     videoRrss: "/downloads/productos/pinza-para-abrazaderas/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/pinza-para-abrazaderas/video-pantalla.mp4",
   },
   {
     slug: "fuelle-universal-de-direccion",
     flyer: "/downloads/productos/fuelle-universal-de-direccion/flyer.pdf",
     videoRrss:
       "/downloads/productos/fuelle-universal-de-direccion/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/fuelle-universal-de-direccion/video-pantalla.mp4",
-  },
-  {
-    slug: "kit-de-proteccion-para-suspension-deportiva",
-    flyer:
-      "/downloads/productos/kit-de-proteccion-para-suspension-deportiva/flyer.pdf",
-    videoRrss:
-      "/downloads/productos/kit-de-proteccion-para-suspension-deportiva/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/kit-de-proteccion-para-suspension-deportiva/video-pantalla.mp4",
-  },
-  {
-    slug: "abrazaderas-universales",
-    flyer: "/downloads/productos/abrazaderas-universales/flyer.pdf",
-    videoRrss: "/downloads/productos/abrazaderas-universales/video-rrss.mp4",
-    videoPantalla:
-      "/downloads/productos/abrazaderas-universales/video-pantalla.mp4",
   },
 ];
 

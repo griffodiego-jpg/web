@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
+import { logAdminError } from "@/lib/admin-log";
+import { escapeHtml } from "@/lib/escape";
+import { saveLead } from "@/lib/leads";
 import { getResend } from "@/lib/resend";
+import { checkFieldLength, isValidEmail } from "@/lib/validate";
 
 /**
  * Registro para descarga de recursos gated (banco de imágenes, base de
@@ -30,27 +34,52 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+    const lenErr =
+      checkFieldLength(body.nombre, "Nombre") ||
+      checkFieldLength(body.empresa, "Empresa") ||
+      checkFieldLength(body.email, "Email") ||
+      checkFieldLength(body.telefono, "Teléfono") ||
+      checkFieldLength(body.compraA, "Compra a");
+    if (lenErr) {
+      return NextResponse.json({ error: lenErr }, { status: 400 });
+    }
+    if (!isValidEmail(body.email)) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 });
     }
 
-    await getResend().emails.send({
-      from: "Griffo Web <onboarding@resend.dev>",
-      to: "contacto@griffo.com.ar",
-      replyTo: body.email,
-      subject: `Descarga registrada: ${body.recursoTitulo ?? body.recursoId}`,
-      html: `
-        <h2>Nuevo registro para descarga</h2>
-        <p>Recurso solicitado: <strong>${body.recursoTitulo ?? body.recursoId}</strong></p>
-        <table style="border-collapse:collapse;width:100%;max-width:600px">
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Nombre</td><td style="padding:6px;border-bottom:1px solid #eee">${body.nombre}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Empresa</td><td style="padding:6px;border-bottom:1px solid #eee">${body.empresa}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:6px;border-bottom:1px solid #eee">${body.email}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Teléfono</td><td style="padding:6px;border-bottom:1px solid #eee">${body.telefono}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Compra Griffo a</td><td style="padding:6px;border-bottom:1px solid #eee">${body.compraA}</td></tr>
-        </table>
-      `,
+    await saveLead({
+      kind: "descarga",
+      ts: Date.now(),
+      nombre: body.nombre,
+      empresa: body.empresa,
+      email: body.email,
+      telefono: body.telefono,
+      compraA: body.compraA,
+      recurso: body.recursoTitulo ?? body.recursoId,
     });
+
+    try {
+      await getResend().emails.send({
+        from: "Griffo Web <onboarding@resend.dev>",
+        to: "contacto@griffo.com.ar",
+        replyTo: body.email,
+        subject: `Descarga registrada: ${body.recursoTitulo ?? body.recursoId}`,
+        html: `
+          <h2>Nuevo registro para descarga</h2>
+          <p>Recurso solicitado: <strong>${escapeHtml(body.recursoTitulo ?? body.recursoId)}</strong></p>
+          <table style="border-collapse:collapse;width:100%;max-width:600px">
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Nombre</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(body.nombre)}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Empresa</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(body.empresa)}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(body.email)}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Teléfono</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(body.telefono)}</td></tr>
+            <tr><td style="padding:6px;font-weight:bold;border-bottom:1px solid #eee">Compra Griffo a</td><td style="padding:6px;border-bottom:1px solid #eee">${escapeHtml(body.compraA)}</td></tr>
+          </table>
+        `,
+      });
+    } catch (e) {
+      console.error("[descargas/registro] error enviando email:", e);
+      await logAdminError("resend", e);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

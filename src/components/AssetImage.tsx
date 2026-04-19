@@ -8,10 +8,12 @@ type Status = "loading" | "ok" | "failed";
 /**
  * Imagen con fallback visual automático.
  *
- * Estrategia de detección de errores: pre-carga con `new Image()` en un
- * useEffect. Es más confiable que `onError` en el <img> renderizado,
- * porque no depende del sistema de eventos sintéticos de React ni sufre
- * issues de hidratación.
+ * Se apoya directamente en `onLoad` / `onError` del `<img>` renderizado
+ * — sin preload con `new Image()` paralelo (antes duplicaba la request
+ * de cada imagen). Cuando falla, reemplaza el `<img>` por un placeholder
+ * estilizado. Durante la carga, el `<img>` se renderiza oculto
+ * (display:none) con un skeleton arriba para no dejar el espacio
+ * colapsado.
  *
  * Modos:
  *   - default: `<img>` a tamaño natural (w-full h-auto). Fallback es
@@ -43,23 +45,12 @@ export function AssetImage({
 }) {
   const [status, setStatus] = useState<Status>("loading");
 
+  // Reset status cuando cambia el src (ej. cambio de producto en un modal).
   useEffect(() => {
-    let alive = true;
     setStatus("loading");
-    const img = new Image();
-    img.onload = () => {
-      if (alive) setStatus("ok");
-    };
-    img.onerror = () => {
-      if (alive) setStatus("failed");
-    };
-    img.src = src;
-    return () => {
-      alive = false;
-    };
   }, [src]);
 
-  // Si falla: placeholder
+  // Si falla: render solo el placeholder (sin <img> roto).
   if (status === "failed") {
     if (bare) {
       return (
@@ -90,51 +81,75 @@ export function AssetImage({
     );
   }
 
-  // Mientras carga, mostrar el mismo placeholder (evita flash del alt roto).
-  if (status === "loading") {
-    if (bare) {
-      return (
-        <div
-          className={`${className} bg-gray-100 rounded`}
-          role="img"
-          aria-label="Cargando"
-          aria-busy="true"
-        />
-      );
-    }
-    if (fill) {
-      return (
-        <div
-          className={`absolute inset-0 ${className} bg-gray-100`}
-          aria-busy="true"
-        />
-      );
-    }
-    return (
-      <div
-        className={`${fallbackAspect} ${className} bg-gray-100 rounded`}
-        aria-busy="true"
-      />
-    );
-  }
+  // Handlers compartidos.
+  const onLoad = () => setStatus("ok");
+  const onError = () => setStatus("failed");
 
-  // Cargó OK: renderizar la imagen
+  // Render OK / cargando — el <img> va siempre (para que el browser
+  // empiece a cargarlo). Durante loading lo escondemos y mostramos un
+  // skeleton con bg-gray-100.
+  const isLoading = status === "loading";
+
   if (bare) {
-    return <img src={src} alt={alt} className={className} />;
+    return (
+      <>
+        <img
+          src={src}
+          alt={alt}
+          className={className}
+          onLoad={onLoad}
+          onError={onError}
+          style={isLoading ? { display: "none" } : undefined}
+        />
+        {isLoading && (
+          <div
+            className={`${className} bg-gray-100 rounded`}
+            aria-busy="true"
+            aria-label="Cargando"
+          />
+        )}
+      </>
+    );
   }
 
   if (fill) {
     return (
-      <img
-        src={src}
-        alt={alt}
-        className={`absolute inset-0 w-full h-full object-cover ${className}`}
-      />
+      <>
+        <img
+          src={src}
+          alt={alt}
+          className={`absolute inset-0 w-full h-full object-cover ${className}`}
+          onLoad={onLoad}
+          onError={onError}
+          style={isLoading ? { display: "none" } : undefined}
+        />
+        {isLoading && (
+          <div
+            className={`absolute inset-0 ${className} bg-gray-100`}
+            aria-busy="true"
+          />
+        )}
+      </>
     );
   }
 
   return (
-    <img src={src} alt={alt} className={`w-full h-auto ${className}`} />
+    <>
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-auto ${className}`}
+        onLoad={onLoad}
+        onError={onError}
+        style={isLoading ? { display: "none" } : undefined}
+      />
+      {isLoading && (
+        <div
+          className={`${fallbackAspect} ${className} bg-gray-100 rounded`}
+          aria-busy="true"
+        />
+      )}
+    </>
   );
 }
 

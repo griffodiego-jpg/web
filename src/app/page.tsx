@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { BuscadorPatenteBanner } from "@/components/BuscadorPatenteBanner";
+import { BannerCarousel } from "@/components/BannerCarousel";
 import { TrustStrip } from "@/components/TrustStrip";
-import { siteConfig } from "@/lib/site-config";
+import { listActiveBanners } from "@/lib/banners-store";
+
+// ISR — el carousel cambia cuando el admin edita banners. Las APIs de
+// save/delete/reorder hacen revalidatePath("/") para refresh inmediato.
+export const revalidate = 3600;
 
 type FeatureCard = {
   title: string;
@@ -19,38 +23,27 @@ const featureCards: FeatureCard[] = [
     cta: "Ver todos",
   },
   {
-    title: "Catálogo",
+    title: "Catálogo online",
     image: "/products/catalogo-card.jpg",
-    href: siteConfig.externalCatalogLogin,
+    href: "/catalogo",
     cta: "Ir al catálogo",
-    external: true,
   },
   {
     title: "Lanzamientos",
-    image: "/products/lanzamiento-card.jpg",
+    image: "/products/lanzamiento-card.webp",
     href: "/novedades",
     cta: "Ver todos",
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Los banners activos vienen del admin (Redis). Si está vacío, el
+  // carousel cae al buscador de patente built-in por default.
+  const banners = await listActiveBanners();
+
   return (
     <>
-      {/*
-        Banner principal: reconstrucción vectorial del "Buscador por Patente".
-        Se adapta solo a todos los tamaños de pantalla (mobile/tablet/desktop).
-        Envuelto en <a> para mantener el comportamiento del slide original
-        (clickeable, lleva al catálogo externo).
-      */}
-      <a
-        href={siteConfig.externalCatalog}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Nuevo buscador por patente — Ir al catálogo"
-        className="block"
-      >
-        <BuscadorPatenteBanner />
-      </a>
+      <BannerCarousel banners={banners} />
 
       <TrustStrip />
 

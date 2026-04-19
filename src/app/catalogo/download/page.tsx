@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { AssetImage } from "@/components/AssetImage";
 import { RegistroDescargaForm } from "@/components/RegistroDescargaForm";
-import {
-  catalogoGeneralPdf,
-  materialPorProducto,
-  recursosGated,
-} from "@/data/descargas";
+import type { RecursoGated } from "@/data/descargas";
 import { productosDetalle } from "@/data/productos";
+import { resolveDescargas } from "@/lib/descargas-store";
 import { navigation } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -16,13 +13,21 @@ export const metadata: Metadata = {
   alternates: { canonical: "/catalogo/download" },
 };
 
+// Dinámica: usamos headers() para chequear qué archivos existen y
+// leemos overrides de Redis. No tiene sentido prerenderizar porque
+// los archivos/URLs cambian en vivo desde el admin.
+export const dynamic = "force-dynamic";
+
 const secciones = [
   { id: "catalogo-pdf", label: "Catálogo de productos en PDF" },
   { id: "material-producto", label: "Material por producto" },
   { id: "material-catalogar", label: "Material para catalogar" },
 ];
 
-export default function DescargasPage() {
+export default async function DescargasPage() {
+  const { catalogoGeneralPdf, materialPorProducto, recursosGated } =
+    await resolveDescargas();
+
   const productos =
     navigation.find((i) => i.label === "Productos destacados")?.children ?? [];
 
@@ -55,7 +60,11 @@ export default function DescargasPage() {
             subtitle="Descargá el catálogo oficial Griffo con el listado completo de productos."
           />
           <div className="mt-5">
-            <CatalogoGeneralCard />
+            {catalogoGeneralPdf ? (
+              <CatalogoGeneralCard href={catalogoGeneralPdf} />
+            ) : (
+              <EmptyState text="Todavía no se subió el catálogo general." />
+            )}
           </div>
         </section>
 
@@ -63,29 +72,38 @@ export default function DescargasPage() {
         <section id="material-producto" className="scroll-mt-32">
           <SectionHeader
             title="Material por producto"
-            subtitle="Flyer en PDF, video para redes sociales y video para pantalla de cada producto destacado."
+            subtitle="Flyer en PDF y video para redes sociales de cada producto destacado."
           />
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {productos.map((p) => {
-              const slug = p.href.split("/").pop()!;
-              const detalle = productosDetalle[slug];
-              const material = materialPorProducto.find((m) => m.slug === slug);
-              if (!material) return null;
-              return (
-                <MaterialCard
-                  key={slug}
-                  nombre={p.label}
-                  imagen={detalle?.image}
-                  flyer={material.flyer}
-                  videoRrss={material.videoRrss}
-                  videoPantalla={material.videoPantalla}
-                />
-              );
-            })}
-          </div>
+          {materialPorProducto.some((m) => m.available) ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {productos.map((p) => {
+                const slug = p.href.split("/").pop()!;
+                const detalle = productosDetalle[slug];
+                const material = materialPorProducto.find(
+                  (m) => m.slug === slug
+                );
+                if (!material || !material.available) return null;
+                return (
+                  <MaterialCard
+                    key={slug}
+                    nombre={p.label}
+                    imagen={detalle?.image}
+                    flyer={material.flyer}
+                    videoRrss={material.videoRrss}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-5">
+              <EmptyState text="Todavía no se subió material de producto." />
+            </div>
+          )}
         </section>
 
-        {/* 3. Material para catalogar — recursos gated */}
+        {/* 3. Material para catalogar — recursos gated. Siempre se
+            muestran los forms (capturan leads aunque el archivo no esté
+            todavía disponible). */}
         <section id="material-catalogar" className="scroll-mt-32">
           <SectionHeader
             title="Material para catalogar"
@@ -119,10 +137,10 @@ function SectionHeader({
   );
 }
 
-function CatalogoGeneralCard() {
+function CatalogoGeneralCard({ href }: { href: string }) {
   return (
     <a
-      href={catalogoGeneralPdf}
+      href={href}
       download
       className="group flex flex-col sm:flex-row items-stretch bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
     >
@@ -153,13 +171,11 @@ function MaterialCard({
   imagen,
   flyer,
   videoRrss,
-  videoPantalla,
 }: {
   nombre: string;
   imagen?: string;
   flyer?: string;
   videoRrss?: string;
-  videoPantalla?: string;
 }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -182,8 +198,7 @@ function MaterialCard({
       </div>
       <ul className="border-t border-gray-100 divide-y divide-gray-100">
         <DownloadRow href={flyer} label="Flyer" sub="PDF" />
-        <DownloadRow href={videoRrss} label="Video redes sociales" sub="MP4" />
-        <DownloadRow href={videoPantalla} label="Video pantalla" sub="MP4" />
+        <DownloadRow href={videoRrss} label="Video para redes" sub="MP4" />
       </ul>
     </div>
   );
@@ -198,17 +213,7 @@ function DownloadRow({
   label: string;
   sub: string;
 }) {
-  if (!href) {
-    return (
-      <li className="flex items-center justify-between px-3 py-2.5 text-sm text-gray-400">
-        <span>
-          {label}
-          <span className="ml-2 text-[10px] uppercase">{sub}</span>
-        </span>
-        <span className="text-[10px] uppercase">Próximamente</span>
-      </li>
-    );
-  }
+  if (!href) return null;
   return (
     <li>
       <a
@@ -230,10 +235,18 @@ function DownloadRow({
   );
 }
 
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
+      <p className="text-sm text-gray-500">{text}</p>
+    </div>
+  );
+}
+
 function RecursoGatedCard({
   recurso,
 }: {
-  recurso: (typeof recursosGated)[number];
+  recurso: RecursoGated & { available: boolean };
 }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -258,6 +271,7 @@ function RecursoGatedCard({
           recursoId={recurso.id}
           recursoTitulo={recurso.titulo}
           fileUrl={recurso.fileUrl}
+          available={recurso.available}
         />
       </div>
     </div>

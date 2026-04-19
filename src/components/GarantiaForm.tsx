@@ -37,6 +37,7 @@ const INITIAL: FormData = {
 export function GarantiaForm() {
   const [data, setData] = useState<FormData>(INITIAL);
   const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   function update<K extends keyof FormData>(key: K, value: FormData[K]) {
     setData((d) => ({ ...d, [key]: value }));
@@ -45,16 +46,21 @@ export function GarantiaForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/garantia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Hubo un error");
+      }
       setStatus("ok");
       setData(INITIAL);
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Hubo un error");
       setStatus("error");
     }
   }
@@ -179,7 +185,7 @@ export function GarantiaForm() {
       )}
       {status === "error" && (
         <p className="lg:col-span-3 md:col-span-2 text-red-700 font-semibold">
-          Hubo un error. Probá de nuevo en unos minutos.
+          {errorMsg ?? "Hubo un error."} Revisá los datos y probá de nuevo.
         </p>
       )}
     </form>
