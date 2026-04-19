@@ -23,7 +23,7 @@ const featureCards: FeatureCard[] = [
     cta: "Ver todos",
   },
   {
-    title: "Catálogo",
+    title: "Catálogo online",
     image: "/products/catalogo-card.jpg",
     href: "/catalogo",
     cta: "Ir al catálogo",

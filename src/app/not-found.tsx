@@ -94,7 +94,7 @@ export default function NotFound() {
 }
 
 const QUICK_LINKS = [
-  { label: "Catálogo", href: "/catalogo" },
+  { label: "Catálogo online", href: "/catalogo" },
   { label: "Productos destacados", href: "/productos" },
   { label: "Empresa", href: "/empresa" },
   { label: "Distribuidores", href: "/distribuidores" },
