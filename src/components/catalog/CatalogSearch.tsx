@@ -353,15 +353,14 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
         ref={stickyBarRef}
         className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}
       >
-        <div className="px-4 py-3 lg:px-6">
+        <div className="px-4 py-2.5 lg:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
                 Catálogo
               </p>
               <p className="text-xs text-gray-500">
-                {products.length} productos Griffo — buscá por patente, vehículo, código, palabra
-                o medidas
+                {products.length} productos — buscá por patente, vehículo, código, palabra o medidas
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -383,72 +382,76 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
             </div>
           </div>
 
-          <nav
-            role="tablist"
-            aria-label="Tipos de búsqueda"
-            className="mt-3 flex flex-wrap gap-1 border-b border-gray-100"
-          >
-            {TABS.map((t) => {
-              const active = tab === t.key;
-              return (
-                <button
-                  key={t.key}
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setTab(t.key)}
-                  type="button"
-                  className={[
-                    "relative px-3 py-2 text-sm font-bold transition",
-                    active
-                      ? "text-primary after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-accent"
-                      : "text-gray-400 hover:text-primary",
-                  ].join(" ")}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </nav>
+          {/* Bloque centrado: tabs + input. max-w acota el ancho para que el
+              buscador no se vea perdido en pantallas anchas. */}
+          <div className="mx-auto mt-2 max-w-3xl">
+            <nav
+              role="tablist"
+              aria-label="Tipos de búsqueda"
+              className="flex flex-wrap justify-center gap-1 border-b border-gray-100"
+            >
+              {TABS.map((t) => {
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.key)}
+                    type="button"
+                    className={[
+                      "relative px-3 py-2 text-sm font-bold transition",
+                      active
+                        ? "text-primary after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-accent"
+                        : "text-gray-400 hover:text-primary",
+                    ].join(" ")}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </nav>
 
-          <div className="mt-3">
-            {tab === "palabra" ? <KeywordForm value={keyword} onChange={setKeyword} /> : null}
-            {tab === "patente" ? (
-              <PlateForm
-                value={plate}
-                onChange={setPlate}
-                onSubmit={() => searchPlate(plate)}
-                pending={platePending}
-              />
-            ) : null}
-            {tab === "vehiculo" ? (
-              <VehicleForm
-                tree={vehicleTree}
-                brand={brand}
-                model={model}
-                year={year}
-                onBrand={(v) => {
-                  setBrand(v);
-                  setModel("");
-                  setYear("");
-                }}
-                onModel={(v) => {
-                  setModel(v);
-                  setYear("");
-                }}
-                onYear={setYear}
-              />
-            ) : null}
-            {tab === "codigo" ? <CodeForm value={code} onChange={setCode} /> : null}
-            {tab === "medidas" ? (
-              <div className="flex flex-col gap-2">
-                <MeasuresSelector value={measureType} onChange={setMeasureType} />
-                <MedidaShortcuts
-                  measureType={measureType}
-                  trebolesUrl={trebolesUrl}
-                  onOpenTreboles={() => setTrebolesOpen(true)}
+            <div className="mt-2.5">
+              {tab === "palabra" ? <KeywordForm value={keyword} onChange={setKeyword} /> : null}
+              {tab === "patente" ? (
+                <PlateForm
+                  value={plate}
+                  onChange={setPlate}
+                  onSubmit={() => searchPlate(plate)}
+                  pending={platePending}
                 />
-              </div>
-            ) : null}
+              ) : null}
+              {tab === "vehiculo" ? (
+                <VehicleForm
+                  tree={vehicleTree}
+                  brand={brand}
+                  model={model}
+                  year={year}
+                  onBrand={(v) => {
+                    setBrand(v);
+                    setModel("");
+                    setYear("");
+                  }}
+                  onModel={(v) => {
+                    setModel(v);
+                    setYear("");
+                  }}
+                  onYear={setYear}
+                />
+              ) : null}
+              {tab === "codigo" ? <CodeForm value={code} onChange={setCode} /> : null}
+              {tab === "medidas" ? (
+                <div className="flex flex-col gap-2">
+                  <MeasuresSelector value={measureType} onChange={setMeasureType} />
+                  <MedidaShortcuts
+                    measureType={measureType}
+                    trebolesUrl={trebolesUrl}
+                    onOpenTreboles={() => setTrebolesOpen(true)}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

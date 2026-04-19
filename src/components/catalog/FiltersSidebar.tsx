@@ -32,7 +32,14 @@ export function FiltersSidebar({ baseProducts, filters, onToggle, onClear, open,
   return (
     <>
       <aside className="hidden lg:block">
-        <div className="sticky top-[192px] max-h-[calc(100vh-220px)] overflow-y-auto rounded-lg border border-gray-100 bg-white">
+        <div
+          className="sticky overflow-y-auto rounded-lg border border-gray-100 bg-white"
+          style={{
+            top: "calc(var(--catalog-header-bottom, 192px) + 8px)",
+            maxHeight:
+              "calc(100vh - var(--catalog-header-bottom, 192px) - 24px)",
+          }}
+        >
           {body}
         </div>
       </aside>
@@ -82,7 +89,7 @@ function FiltersBody({
   const anioDisabled = filters.modelo.size === 0;
 
   return (
-    <div className="flex flex-col gap-5 p-4">
+    <div className="flex flex-col gap-3.5 p-3.5">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-black text-[#0a2b3d]">Filtros</h2>
         {active ? (
