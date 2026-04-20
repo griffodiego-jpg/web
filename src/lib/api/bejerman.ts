@@ -37,6 +37,10 @@ function baseUrl(): string {
 }
 
 async function login(): Promise<string> {
+  // El campo JSON se llama "email" en la API, pero acepta username
+  // también (el técnico provisionó `WebGriffo`, por ejemplo). Para
+  // claridad en Vercel mantenemos el nombre BEJERMAN_EMAIL — admite
+  // ambos tipos de credencial.
   const email = process.env.BEJERMAN_EMAIL;
   const password = process.env.BEJERMAN_PASSWORD;
   if (!email || !password) {

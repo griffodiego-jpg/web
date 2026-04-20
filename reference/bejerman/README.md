@@ -1,13 +1,19 @@
 # Bejerman (ERP Griffo) — documentación de la API
 
-Fuentes oficiales:
-- `reference/bejerman/Documentación API ERP Griffo v2.pdf`
-  (auth, clientes, precios, pedidos).
-- `reference/bejerman/Documentación API Cuentas corrientes.docx`
-  (cuenta corriente + descarga de comprobantes).
+Fuente oficial unificada:
+- `reference/bejerman/Documentación API ERP Griffo v4.pdf` — contiene
+  auth, clientes, precios, pedidos, cuenta corriente y descarga de
+  comprobantes. Reemplaza las versiones anteriores (v2 + docx de
+  cuentas corrientes).
 
-**Proveedor del middleware:** Promotive (presumido por el email del usuario
-de ejemplo `mpinero@promotive.la`). Falta confirmar con la cliente.
+**Proveedor de la API:** técnico propio de Griffo (la API pertenece a
+Griffo, no a un tercero). En origen iba a consumirla Promotive como
+proveedor de front, pero el desarrollo lo hacemos nosotros.
+
+**Credencial provisionada (2026-04-20):**
+- Usuario: `WebGriffo` (va en el campo `email` del login por
+  retrocompatibilidad del schema).
+- Password: ver env var `BEJERMAN_PASSWORD` en Vercel.
 
 ---
 
