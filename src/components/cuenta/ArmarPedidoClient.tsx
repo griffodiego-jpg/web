@@ -8,27 +8,29 @@ import {
   getMockCompraPrice,
   formatARS,
 } from "@/lib/mock-prices";
-import { TabPorCodigo } from "./armar-pedido/TabPorCodigo";
 import { TabPegarVarios } from "./armar-pedido/TabPegarVarios";
 import { TabSubirExcel } from "./armar-pedido/TabSubirExcel";
+import { TabIrAlCatalogo } from "./armar-pedido/TabIrAlCatalogo";
 
-type TabKey = "codigo" | "pegar" | "excel";
+type TabKey = "codigo" | "excel" | "catalogo";
 
 const TABS: { key: TabKey; label: string; description: string }[] = [
   {
     key: "codigo",
     label: "Por código",
-    description: "Ingresá el código y cantidad, uno por vez.",
-  },
-  {
-    key: "pegar",
-    label: "Pegar varios",
-    description: "Pegá una lista de códigos + cantidades de una sola vez.",
+    description:
+      "Pegá una lista de códigos + cantidades de una sola vez y revisá el preview antes de agregar.",
   },
   {
     key: "excel",
     label: "Subir Excel",
     description: "Descargá el modelo, completalo y subílo.",
+  },
+  {
+    key: "catalogo",
+    label: "Ir al buscador",
+    description:
+      "¿Querés buscar por patente, vehículo o medidas? Usá el catálogo online.",
   },
 ];
 
@@ -71,9 +73,9 @@ export function ArmarPedidoClient() {
         </p>
 
         <div className="bg-white border border-gray-200 rounded-xl p-5">
-          {activeTab === "codigo" && <TabPorCodigo />}
-          {activeTab === "pegar" && <TabPegarVarios />}
+          {activeTab === "codigo" && <TabPegarVarios />}
           {activeTab === "excel" && <TabSubirExcel />}
+          {activeTab === "catalogo" && <TabIrAlCatalogo />}
         </div>
       </div>
 
