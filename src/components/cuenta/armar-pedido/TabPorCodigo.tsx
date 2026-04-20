@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/lib/cart";
 import { formatARSNeto, getMockCompraPrice } from "@/lib/mock-prices";
+import { getDisplayApplication } from "@/lib/catalog/display";
+import type { SpecPartsProduct } from "@/types/specparts";
 
 /**
  * Tab "Por código" del armador de pedidos. Input con autocomplete sobre
  * el catálogo + cantidad + agregar. Al agregar queda en el carrito y el
  * input se resetea para seguir cargando.
- *
- * Fetch del catálogo via `/api/catalog/products` (ya existe y cachea).
  */
 
 interface CatalogLite {
@@ -17,6 +17,43 @@ interface CatalogLite {
   slug: string;
   name: string;
   image?: string;
+  linea: string;
+  ubicacion: string;
+  lado: string;
+  marcas: string[];
+  marcasExtra: number;
+}
+
+const HIDE_BRANDS = new Set(["AGRALE", "IVECO", "UNIVERSAL"]);
+
+function buildLite(p: SpecPartsProduct): CatalogLite {
+  const disp = getDisplayApplication(p);
+  const brandSet = new Set<string>();
+  for (const v of p.vehicles ?? []) {
+    const b = (v.brand ?? "").toUpperCase().trim();
+    if (b && !HIDE_BRANDS.has(b)) brandSet.add(b);
+  }
+  const allBrands = [...brandSet].sort((a, b) => a.localeCompare(b));
+  const TOP = 3;
+  return {
+    code: p.code,
+    slug: p.slug,
+    name: (p.product ?? "").toString(),
+    image: p.pictures?.[0]?.image_url,
+    linea: (p.category ?? "").toString().toUpperCase(),
+    ubicacion: disp.ubicaciones.join(" · "),
+    lado: disp.lados.join(" · "),
+    marcas: allBrands.slice(0, TOP),
+    marcasExtra: Math.max(0, allBrands.length - TOP),
+  };
+}
+
+function lineaBadgeColor(linea: string): string {
+  const l = linea.toLowerCase();
+  if (l.includes("susp")) return "bg-blue-100 text-blue-800 border-blue-200";
+  if (l.includes("direc")) return "bg-purple-100 text-purple-800 border-purple-200";
+  if (l.includes("trans")) return "bg-amber-100 text-amber-800 border-amber-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
 export function TabPorCodigo() {
@@ -34,21 +71,9 @@ export function TabPorCodigo() {
         const res = await fetch("/api/catalog/products", {
           cache: "force-cache",
         });
-        const data = (await res.json()) as {
-          products?: Array<{
-            code: string;
-            slug: string;
-            product: string;
-            pictures?: Array<{ image_url: string }>;
-          }>;
-        };
+        const data = (await res.json()) as { products?: SpecPartsProduct[] };
         if (cancel) return;
-        const items = (data.products ?? []).map((p) => ({
-          code: p.code,
-          slug: p.slug,
-          name: p.product,
-          image: p.pictures?.[0]?.image_url,
-        }));
+        const items = (data.products ?? []).map(buildLite);
         setCatalog(items);
       } catch {
         setCatalog([]);
@@ -63,7 +88,6 @@ export function TabPorCodigo() {
     if (!catalog) return [];
     const q = query.trim().toUpperCase();
     if (!q) return [];
-    // Prioriza matches exactos, después prefix, después substring
     const exact: CatalogLite[] = [];
     const prefix: CatalogLite[] = [];
     const sub: CatalogLite[] = [];
@@ -127,26 +151,68 @@ export function TabPorCodigo() {
             autoComplete="off"
           />
           {suggestions.length > 0 && !selected && (
-            <ul className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+            <ul className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[440px] overflow-y-auto">
               {suggestions.map((p) => (
                 <li
                   key={p.code}
                   onClick={() => handleSelect(p)}
-                  className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center gap-3"
+                  className="px-3 py-2.5 hover:bg-blue-50 cursor-pointer text-sm flex items-start gap-3 border-b border-gray-100 last:border-b-0"
                 >
-                  {p.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
+                  {p.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={p.image}
                       alt={p.code}
-                      className="w-8 h-8 object-contain shrink-0"
+                      className="w-10 h-10 object-contain shrink-0 mt-0.5"
                     />
+                  ) : (
+                    <div className="w-10 h-10 shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-mono font-bold text-primary">
-                      {p.code}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="font-mono font-bold text-primary text-base">
+                        {p.code}
+                      </p>
+                      {p.linea && (
+                        <span
+                          className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border ${lineaBadgeColor(p.linea)}`}
+                        >
+                          {p.linea}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide truncate">
+                      {p.name}
                     </p>
-                    <p className="text-xs text-gray-600 truncate">{p.name}</p>
+                    {(p.ubicacion || p.lado || p.marcas.length > 0) && (
+                      <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-gray-500">
+                        {p.ubicacion && (
+                          <span>
+                            <span className="text-gray-400">Ubic:</span>{" "}
+                            <span className="font-semibold text-gray-700">
+                              {p.ubicacion}
+                            </span>
+                          </span>
+                        )}
+                        {p.lado && (
+                          <span>
+                            <span className="text-gray-400">Lado:</span>{" "}
+                            <span className="font-semibold text-gray-700">
+                              {p.lado}
+                            </span>
+                          </span>
+                        )}
+                        {p.marcas.length > 0 && (
+                          <span className="truncate">
+                            <span className="text-gray-400">Marcas:</span>{" "}
+                            <span className="font-semibold text-gray-700">
+                              {p.marcas.join(" · ")}
+                              {p.marcasExtra > 0 ? ` +${p.marcasExtra}` : ""}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -158,7 +224,7 @@ export function TabPorCodigo() {
       {selected && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-4">
           {selected.image && (
-            // eslint-disable-next-line @next/next/no-img-element
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={selected.image}
               alt={selected.code}
@@ -166,13 +232,48 @@ export function TabPorCodigo() {
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-mono text-lg font-black text-primary">
-              {selected.code}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-mono text-lg font-black text-primary">
+                {selected.code}
+              </p>
+              {selected.linea && (
+                <span
+                  className={`text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded border ${lineaBadgeColor(selected.linea)}`}
+                >
+                  {selected.linea}
+                </span>
+              )}
+            </div>
             <p className="text-sm font-semibold text-[#0a2b3d]">
               {selected.name}
             </p>
-            <p className="text-xs text-gray-600 mt-1">
+            {(selected.ubicacion || selected.lado) && (
+              <p className="text-xs text-gray-600 mt-1">
+                {selected.ubicacion && (
+                  <>
+                    <span className="text-gray-400">Ubic:</span>{" "}
+                    <strong>{selected.ubicacion}</strong>
+                  </>
+                )}
+                {selected.ubicacion && selected.lado && " · "}
+                {selected.lado && (
+                  <>
+                    <span className="text-gray-400">Lado:</span>{" "}
+                    <strong>{selected.lado}</strong>
+                  </>
+                )}
+              </p>
+            )}
+            {selected.marcas.length > 0 && (
+              <p className="text-xs text-gray-600 mt-0.5">
+                <span className="text-gray-400">Marcas:</span>{" "}
+                <strong>
+                  {selected.marcas.join(" · ")}
+                  {selected.marcasExtra > 0 ? ` +${selected.marcasExtra} más` : ""}
+                </strong>
+              </p>
+            )}
+            <p className="text-xs text-gray-700 mt-1.5">
               Precio de compra:{" "}
               <strong>
                 {formatARSNeto(getMockCompraPrice(selected.code))}
