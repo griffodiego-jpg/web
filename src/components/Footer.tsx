@@ -5,7 +5,7 @@ import { Newsletter } from "@/components/Newsletter";
 export function Footer() {
   // Agrupa el nav en tres columnas como el sitio original.
   const col1 = navigation.filter((i) =>
-    ["Empresa", "Novedades", "Catálogo online", "Descargas"].includes(i.label)
+    ["Empresa", "Novedades", "Catálogo", "Descargas"].includes(i.label)
   );
   const productos = navigation.find((i) => i.label === "Productos destacados");
   const col3 = navigation.filter((i) =>
