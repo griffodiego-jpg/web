@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { computeSaldo, formatARS, mockAccountStatus } from "@/data/mock-b2b";
+import { computeSaldo, formatARS } from "@/data/mock-b2b";
+import { getAccountStatusForClient } from "@/lib/b2b/account-status";
 import { hasUnseenPriceList } from "@/lib/price-lists";
 import { getCurrentClient } from "@/lib/b2b/current-client";
 
@@ -15,10 +16,12 @@ function formatDate(iso: string): string {
 }
 
 export default async function ResumenPage() {
-  const saldo = computeSaldo(mockAccountStatus);
-  const hayDeuda = saldo > 0;
-
   const client = await getCurrentClient();
+  const { items, source } = await getAccountStatusForClient(client.client_id);
+  const saldo = computeSaldo(items);
+  const hayDeuda = saldo > 0;
+  const disponible = source !== "unavailable";
+
   const { hasNew, list } = await hasUnseenPriceList(
     client.client_id,
     client.priceListCode,
@@ -57,19 +60,32 @@ export default async function ResumenPage() {
         <p className="text-xs uppercase tracking-wider text-gray-500 font-bold">
           Saldo en cuenta corriente
         </p>
-        <p
-          className={`text-5xl font-black mt-3 ${
-            hayDeuda ? "text-amber-700" : "text-emerald-700"
-          }`}
-        >
-          {formatARS(saldo)}
-        </p>
-        <p className="text-sm text-gray-600 mt-2">
-          {hayDeuda ? "Pendiente de pago" : "Tu cuenta está al día"}
-          <span className="text-primary font-bold ml-3">
-            Ver movimientos →
-          </span>
-        </p>
+        {disponible ? (
+          <>
+            <p
+              className={`text-5xl font-black mt-3 ${
+                hayDeuda ? "text-amber-700" : "text-emerald-700"
+              }`}
+            >
+              {formatARS(saldo)}
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              {hayDeuda ? "Pendiente de pago" : "Tu cuenta está al día"}
+              <span className="text-primary font-bold ml-3">
+                Ver movimientos →
+              </span>
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-2xl font-black mt-3 text-gray-400">—</p>
+            <p className="text-sm text-gray-600 mt-2">
+              Todavía no se activó la integración con el ERP para este
+              cliente.
+              <span className="text-primary font-bold ml-3">Ver más →</span>
+            </p>
+          </>
+        )}
       </Link>
     </div>
   );
