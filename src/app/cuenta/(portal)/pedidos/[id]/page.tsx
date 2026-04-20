@@ -76,10 +76,10 @@ export default async function PedidoDetallePage({
       {/* Info extra según estado */}
       {pedido.status === "en_preparacion" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InfoBox label="Nº de nota (ERP)">
+          <InfoBox label="Número de pedido">
             <span className="font-mono">{pedido.erpOrderNumber ?? "—"}</span>
           </InfoBox>
-          <InfoBox label="Fecha estimada de despacho">
+          <InfoBox label="Fecha de despacho">
             {pedido.estimatedDispatchDate
               ? formatDate(pedido.estimatedDispatchDate)
               : "A confirmar"}

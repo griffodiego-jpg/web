@@ -88,7 +88,7 @@ export default async function AdminPedidosPage({
                   <th className="px-4 py-3 font-semibold">Cliente</th>
                   <th className="px-4 py-3 font-semibold">Fecha</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Nº Bejerman</th>
+                  <th className="px-4 py-3 font-semibold">Número de pedido</th>
                   <th className="px-4 py-3 font-semibold text-right">Ítems</th>
                   <th className="px-4 py-3 font-semibold text-right">Total</th>
                 </tr>

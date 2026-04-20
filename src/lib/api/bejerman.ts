@@ -201,3 +201,50 @@ export function changeApiPassword(
     body: JSON.stringify({ currentPassword, newPassword }),
   });
 }
+
+/**
+ * Lista los pedidos pendientes de entrega para un cliente.
+ *
+ * ⚠ Endpoint tentativo — al 2026-04 el middleware NO expone este
+ * endpoint. Se le pidió al técnico agregarlo:
+ *
+ *   GET /ERP/clientes/{clientCode}/pedidos
+ *
+ * Devuelve los pedidos cargados en Bejerman para ese cliente que
+ * todavía no fueron facturados (independiente de si se crearon
+ * desde la web o directo en Bejerman).
+ *
+ * Mientras no exista, esta función captura 404/500 y devuelve [].
+ * Así el portal muestra sólo los pedidos locales hasta que el
+ * técnico lo habilite — y cuando lo haga, empieza a funcionar
+ * solo sin cambios acá.
+ *
+ * Shape esperado (sujeto a confirmación con el técnico):
+ */
+export interface BejermanPendingOrder {
+  erpOrderId: string;
+  /** ISO date-time de creación en Bejerman. */
+  createdAt: string;
+  /** Fecha estimada de despacho, si ya se asignó. */
+  estimatedDispatchDate?: string;
+  status: string;
+  itemCount: number;
+  total: number;
+}
+
+export async function getPendingOrdersForClient(
+  clientCode: string,
+): Promise<BejermanPendingOrder[]> {
+  try {
+    return await request<BejermanPendingOrder[]>(
+      `/ERP/clientes/${encodeURIComponent(clientCode)}/pedidos`,
+    );
+  } catch (e) {
+    // Endpoint todavía no implementado o credenciales no cargadas —
+    // es OK que falle silenciosamente; mostramos sólo los locales.
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[bejerman] getPendingOrdersForClient falló:", e);
+    }
+    return [];
+  }
+}

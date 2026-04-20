@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listPedidosByClient } from "@/lib/pedidos";
+import { getPendingOrdersForClient } from "@/lib/api/bejerman";
 import { mockCurrentClient, formatARS, formatDate } from "@/data/mock-b2b";
 import { PedidoStatusPill } from "@/components/cuenta/PedidoStatusPill";
 
@@ -10,7 +11,22 @@ export default async function PedidosPage() {
   /* Hoy el clientId viene del mock. Cuando Firebase Auth esté vivo,
      sale del token del usuario → mapeo email → /ERP/Clients → client_id. */
   const clientId = mockCurrentClient.client_id;
-  const pedidos = await listPedidosByClient(clientId, 200);
+
+  const [localPedidos, erpOrders] = await Promise.all([
+    listPedidosByClient(clientId, 200),
+    getPendingOrdersForClient(clientId),
+  ]);
+
+  /* Los pedidos del ERP que ya existen en local (mismo erpOrderNumber)
+     no se duplican — son el mismo pedido visto desde dos lados. */
+  const knownErpNumbers = new Set(
+    localPedidos.map((p) => p.erpOrderNumber).filter(Boolean) as string[],
+  );
+  const onlyErp = erpOrders.filter(
+    (o) => !knownErpNumbers.has(o.erpOrderId),
+  );
+
+  const totalRows = localPedidos.length + onlyErp.length;
 
   return (
     <div>
@@ -18,28 +34,29 @@ export default async function PedidosPage() {
         <div>
           <h2 className="text-2xl font-black text-[#0a2b3d]">Mis pedidos</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Historial completo de pedidos que armaste desde la web.
+            Incluye los pedidos que armaste desde la web y los cargados
+            directamente en Bejerman.
           </p>
         </div>
         <Link
-          href="/catalogo"
+          href="/cuenta/armar-pedido"
           className="bg-primary hover:bg-primary-dark text-white font-bold px-5 py-2.5 rounded-lg transition"
         >
           + Armar pedido nuevo
         </Link>
       </div>
 
-      {pedidos.length === 0 ? (
+      {totalRows === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
           <p className="text-[#0a2b3d] font-bold">No tenés pedidos todavía.</p>
           <p className="text-sm text-gray-600 mt-1 mb-5">
             Armá tu primer pedido desde el catálogo.
           </p>
           <Link
-            href="/catalogo"
+            href="/cuenta/armar-pedido"
             className="inline-block px-5 py-2 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition"
           >
-            Ir al catálogo
+            Armar pedido
           </Link>
         </div>
       ) : (
@@ -48,16 +65,18 @@ export default async function PedidosPage() {
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Pedido</th>
-                <th className="px-4 py-3 font-semibold">Nº nota ERP</th>
+                <th className="px-4 py-3 font-semibold">Número de pedido</th>
                 <th className="px-4 py-3 font-semibold">Fecha</th>
+                <th className="px-4 py-3 font-semibold">Fecha despacho</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold">Origen</th>
                 <th className="px-4 py-3 font-semibold text-right">Ítems</th>
                 <th className="px-4 py-3 font-semibold text-right">Total</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {pedidos.map((p) => (
+              {localPedidos.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-xs text-[#0a2b3d]">
                     {p.id}
@@ -68,14 +87,25 @@ export default async function PedidosPage() {
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                     {formatDate(p.createdAt)}
                   </td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {p.estimatedDispatchDate
+                      ? formatDate(p.estimatedDispatchDate)
+                      : "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <PedidoStatusPill status={p.status} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-blue-50 text-blue-800 border-blue-200">
+                      Web
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-700">
                     {p.items.reduce((a, x) => a + x.quantity, 0)}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-[#0a2b3d] whitespace-nowrap">
-                    {formatARS(p.total)} <span className="text-[10px] text-gray-500">+ IVA</span>
+                    {formatARS(p.total)}{" "}
+                    <span className="text-[10px] text-gray-500">+ IVA</span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
@@ -87,9 +117,64 @@ export default async function PedidosPage() {
                   </td>
                 </tr>
               ))}
+
+              {onlyErp.map((o) => (
+                <tr key={o.erpOrderId} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                    —
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#0a2b3d] font-bold">
+                    {o.erpOrderId}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {formatDate(o.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {o.estimatedDispatchDate
+                      ? formatDate(o.estimatedDispatchDate)
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold border bg-blue-50 text-blue-800 border-blue-200">
+                      {o.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-gray-100 text-gray-700 border-gray-200">
+                      ERP
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-700">
+                    {o.itemCount}
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-[#0a2b3d] whitespace-nowrap">
+                    {formatARS(o.total)}{" "}
+                    <span className="text-[10px] text-gray-500">+ IVA</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span
+                      className="text-xs text-gray-400 whitespace-nowrap"
+                      title="Pedido cargado directamente en Bejerman — el detalle completo vive en el ERP"
+                    >
+                      Detalle en ERP
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {erpOrders.length === 0 && (
+        <p className="text-xs text-gray-500 mt-3">
+          Los pedidos cargados directamente en Bejerman aparecerán acá
+          cuando el técnico habilite el endpoint{" "}
+          <code className="px-1 py-0.5 bg-gray-100 rounded">
+            GET /ERP/clientes/{"{"}codigo{"}"}/pedidos
+          </code>
+          .
+        </p>
       )}
     </div>
   );

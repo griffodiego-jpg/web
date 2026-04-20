@@ -115,7 +115,7 @@ export default async function AdminPedidoDetallePage({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {pedido.erpOrderNumber && (
               <div>
-                <p className="text-xs text-blue-800 mb-1">Nº nota de pedido</p>
+                <p className="text-xs text-blue-800 mb-1">Número de pedido</p>
                 <p className="font-mono font-bold text-blue-900">
                   {pedido.erpOrderNumber}
                 </p>
@@ -124,7 +124,7 @@ export default async function AdminPedidoDetallePage({
             {pedido.estimatedDispatchDate && (
               <div>
                 <p className="text-xs text-blue-800 mb-1">
-                  Fecha estimada de despacho
+                  Fecha de despacho
                 </p>
                 <p className="font-bold text-blue-900">
                   {formatDate(pedido.estimatedDispatchDate)}

@@ -196,6 +196,34 @@ listamos con `ClientAccountStatus` y cada fila linkea a `GetComprobante`.
 | Actualizar datos de cliente | ❌ no existe | Idem, editar en Bejerman. |
 | Recibos (ND / NC / pagos) | ✅ `ClientAccountStatus` devuelve todos los comprobantes (FC, ND, NC, etc.), `GetComprobante` baja el PDF. | — |
 
+## Endpoint pendiente de agregar
+
+**`GET /ERP/clientes/{clientCode}/pedidos`**
+
+Lista los pedidos pendientes de entrega de un cliente — los cargados
+directamente en Bejerman **y** los que llegaron por web que después
+fueron cargados en el ERP. Respuesta tentativa:
+
+```json
+[
+  {
+    "erpOrderId": "PED-23900",
+    "createdAt": "2026-04-20T10:15:00Z",
+    "estimatedDispatchDate": "2026-04-25T00:00:00Z",
+    "status": "En preparación",
+    "itemCount": 12,
+    "total": 487600
+  }
+]
+```
+
+Se usa en `/cuenta/pedidos` para mostrar al cliente **todos** sus
+pedidos vivos, no sólo los armados desde la web.
+`getPendingOrdersForClient()` en `src/lib/api/bejerman.ts` ya está
+preparada: hoy devuelve `[]` cuando el endpoint tira 404; el día que
+el técnico lo habilite, empieza a aparecer la info sin cambios de
+código.
+
 ## Preguntas abiertas (para el proveedor / la cliente)
 
 1. **HTTPS:** ¿el middleware va a tener HTTPS antes de producción? Si no,
