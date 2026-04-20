@@ -204,6 +204,17 @@ listamos con `ClientAccountStatus` y cada fila linkea a `GetComprobante`.
 
 ## Endpoint pendiente de agregar
 
+### Sucursal en comprobantes (opcional)
+
+`GET /ERP/ClientAccountStatus/{client_code}` devuelve los movimientos
+de cuenta corriente sin identificar qué sucursal generó cada uno. Hoy
+la pantalla de cuenta corriente los muestra unificados. Si la cliente
+quiere desglosar por sucursal, pedirle al técnico agregar un campo
+`warehouseId` en cada item. No es bloqueante — la cuenta corriente a
+nivel cliente es lo habitual.
+
+### Endpoint nuevo (pendiente)
+
 **`GET /ERP/clientes/{clientCode}/pedidos`**
 
 Lista los pedidos pendientes de entrega de un cliente — los cargados

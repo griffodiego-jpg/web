@@ -67,6 +67,7 @@ export default async function PedidosPage() {
                 <th className="px-4 py-3 font-semibold">Pedido</th>
                 <th className="px-4 py-3 font-semibold">Número de pedido</th>
                 <th className="px-4 py-3 font-semibold">Fecha</th>
+                <th className="px-4 py-3 font-semibold">Sucursal</th>
                 <th className="px-4 py-3 font-semibold">Fecha despacho</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
                 <th className="px-4 py-3 font-semibold">Origen</th>
@@ -86,6 +87,9 @@ export default async function PedidosPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                     {formatDate(p.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 text-xs">
+                    {p.warehouseDescription || "—"}
                   </td>
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                     {p.estimatedDispatchDate
@@ -128,6 +132,9 @@ export default async function PedidosPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                     {formatDate(o.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-xs italic">
+                    —
                   </td>
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                     {o.estimatedDispatchDate

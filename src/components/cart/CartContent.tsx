@@ -17,6 +17,13 @@ export function CartContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* Cliente + sucursales del cliente. En modo demo vienen del mock.
+     Cuando Firebase Auth esté vivo → mapeo email → /ERP/Clients. */
+  const warehouses = mockCurrentClient.warehouses ?? [];
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>(
+    warehouses[0]?.warehouse_id ?? "",
+  );
+
   if (!ready) {
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-500 text-sm">
@@ -62,6 +69,13 @@ export function CartContent() {
   }
 
   async function handleConfirmarPedido() {
+    if (!selectedWarehouseId) {
+      setError("Elegí una sucursal antes de confirmar.");
+      return;
+    }
+    const selectedWarehouse = warehouses.find(
+      (w) => w.warehouse_id === selectedWarehouseId,
+    );
     setSubmitting(true);
     setError(null);
     try {
@@ -86,6 +100,8 @@ export function CartContent() {
           clientId: mockCurrentClient.client_id,
           clientName: mockCurrentClient.name,
           clientEmail: mockCurrentClient.email,
+          warehouseId: selectedWarehouseId,
+          warehouseDescription: selectedWarehouse?.description ?? "",
           items: itemsPayload,
         }),
       });
@@ -258,6 +274,44 @@ export function CartContent() {
         </div>
       </div>
 
+      {/* Selector de sucursal — sólo B2B logueado */}
+      {isLoggedIn && warehouses.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500 font-bold mb-1">
+                Sucursal de entrega
+              </p>
+              {warehouses.length === 1 ? (
+                <p className="text-sm font-bold text-[#0a2b3d]">
+                  {warehouses[0].description}
+                  <span className="text-xs text-gray-500 font-normal ml-2">
+                    (única sucursal disponible)
+                  </span>
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600">
+                  Elegí la sucursal donde querés recibir el pedido.
+                </p>
+              )}
+            </div>
+            {warehouses.length > 1 && (
+              <select
+                value={selectedWarehouseId}
+                onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-semibold bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none min-w-[240px]"
+              >
+                {warehouses.map((w) => (
+                  <option key={w.warehouse_id} value={w.warehouse_id}>
+                    {w.description}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
           El total definitivo se confirma cuando Griffo procesa el pedido.
@@ -273,7 +327,7 @@ export function CartContent() {
             <button
               type="button"
               onClick={handleConfirmarPedido}
-              disabled={submitting}
+              disabled={submitting || !selectedWarehouseId}
               className="px-5 py-2 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? "Confirmando…" : "Confirmar pedido"}

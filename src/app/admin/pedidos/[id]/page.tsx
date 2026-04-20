@@ -81,7 +81,7 @@ export default async function AdminPedidoDetallePage({
         <h2 className="text-xs uppercase tracking-wider font-bold text-gray-500 mb-3">
           Cliente
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <p className="text-xs text-gray-500 mb-1">Razón social</p>
             <p className="font-bold text-[#0a2b3d]">{pedido.clientName}</p>
@@ -100,6 +100,19 @@ export default async function AdminPedidoDetallePage({
             >
               {pedido.clientEmail}
             </a>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Sucursal de entrega</p>
+            <p className="font-bold text-[#0a2b3d]">
+              {pedido.warehouseDescription || (
+                <span className="text-gray-400 italic font-normal">—</span>
+              )}
+            </p>
+            {pedido.warehouseId && (
+              <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+                ID: {pedido.warehouseId}
+              </p>
+            )}
           </div>
         </div>
       </section>

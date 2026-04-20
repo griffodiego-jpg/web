@@ -99,6 +99,9 @@ export async function sendPedidoCreadoAlCliente(pedido: Pedido): Promise<void> {
 export async function sendPedidoCreadoAGriffo(pedido: Pedido): Promise<void> {
   try {
     const to = await getPedidosNotificationEmail();
+    const sucursalLinea = pedido.warehouseDescription
+      ? `<p>Sucursal de entrega: <strong>${pedido.warehouseDescription}</strong></p>`
+      : "";
     await getResend().emails.send({
       from: SENDER,
       to,
@@ -107,6 +110,7 @@ export async function sendPedidoCreadoAGriffo(pedido: Pedido): Promise<void> {
         <div style="font-family:Arial,sans-serif;color:#0a2b3d;max-width:700px;margin:0 auto;">
           <h1 style="color:#00549F;">Nuevo pedido B2B</h1>
           <p><strong>${pedido.clientName}</strong> (código ${pedido.clientId}) armó un pedido desde la web.</p>
+          ${sucursalLinea}
           ${pedidoTablaHtml(pedido)}
           <p><a href="${SITE_URL}/admin/pedidos/${pedido.id}" style="display:inline-block;background:#00549F;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Abrir en admin</a></p>
           <p style="color:#6b7280;font-size:13px;margin-top:16px;">Desde admin podés bajar el Excel, cargarlo en Bejerman, y marcar el pedido como "En preparación" con el nº de nota.</p>

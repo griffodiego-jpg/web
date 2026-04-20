@@ -37,6 +37,9 @@ export async function GET(
   lines.push(`Cliente;${csvEscape(pedido.clientName)}`);
   lines.push(`Código cliente;${csvEscape(pedido.clientId)}`);
   lines.push(`Email;${csvEscape(pedido.clientEmail)}`);
+  lines.push(
+    `Sucursal;${csvEscape(pedido.warehouseDescription || "—")} (${csvEscape(pedido.warehouseId || "—")})`,
+  );
   lines.push(`Estado;${csvEscape(pedido.status)}`);
   if (pedido.erpOrderNumber) {
     lines.push(`Nº nota ERP;${csvEscape(pedido.erpOrderNumber)}`);

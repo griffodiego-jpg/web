@@ -70,6 +70,9 @@ export function AdminPedidoRow({ pedido }: { pedido: Pedido }) {
           <p className="font-semibold text-[#0a2b3d]">{pedido.clientName}</p>
           <p className="text-xs text-gray-500 font-mono">{pedido.clientId}</p>
         </td>
+        <td className="px-4 py-3 text-xs text-gray-700">
+          {pedido.warehouseDescription || "—"}
+        </td>
         <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-xs">
           {formatDateTime(pedido.createdAt)}
         </td>
@@ -87,7 +90,7 @@ export function AdminPedidoRow({ pedido }: { pedido: Pedido }) {
 
       {open && (
         <tr className="bg-blue-50/40">
-          <td colSpan={8} className="px-4 py-5 border-b-2 border-primary/20">
+          <td colSpan={9} className="px-4 py-5 border-b-2 border-primary/20">
             <div className="space-y-4">
               {/* Header con acciones rápidas */}
               <div className="flex flex-wrap items-center justify-between gap-3">

@@ -46,6 +46,12 @@ export interface Pedido {
   clientId: string;
   clientName: string;
   clientEmail: string;
+  /** `warehouse_id` del depósito/sucursal elegido al confirmar. Si el
+   *  cliente tiene un solo depósito, se setea automáticamente. */
+  warehouseId: string;
+  /** Nombre legible (ej. "Depósito Central") — cacheado para mostrar
+   *  sin re-query a Bejerman. */
+  warehouseDescription: string;
   items: PedidoItem[];
   /** Suma de subtotales, neto sin IVA. */
   total: number;

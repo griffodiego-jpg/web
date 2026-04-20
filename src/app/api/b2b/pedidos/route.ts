@@ -49,6 +49,8 @@ interface Body {
   clientId: unknown;
   clientName: unknown;
   clientEmail: unknown;
+  warehouseId: unknown;
+  warehouseDescription: unknown;
   items: unknown;
 }
 
@@ -87,6 +89,8 @@ export async function POST(req: Request) {
   const clientId = String(body.clientId ?? "").trim();
   const clientName = String(body.clientName ?? "").trim();
   const clientEmail = String(body.clientEmail ?? "").trim();
+  const warehouseId = String(body.warehouseId ?? "").trim();
+  const warehouseDescription = String(body.warehouseDescription ?? "").trim();
 
   if (!clientId) {
     return NextResponse.json({ error: "Falta clientId" }, { status: 400 });
@@ -96,6 +100,12 @@ export async function POST(req: Request) {
   }
   if (!clientEmail || !clientEmail.includes("@")) {
     return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+  }
+  if (!warehouseId) {
+    return NextResponse.json(
+      { error: "Falta seleccionar una sucursal" },
+      { status: 400 },
+    );
   }
 
   let items: Omit<PedidoItem, "subtotal">[];
@@ -111,6 +121,8 @@ export async function POST(req: Request) {
       clientId,
       clientName,
       clientEmail,
+      warehouseId,
+      warehouseDescription,
       items,
     });
     // Mails en paralelo, no bloqueamos la respuesta si uno falla (ya está

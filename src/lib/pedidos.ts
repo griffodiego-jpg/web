@@ -65,6 +65,8 @@ export interface CreatePedidoInput {
   clientId: string;
   clientName: string;
   clientEmail: string;
+  warehouseId: string;
+  warehouseDescription: string;
   items: Array<Omit<PedidoItem, "subtotal"> & { subtotal?: number }>;
 }
 
@@ -93,6 +95,8 @@ export async function createPedido(input: CreatePedidoInput): Promise<Pedido> {
     clientId: input.clientId,
     clientName: input.clientName,
     clientEmail: input.clientEmail,
+    warehouseId: input.warehouseId,
+    warehouseDescription: input.warehouseDescription,
     items,
     total,
     status: "procesando",

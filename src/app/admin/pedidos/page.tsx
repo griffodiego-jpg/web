@@ -86,6 +86,7 @@ export default async function AdminPedidosPage({
                   <th className="px-4 py-3 w-8"></th>
                   <th className="px-4 py-3 font-semibold">ID web</th>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
+                  <th className="px-4 py-3 font-semibold">Sucursal</th>
                   <th className="px-4 py-3 font-semibold">Fecha</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Número de pedido</th>

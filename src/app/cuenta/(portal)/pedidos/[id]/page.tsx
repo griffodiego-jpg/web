@@ -68,6 +68,14 @@ export default async function PedidoDetallePage({
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             Creado el {formatDate(pedido.createdAt)}
+            {pedido.warehouseDescription && (
+              <>
+                {" · "}Sucursal:{" "}
+                <strong className="text-[#0a2b3d]">
+                  {pedido.warehouseDescription}
+                </strong>
+              </>
+            )}
           </p>
         </div>
         <PedidoStatusPill status={pedido.status} />
