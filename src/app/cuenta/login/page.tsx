@@ -29,8 +29,10 @@ export default function LoginPage() {
           <div className="mb-5 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
             <p className="font-bold mb-1">🚧 Modo demo</p>
             <p>
-              El login todavía no está conectado. Podés entrar al portal
-              con cualquier email + contraseña para ver cómo va a quedar.
+              Todavía estamos conectando la integración con el ERP. Usá el
+              email de tu cuenta y la contraseña inicial{" "}
+              <code className="bg-amber-100 px-1 rounded">GRIFFO+CUIT</code>{" "}
+              (sin guiones, en mayúsculas). Si la cambiaste, usá la nueva.
             </p>
           </div>
 

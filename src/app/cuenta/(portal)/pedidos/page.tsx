@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { listPedidosByClient } from "@/lib/pedidos";
 import { getPendingOrdersForClient } from "@/lib/api/bejerman";
-import { mockCurrentClient, formatARS, formatDate } from "@/data/mock-b2b";
+import { formatARS, formatDate } from "@/data/mock-b2b";
+import { getCurrentClient } from "@/lib/b2b/current-client";
 import { PedidoStatusPill } from "@/components/cuenta/PedidoStatusPill";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mis pedidos" };
 
 export default async function PedidosPage() {
-  /* Hoy el clientId viene del mock. Cuando Firebase Auth esté vivo,
-     sale del token del usuario → mapeo email → /ERP/Clients → client_id. */
-  const clientId = mockCurrentClient.client_id;
+  const client = await getCurrentClient();
+  const clientId = client.client_id;
 
   const [localPedidos, erpOrders] = await Promise.all([
     listPedidosByClient(clientId, 200),

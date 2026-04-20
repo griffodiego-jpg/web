@@ -13,6 +13,15 @@ export interface BejermanClient {
   email: string;
   name: string;
   warehouses: BejermanWarehouse[];
+  /** CUIT del cliente. Opcional: el middleware actual no lo expone — se
+   * completa desde la respuesta extendida cuando el proveedor lo sume. */
+  cuit?: string;
+  /** Código de lista de precios asignada (ej. "LISTA3", "MAYORISTA"). */
+  priceListCode?: string;
+  /** Dirección comercial (opcional). */
+  address?: string;
+  /** Teléfono de contacto (opcional). */
+  phone?: string;
 }
 
 export interface BejermanPriceRequest {

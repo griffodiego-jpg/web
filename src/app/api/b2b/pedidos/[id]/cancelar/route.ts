@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { cancelPedido, getPedido } from "@/lib/pedidos";
-import { mockCurrentClient } from "@/data/mock-b2b";
+import { getCurrentClient } from "@/lib/b2b/current-client";
 
 /**
  * `POST /api/b2b/pedidos/{id}/cancelar` — cancela un pedido en estado
  * `procesando`. Sólo el dueño del pedido puede cancelarlo.
  *
- * Hoy el dueño se determina contra `mockCurrentClient`. Cuando Firebase
- * Auth esté activo, usar el token para validar.
+ * El dueño sale de `getCurrentClient()` — que respeta la impersonación
+ * del admin. Cuando Firebase esté activo, el client se lee del token
+ * del usuario logueado.
  */
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export async function POST(
   if (!pedido) {
     return NextResponse.json({ error: "Pedido no existe" }, { status: 404 });
   }
-  if (pedido.clientId !== mockCurrentClient.client_id) {
+  const client = await getCurrentClient();
+  if (pedido.clientId !== client.client_id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 

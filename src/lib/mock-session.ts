@@ -10,6 +10,10 @@ import { useCallback, useEffect, useState } from "react";
 
 export interface MockSession {
   email: string;
+  clientId?: string;
+  clientName?: string;
+  /** True si la sesión la inició el admin vía /admin/clientes. */
+  impersonated?: boolean;
   loggedAt: string;
 }
 
@@ -51,12 +55,20 @@ export function useMockSession() {
     };
   }, []);
 
-  const login = useCallback((email: string) => {
-    const next: MockSession = { email, loggedAt: new Date().toISOString() };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    window.dispatchEvent(new Event(EVENT_NAME));
-    setSession(next);
-  }, []);
+  const login = useCallback(
+    (data: { email: string; clientId?: string; clientName?: string }) => {
+      const next: MockSession = {
+        email: data.email,
+        clientId: data.clientId,
+        clientName: data.clientName,
+        loggedAt: new Date().toISOString(),
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event(EVENT_NAME));
+      setSession(next);
+    },
+    [],
+  );
 
   const logout = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);

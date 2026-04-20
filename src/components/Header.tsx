@@ -7,7 +7,6 @@ import { navigation, type NavItem } from "@/lib/site-config";
 import { Logo } from "@/components/Logo";
 import { CartIndicator } from "@/components/cart/CartIndicator";
 import { useMockSession } from "@/lib/mock-session";
-import { mockCurrentClient } from "@/data/mock-b2b";
 
 /**
  * Determina si un item del nav está activo según el pathname actual.
@@ -44,7 +43,7 @@ export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const { isLoggedIn, ready } = useMockSession();
+  const { isLoggedIn, ready, session } = useMockSession();
 
   // Cierra el menú mobile al cambiar a desktop.
   useEffect(() => {
@@ -265,7 +264,7 @@ export function Header() {
                     Entrar al portal
                   </span>
                   <span className="text-xs font-black truncate max-w-[160px]">
-                    {mockCurrentClient.name}
+                    {session?.clientName || session?.email || "Mi cuenta"}
                   </span>
                 </span>
               </Link>

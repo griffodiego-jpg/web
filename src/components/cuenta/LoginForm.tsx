@@ -9,11 +9,33 @@ export function LoginForm() {
   const { login } = useMockSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    login(email);
-    router.push("/cuenta");
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/b2b/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || `Error ${res.status}`);
+      }
+      login({
+        email: data.client.email,
+        clientId: data.client.client_id,
+        clientName: data.client.name,
+      });
+      router.push("/cuenta");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error desconocido");
+      setLoading(false);
+    }
   }
 
   return (
@@ -30,6 +52,7 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="tu@empresa.com.ar"
+          autoComplete="email"
           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
         />
       </div>
@@ -54,15 +77,19 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
+          autoComplete="current-password"
           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
         />
       </div>
 
+      {err ? <p className="text-sm text-red-600">{err}</p> : null}
+
       <button
         type="submit"
-        className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2.5 rounded-lg transition shadow-sm"
+        disabled={loading}
+        className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2.5 rounded-lg transition shadow-sm disabled:opacity-50"
       >
-        Ingresar
+        {loading ? "Ingresando..." : "Ingresar"}
       </button>
     </form>
   );

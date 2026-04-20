@@ -33,11 +33,68 @@ export const mockCurrentClient: BejermanClient = {
   client_id: "000042",
   email: "juan@distribuidora-martinez.com.ar",
   name: "Distribuidora Martínez S.R.L.",
+  cuit: "30-71234567-8",
+  priceListCode: "LISTA3",
+  address: "Av. San Martín 1234, Córdoba",
+  phone: "+54 351 555-1234",
   warehouses: [
     { warehouse_id: "001", description: "Depósito Central" },
     { warehouse_id: "002", description: "Sucursal Córdoba" },
   ],
 };
+
+/**
+ * Lista de clientes mock para el admin mientras el ERP real no devuelve
+ * los campos extendidos (cuit, priceListCode, address, phone). Una vez
+ * que el middleware los exponga vía /ERP/Clients, esta lista queda como
+ * fallback en entornos sin credenciales.
+ */
+export const mockClients: BejermanClient[] = [
+  mockCurrentClient,
+  {
+    client_id: "000087",
+    email: "compras@autorepuestoselsol.com.ar",
+    name: "Auto Repuestos El Sol",
+    cuit: "30-65987412-5",
+    priceListCode: "LISTA2",
+    address: "Ruta 3 km 42, Longchamps, Buenos Aires",
+    phone: "+54 11 4298-7766",
+    warehouses: [{ warehouse_id: "001", description: "Depósito Central" }],
+  },
+  {
+    client_id: "000115",
+    email: "ventas@grupopellegrini.com.ar",
+    name: "Grupo Pellegrini S.A.",
+    cuit: "30-70234188-2",
+    priceListCode: "LISTA1",
+    address: "Pellegrini 2500, Rosario, Santa Fe",
+    phone: "+54 341 420-5533",
+    warehouses: [
+      { warehouse_id: "001", description: "Depósito Rosario" },
+      { warehouse_id: "003", description: "Sucursal Santa Fe" },
+    ],
+  },
+  {
+    client_id: "000203",
+    email: "info@repuestosdelsur.com.ar",
+    name: "Repuestos del Sur",
+    cuit: "30-68541222-7",
+    priceListCode: "LISTA3",
+    address: "Av. Roca 1820, Bahía Blanca, Buenos Aires",
+    phone: "+54 291 453-2100",
+    warehouses: [{ warehouse_id: "001", description: "Depósito Único" }],
+  },
+  {
+    client_id: "000256",
+    email: "admin@rvrepuestos.com.ar",
+    name: "R.V. Repuestos",
+    cuit: "30-71567890-3",
+    priceListCode: "LISTA3",
+    address: "Italia 450, Neuquén",
+    phone: "+54 299 448-9912",
+    warehouses: [{ warehouse_id: "001", description: "Depósito Neuquén" }],
+  },
+];
 
 export const mockAccountStatus: BejermanAccountStatusItem[] = [
   {

@@ -12,7 +12,7 @@ import { mockCurrentClient } from "@/data/mock-b2b";
 export function CartContent() {
   const router = useRouter();
   const { items, ready, setQuantity, removeItem, clear, count } = useCart();
-  const { isLoggedIn } = useMockSession();
+  const { isLoggedIn, session } = useMockSession();
   const { prefs, ready: prefsReady } = useB2BPreferences();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,9 +97,9 @@ export function CartContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientId: mockCurrentClient.client_id,
-          clientName: mockCurrentClient.name,
-          clientEmail: mockCurrentClient.email,
+          clientId: session?.clientId || mockCurrentClient.client_id,
+          clientName: session?.clientName || mockCurrentClient.name,
+          clientEmail: session?.email || mockCurrentClient.email,
           warehouseId: selectedWarehouseId,
           warehouseDescription: selectedWarehouse?.description ?? "",
           items: itemsPayload,

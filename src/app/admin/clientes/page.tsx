@@ -1,44 +1,34 @@
-import { getClients } from "@/lib/api/bejerman";
+import Link from "next/link";
+
+import { ImpersonateButton } from "@/components/admin/ImpersonateButton";
+import { loadAllClients } from "@/lib/b2b/client-loader";
 import type { BejermanClient } from "@/types/bejerman";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Clientes B2B" };
 
-async function loadClients(): Promise<
-  | { ok: true; clients: BejermanClient[] }
-  | { ok: false; error: string }
-> {
-  try {
-    const clients = await getClients();
-    return { ok: true, clients };
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    return { ok: false, error };
-  }
-}
-
 export default async function ClientesPage() {
-  const result = await loadClients();
+  const { clients, source, error } = await loadAllClients();
 
   return (
     <div>
       <header className="mb-6">
         <h1 className="text-2xl font-black text-[#0a2b3d]">Clientes B2B</h1>
         <p className="text-sm text-gray-600 mt-1">
-          Listado en vivo desde el ERP Griffo ({" "}
-          <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">
-            GET /ERP/Clients
-          </code>
-          ). Se actualiza en cada carga.
+          Listado de clientes habilitados para el portal{" "}
+          <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">/cuenta</code>
+          . Tocá una fila para ver el detalle completo (datos, lista de precios,
+          contraseña) o &quot;Loguear como&quot; para entrar al portal como ese
+          cliente y verificar la experiencia.
         </p>
       </header>
 
-      {!result.ok ? (
-        <ErrorBox message={result.error} />
-      ) : result.clients.length === 0 ? (
+      {source === "mock" ? <MockBanner error={error} /> : null}
+
+      {clients.length === 0 ? (
         <EmptyBox />
       ) : (
-        <ClientsTable clients={result.clients} />
+        <ClientsTable clients={clients} />
       )}
     </div>
   );
@@ -49,7 +39,7 @@ function ClientsTable({ clients }: { clients: BejermanClient[] }) {
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          {clients.length} cliente{clients.length === 1 ? "" : "s"} encontrados
+          {clients.length} cliente{clients.length === 1 ? "" : "s"}
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -58,8 +48,11 @@ function ClientsTable({ clients }: { clients: BejermanClient[] }) {
             <tr>
               <th className="px-5 py-3 font-semibold">Código</th>
               <th className="px-5 py-3 font-semibold">Razón social</th>
+              <th className="px-5 py-3 font-semibold">CUIT</th>
               <th className="px-5 py-3 font-semibold">Email</th>
-              <th className="px-5 py-3 font-semibold">Depósitos</th>
+              <th className="px-5 py-3 font-semibold">Lista</th>
+              <th className="px-5 py-3 font-semibold">Dep.</th>
+              <th className="px-5 py-3 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -69,10 +62,21 @@ function ClientsTable({ clients }: { clients: BejermanClient[] }) {
                   {c.client_id}
                 </td>
                 <td className="px-5 py-3 font-medium text-[#0a2b3d]">
-                  {c.name || <span className="text-gray-400">—</span>}
+                  <Link
+                    href={`/admin/clientes/${encodeURIComponent(c.client_id)}`}
+                    className="hover:underline"
+                  >
+                    {c.name || <span className="text-gray-400">—</span>}
+                  </Link>
+                </td>
+                <td className="px-5 py-3 font-mono text-xs text-gray-700">
+                  {c.cuit || <span className="text-gray-400">—</span>}
                 </td>
                 <td className="px-5 py-3 text-gray-700">
                   {c.email || <span className="text-gray-400">—</span>}
+                </td>
+                <td className="px-5 py-3 font-mono text-xs text-gray-700">
+                  {c.priceListCode || <span className="text-gray-400">—</span>}
                 </td>
                 <td className="px-5 py-3 text-gray-600">
                   {c.warehouses?.length > 0 ? (
@@ -82,6 +86,17 @@ function ClientsTable({ clients }: { clients: BejermanClient[] }) {
                   ) : (
                     <span className="text-gray-400">—</span>
                   )}
+                </td>
+                <td className="px-5 py-3 text-right">
+                  <div className="flex items-center justify-end gap-3">
+                    <Link
+                      href={`/admin/clientes/${encodeURIComponent(c.client_id)}`}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Ver detalle
+                    </Link>
+                    <ImpersonateButton code={c.client_id} />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -95,39 +110,32 @@ function ClientsTable({ clients }: { clients: BejermanClient[] }) {
 function EmptyBox() {
   return (
     <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-      <p className="text-gray-700">
-        La API respondió OK pero devolvió 0 clientes.
-      </p>
+      <p className="text-gray-700">Sin clientes para mostrar.</p>
     </div>
   );
 }
 
-function ErrorBox({ message }: { message: string }) {
-  const missingCreds = message.includes("BEJERMAN_EMAIL");
+function MockBanner({ error }: { error?: string }) {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-      <h2 className="font-bold text-amber-900 mb-2">
-        No se pudo conectar con el ERP
-      </h2>
-      <pre className="text-xs text-amber-800 bg-amber-100 p-3 rounded overflow-x-auto whitespace-pre-wrap">
-        {message}
-      </pre>
-      {missingCreds && (
-        <div className="mt-4 text-sm text-amber-900 space-y-2">
-          <p className="font-semibold">Faltan credenciales en Vercel.</p>
-          <ol className="list-decimal list-inside space-y-1">
-            <li>
-              Vercel → Settings → Environment Variables (los 3 scopes:
-              Production, Preview, Development).
-            </li>
-            <li>
-              Agregar <code className="bg-amber-100 px-1">BEJERMAN_EMAIL</code>{" "}
-              y <code className="bg-amber-100 px-1">BEJERMAN_PASSWORD</code>.
-            </li>
-            <li>Redeploy (o esperar al próximo push).</li>
-          </ol>
-        </div>
-      )}
+    <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <p className="font-bold">Mostrando clientes de ejemplo</p>
+      <p className="mt-1">
+        La API del ERP aún no devuelve clientes reales — falta conectar{" "}
+        <code className="bg-amber-100 px-1 rounded">BEJERMAN_EMAIL</code> y{" "}
+        <code className="bg-amber-100 px-1 rounded">BEJERMAN_PASSWORD</code> en
+        Vercel, o el endpoint no tiene datos todavía. Cuando eso se active, esta
+        lista pasa a venir en vivo.
+      </p>
+      {error ? (
+        <details className="mt-2 text-xs">
+          <summary className="cursor-pointer hover:underline">
+            Detalle técnico del error
+          </summary>
+          <pre className="mt-1 bg-amber-100 p-2 rounded whitespace-pre-wrap">
+            {error}
+          </pre>
+        </details>
+      ) : null}
     </div>
   );
 }

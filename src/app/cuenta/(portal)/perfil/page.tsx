@@ -1,9 +1,10 @@
 import { PerfilForm } from "@/components/cuenta/PerfilForm";
-import { mockCurrentClient } from "@/data/mock-b2b";
+import { getCurrentClient } from "@/lib/b2b/current-client";
 
 export const metadata = { title: "Mi perfil" };
 
-export default function PerfilPage() {
+export default async function PerfilPage() {
+  const client = await getCurrentClient();
   return (
     <div className="max-w-3xl space-y-6">
       <div>
@@ -14,9 +15,9 @@ export default function PerfilPage() {
         </p>
       </div>
       <PerfilForm
-        initialEmail={mockCurrentClient.email}
-        clientName={mockCurrentClient.name}
-        clientCode={mockCurrentClient.client_id}
+        initialEmail={client.email}
+        clientName={client.name}
+        clientCode={client.client_id}
       />
     </div>
   );

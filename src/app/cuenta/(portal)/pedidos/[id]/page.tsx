@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPedido } from "@/lib/pedidos";
-import { mockCurrentClient, formatARS, formatDate } from "@/data/mock-b2b";
+import { formatARS, formatDate } from "@/data/mock-b2b";
+import { getCurrentClient } from "@/lib/b2b/current-client";
 import { PedidoStatusPill } from "@/components/cuenta/PedidoStatusPill";
 import { CancelarPedidoButton } from "@/components/cuenta/CancelarPedidoButton";
 
@@ -25,9 +26,8 @@ export default async function PedidoDetallePage({
   const pedido = await getPedido(id);
   if (!pedido) notFound();
 
-  /* Guardia mock: el pedido tiene que ser del cliente logueado. Cuando
-     Firebase esté vivo, comparar contra el token en vez del mock. */
-  if (pedido.clientId !== mockCurrentClient.client_id) {
+  const client = await getCurrentClient();
+  if (pedido.clientId !== client.client_id) {
     notFound();
   }
 
