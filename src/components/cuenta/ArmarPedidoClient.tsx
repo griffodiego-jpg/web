@@ -8,7 +8,7 @@ import {
   getMockCompraPrice,
   formatARS,
 } from "@/lib/mock-prices";
-import { TabPegarVarios } from "./armar-pedido/TabPegarVarios";
+import { TabGrillaCodigo } from "./armar-pedido/TabGrillaCodigo";
 import { TabSubirExcel } from "./armar-pedido/TabSubirExcel";
 import { TabIrAlCatalogo } from "./armar-pedido/TabIrAlCatalogo";
 
@@ -19,7 +19,7 @@ const TABS: { key: TabKey; label: string; description: string }[] = [
     key: "codigo",
     label: "Por código",
     description:
-      "Pegá una lista de códigos + cantidades de una sola vez y revisá el preview antes de agregar.",
+      "Grilla tipo Excel: cargá los códigos uno por fila y revisá la info del producto antes de agregar.",
   },
   {
     key: "excel",
@@ -73,7 +73,7 @@ export function ArmarPedidoClient() {
         </p>
 
         <div className="bg-white border border-gray-200 rounded-xl p-5">
-          {activeTab === "codigo" && <TabPegarVarios />}
+          {activeTab === "codigo" && <TabGrillaCodigo />}
           {activeTab === "excel" && <TabSubirExcel />}
           {activeTab === "catalogo" && <TabIrAlCatalogo />}
         </div>
