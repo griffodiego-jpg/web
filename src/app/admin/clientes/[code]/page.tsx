@@ -60,7 +60,15 @@ export default async function ClienteDetallePage({
               ) : null}
             </p>
           </div>
-          <ImpersonateButton code={client.client_id} label="Loguear como este cliente" />
+          <div className="flex flex-col items-end gap-2">
+            <ImpersonateButton code={client.client_id} label="Loguear como este cliente" />
+            <a
+              href={`/admin/clientes/${encodeURIComponent(client.client_id)}/debug-cuenta`}
+              className="text-xs font-semibold text-gray-500 hover:text-primary hover:underline"
+            >
+              🔍 Debug cuenta corriente
+            </a>
+          </div>
         </div>
       </div>
 

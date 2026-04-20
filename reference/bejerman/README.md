@@ -204,6 +204,39 @@ listamos con `ClientAccountStatus` y cada fila linkea a `GetComprobante`.
 
 ## Endpoint pendiente de agregar
 
+### 🔴 Pagos/Recibos faltantes en ClientAccountStatus (2026-04-21)
+
+`GET /ERP/ClientAccountStatus/{client_code}` **no está devolviendo los
+pagos del cliente**. Ejemplo real observado: cliente con 450
+movimientos devueltos: 413 FC + 37 NC + **0 RE**.
+
+Consecuencias:
+- El "Total haber" se calcula como la suma de `haber` de NCs. En el
+  caso observado dio **negativo** (-$647.947,84), lo que sugiere que
+  algunas NC llegan con `haber < 0` (también un bug).
+- El saldo mostrado al cliente es incorrecto — refleja casi la suma
+  bruta de facturas sin descontar pagos.
+
+**Qué pedirle al técnico**:
+
+1. Verificar que el endpoint `/ERP/ClientAccountStatus` incluya los
+   comprobantes de cobranza/recibos. Qué códigos `comp` usa para
+   pagos en Bejerman (RE, RB, COB, PA, CBR, etc.)?
+2. Verificar que el campo `haber` venga siempre en positivo para
+   NCs y RE (convención contable estándar: pagos+créditos en haber,
+   facturas+débitos en debe).
+
+**Workarounds del lado web** (ya implementados):
+- `src/lib/b2b/movement-classifier.ts`: matchea múltiples patrones
+  de `comp` para detectar pagos (`RE|RB|RC|COB|PA|CBR|CX|REC`).
+- Heurística extra: si `comp` no matchea y `haber > 0` con `debe == 0`,
+  lo clasificamos como pago igual.
+- La pantalla de cuenta corriente muestra un banner amarillo si hay
+  movimientos pero 0 pagos detectados.
+- `/admin/clientes/{code}/debug-cuenta` lista todos los `comp` únicos
+  que el ERP devuelve para ese cliente — sirve para identificar
+  códigos nuevos y extenderlos en `movement-classifier.ts`.
+
 ### Sucursal en comprobantes (opcional)
 
 `GET /ERP/ClientAccountStatus/{client_code}` devuelve los movimientos

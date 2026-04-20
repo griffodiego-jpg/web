@@ -6,6 +6,10 @@ import {
 } from "@/data/mock-b2b";
 import { getAccountStatusForClient } from "@/lib/b2b/account-status";
 import { getCurrentClient } from "@/lib/b2b/current-client";
+import {
+  classifyComp,
+  isLikelyPago,
+} from "@/lib/b2b/movement-classifier";
 import type { BejermanAccountStatusItem } from "@/types/bejerman";
 
 export const dynamic = "force-dynamic";
@@ -16,23 +20,20 @@ const COMP_LABEL: Record<string, string> = {
   ND: "Nota de débito",
   NC: "Nota de crédito",
   RE: "Recibo",
+  RB: "Recibo",
+  COB: "Cobranza",
+  PA: "Pago",
 };
 
 type Filtro = "todos" | "FC" | "NC" | "RE";
 
-const FILTROS: Array<{ key: Filtro; label: string; match?: string | string[] }> = [
-  { key: "todos", label: "Todos los movimientos" },
-  { key: "FC", label: "Facturas", match: ["FC", "ND"] },
-  { key: "NC", label: "Notas de crédito", match: "NC" },
-  { key: "RE", label: "Recibos", match: "RE" },
-];
-
 function matchesFilter(item: BejermanAccountStatusItem, filtro: Filtro): boolean {
-  const f = FILTROS.find((x) => x.key === filtro);
-  if (!f || f.key === "todos" || !f.match) return true;
-  return Array.isArray(f.match)
-    ? f.match.includes(item.comp)
-    : item.comp === f.match;
+  if (filtro === "todos") return true;
+  const cat = classifyComp(item.comp);
+  if (filtro === "FC") return cat === "factura" || cat === "nota_debito";
+  if (filtro === "NC") return cat === "nota_credito";
+  if (filtro === "RE") return isLikelyPago(item);
+  return true;
 }
 
 export default async function CuentaCorrientePage({
@@ -120,9 +121,40 @@ export default async function CuentaCorrientePage({
             </div>
           </div>
 
+          {/* Alerta si no hay pagos registrados — probable gap del ERP */}
+          {accountItems.length > 0 &&
+            accountItems.filter(isLikelyPago).length === 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-bold">
+                  No vemos pagos/recibos en tus movimientos
+                </p>
+                <p className="mt-1">
+                  El ERP nos devolvió {accountItems.length} movimientos pero
+                  ninguno es un pago. Es probable que el middleware no esté
+                  incluyendo los recibos. Ya estamos trabajando con el técnico
+                  del ERP para resolverlo — mientras tanto, si necesitás
+                  confirmar un pago puntual escribinos a{" "}
+                  <a
+                    href="mailto:ventas@griffo.com.ar"
+                    className="underline font-semibold"
+                  >
+                    ventas@griffo.com.ar
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
+
           {/* Filtro por tipo */}
           <nav className="flex gap-1 border-b border-gray-200 overflow-x-auto">
-            {FILTROS.map((f) => {
+            {(
+              [
+                { key: "todos", label: "Todos los movimientos" },
+                { key: "FC", label: "Facturas" },
+                { key: "NC", label: "Notas de crédito" },
+                { key: "RE", label: "Pagos / Recibos" },
+              ] as Array<{ key: Filtro; label: string }>
+            ).map((f) => {
               const count = countFor(f.key);
               const isActive = active === f.key;
               const href =
