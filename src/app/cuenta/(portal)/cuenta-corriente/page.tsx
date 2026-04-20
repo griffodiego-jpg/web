@@ -1,9 +1,12 @@
+import Link from "next/link";
 import {
   computeSaldo,
   formatARS,
   formatDate,
   mockAccountStatus,
+  mockCurrentClient,
 } from "@/data/mock-b2b";
+import type { BejermanAccountStatusItem } from "@/types/bejerman";
 
 export const metadata = { title: "Cuenta corriente" };
 
@@ -14,12 +17,43 @@ const COMP_LABEL: Record<string, string> = {
   RE: "Recibo",
 };
 
-export default function CuentaCorrientePage() {
+type Filtro = "todos" | "FC" | "NC" | "RE";
+
+const FILTROS: Array<{ key: Filtro; label: string; match?: string | string[] }> = [
+  { key: "todos", label: "Todos los movimientos" },
+  { key: "FC", label: "Facturas", match: ["FC", "ND"] },
+  { key: "NC", label: "Notas de crédito", match: "NC" },
+  { key: "RE", label: "Recibos", match: "RE" },
+];
+
+function matchesFilter(item: BejermanAccountStatusItem, filtro: Filtro): boolean {
+  const f = FILTROS.find((x) => x.key === filtro);
+  if (!f || f.key === "todos" || !f.match) return true;
+  return Array.isArray(f.match)
+    ? f.match.includes(item.comp)
+    : item.comp === f.match;
+}
+
+function countFor(filtro: Filtro): number {
+  return mockAccountStatus.filter((x) => matchesFilter(x, filtro)).length;
+}
+
+export default async function CuentaCorrientePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filtro?: string }>;
+}) {
+  const { filtro: filtroParam } = await searchParams;
+  const active: Filtro = (["todos", "FC", "NC", "RE"].includes(filtroParam ?? "")
+    ? filtroParam
+    : "todos") as Filtro;
+
+  const items = mockAccountStatus.filter((x) => matchesFilter(x, active));
   const saldo = computeSaldo(mockAccountStatus);
   const debe = mockAccountStatus.reduce((a, x) => a + x.debe, 0);
   const haber = mockAccountStatus.reduce((a, x) => a + x.haber, 0);
 
-  // Saldo running para la tabla (más viejo → más nuevo).
+  // Saldo running sobre TODA la cuenta (no sobre el filtro).
   const sorted = [...mockAccountStatus].sort(
     (a, b) => new Date(a.emision).getTime() - new Date(b.emision).getTime(),
   );
@@ -28,15 +62,17 @@ export default function CuentaCorrientePage() {
     running += item.debe - item.haber;
     return { ...item, saldo: running };
   });
-  // Mostramos más nuevo primero.
-  withRunning.reverse();
+  const visible = withRunning
+    .filter((x) => matchesFilter(x, active))
+    .reverse();
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-black text-[#0a2b3d]">Cuenta corriente</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Movimientos de tu cuenta (más recientes arriba).
+          Movimientos de tu cuenta. Bajás el PDF de cualquier factura o
+          nota desde la misma fila.
         </p>
       </div>
 
@@ -75,13 +111,36 @@ export default function CuentaCorrientePage() {
         </div>
       </div>
 
+      {/* Filtro por tipo */}
+      <nav className="flex gap-1 border-b border-gray-200 overflow-x-auto">
+        {FILTROS.map((f) => {
+          const count = countFor(f.key);
+          const isActive = active === f.key;
+          const href =
+            f.key === "todos"
+              ? "/cuenta/cuenta-corriente"
+              : `/cuenta/cuenta-corriente?filtro=${f.key}`;
+          return (
+            <Link
+              key={f.key}
+              href={href}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 whitespace-nowrap transition ${
+                isActive
+                  ? "border-primary text-[#0a2b3d] font-black"
+                  : "border-transparent text-gray-600 hover:text-[#0a2b3d]"
+              }`}
+            >
+              {f.label}{" "}
+              <span className="text-xs text-gray-400 font-normal">
+                ({count})
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* Movimientos */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200">
-          <p className="text-sm font-semibold text-[#0a2b3d]">
-            {withRunning.length} movimientos
-          </p>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
@@ -93,11 +152,13 @@ export default function CuentaCorrientePage() {
                 <th className="px-4 py-3 font-semibold text-right">Debe</th>
                 <th className="px-4 py-3 font-semibold text-right">Haber</th>
                 <th className="px-4 py-3 font-semibold text-right">Saldo</th>
+                <th className="px-4 py-3 font-semibold text-right">PDF</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {withRunning.map((r, idx) => {
+              {visible.map((r, idx) => {
                 const numero = `${r.compLetra}${r.puntoVenta}-${r.compNro}`;
+                const puedeDescargar = r.hasPdf !== false;
                 return (
                   <tr key={`${numero}-${idx}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
@@ -107,7 +168,7 @@ export default function CuentaCorrientePage() {
                       {COMP_LABEL[r.comp] ?? r.comp}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-[#0a2b3d]">
-                      {numero}
+                      {r.comp} {numero}
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                       {r.vencimiento ? formatDate(r.vencimiento) : "—"}
@@ -121,6 +182,31 @@ export default function CuentaCorrientePage() {
                     <td className="px-4 py-3 text-right font-semibold text-[#0a2b3d] whitespace-nowrap">
                       {formatARS(r.saldo)}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      {puedeDescargar ? (
+                        <a
+                          href={buildDownloadUrl(r, mockCurrentClient.client_id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Descargar PDF"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-primary text-primary hover:bg-primary hover:text-white font-bold text-[10px] transition"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                          PDF
+                        </a>
+                      ) : (
+                        <span
+                          className="inline-block text-[10px] text-gray-400"
+                          title="Este comprobante no tiene PDF descargable"
+                        >
+                          —
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -129,13 +215,31 @@ export default function CuentaCorrientePage() {
         </div>
       </div>
 
-      <div className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500">
         🚧 Los saldos reales se van a traer de Bejerman vía{" "}
         <code className="px-1 py-0.5 bg-gray-100 rounded">
           GET /ERP/ClientAccountStatus/{"{client_code}"}
         </code>
+        . El botón PDF usa{" "}
+        <code className="px-1 py-0.5 bg-gray-100 rounded">
+          GET /ERP/GetComprobante
+        </code>
         .
-      </div>
+      </p>
     </div>
   );
+}
+
+function buildDownloadUrl(
+  r: BejermanAccountStatusItem,
+  clientId: string,
+): string {
+  const q = new URLSearchParams({
+    Comp: r.comp,
+    PuntoVenta: r.puntoVenta,
+    CompNro: r.compNro,
+    CodCliente: clientId,
+  });
+  if (r.compLetra) q.set("CompLetra", r.compLetra);
+  return `/api/b2b/comprobante?${q.toString()}`;
 }

@@ -75,6 +75,9 @@ export const mockAccountStatus: BejermanAccountStatusItem[] = [
     vencimiento: "2026-03-28T00:00:00.000Z",
     debe: 0,
     haber: 200_000.0,
+    // Este recibo es interno y no tiene PDF — sirve para probar el
+    // caso de "row sin botón de descarga".
+    hasPdf: false,
   },
   {
     cliCod: "000042",
@@ -123,6 +126,7 @@ export const mockAccountStatus: BejermanAccountStatusItem[] = [
     vencimiento: "2026-02-05T00:00:00.000Z",
     debe: 0,
     haber: 412_000.0,
+    hasPdf: false,
   },
 ];
 

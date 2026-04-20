@@ -69,6 +69,13 @@ export interface BejermanAccountStatusItem {
   vencimiento: string;
   debe: number;
   haber: number;
+  /**
+   * Indica si el comprobante tiene PDF descargable. Opcional: cuando
+   * el middleware no lo envía, asumimos que sí y el botón de descarga
+   * se muestra (falla gracefully si 404). Cuando el técnico lo agregue,
+   * filtramos el botón correctamente por row.
+   */
+  hasPdf?: boolean;
 }
 
 export interface BejermanComprobanteQuery {
