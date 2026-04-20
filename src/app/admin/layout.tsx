@@ -49,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/pedidos", label: "Pedidos", icon: "inbox" },
       { href: "/admin/clientes", label: "Clientes", icon: "users" },
+      { href: "/admin/listas-precios", label: "Listas de precios", icon: "download" },
     ],
   },
 ];
