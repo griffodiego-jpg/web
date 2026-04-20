@@ -185,7 +185,6 @@ async function checkResend(): Promise<CheckResult> {
 }
 
 async function checkBejerman(): Promise<CheckResult> {
-  const hasUrl = !!process.env.BEJERMAN_API_URL;
   const hasCreds = !!(process.env.BEJERMAN_EMAIL && process.env.BEJERMAN_PASSWORD);
   if (!hasCreds) {
     return {
@@ -212,13 +211,9 @@ async function checkBejerman(): Promise<CheckResult> {
     });
     clearTimeout(timeout);
     if (res.ok) {
-      return {
-        status: hasUrl ? "ok" : "warn",
-        message: hasUrl ? "Conectado" : "Conectado (URL default)",
-        detail: hasUrl
-          ? undefined
-          : "Usando URL default — setear BEJERMAN_API_URL explícitamente en Vercel",
-      };
+      // La URL default ya apunta al server productivo del técnico, así
+      // que no warneamos cuando no hay override explícito.
+      return { status: "ok", message: "Conectado" };
     }
     if (res.status === 401) {
       return {
