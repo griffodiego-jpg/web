@@ -15,29 +15,40 @@
 
 1. **Stack**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + pnpm.
    Deploy automático en Vercel cada push a la rama de desarrollo.
-2. **Rama de desarrollo actual**: `claude/rebuild-web-platform-WwmFb` (o la
-   que esté activa — ver `CLAUDE.md`). **Nunca** se pushea directo a `main`.
-3. **Staging**: `https://web-omega-wheat-25.vercel.app` (Vercel).
+2. **Rama de desarrollo actual**: `claude/new-website-2026-g1UGd` — **única**
+   rama de trabajo, todas las sesiones de Claude pushean acá. Nunca se
+   pushea directo a `main`.
+3. **Staging Preview** (lo que se testea): `https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`
 4. **Producción futura**: `https://www.griffo.com.ar` (migración pendiente,
    ver `MIGRATION.md`). El dominio está en NIC Argentina, mail en Zoho.
 5. **Estructura del código**:
    - `src/app/` → páginas (App Router). Cada carpeta = una ruta.
-   - `src/app/api/` → endpoints (forms, login admin).
-   - `src/components/` → componentes reusables (Header, Footer, forms, etc).
-   - `src/lib/` → config + helpers (site-config, assets, resend, site-url).
-   - `src/data/` → datos estáticos (distribuidores, productos, descargas).
-   - `public/` → assets estáticos (imágenes, videos, logo, fonts si hubiera).
+   - `src/app/api/` → endpoints (forms, pedidos, admin, catálogo, B2B).
+   - `src/components/` → componentes reusables.
+   - `src/lib/` → config + helpers + clientes HTTP (SpecParts, Bejerman).
+   - `src/data/` → datos estáticos (distribuidores, productos, mocks B2B).
+   - `public/` → assets estáticos.
 6. **Identidad visual**: paleta Pantone del cliente, tipografía Montserrat
-   (sustituto libre de Gotham que es paga). Ver `globals.css` y `CLAUDE.md`.
+   (sustituto libre de Gotham). Ver `globals.css` y `CLAUDE.md`.
 7. **Servicios externos conectados**:
-   - **Resend** → envío de emails (forms de contacto, garantía, newsletter).
-   - **Google Analytics 4** → `G-FR8KN76LQ2` cargado en `layout.tsx`.
-   - **Vercel KV / Upstash Redis** → creado por la cliente, todavía sin CRUD.
-8. **Admin panel** (`/admin`): login con contraseña (`ADMIN_PASSWORD`).
-   Dashboard + tabla distribuidores + editor links productos. CRUD pendiente.
-9. **SEO**: sitemap y robots dinámicos, JSON-LD estructurado (Organization,
-   WebSite, LocalBusiness, Manufacturer, Product, Breadcrumb), canonicals
-   y OpenGraph controlados por `NEXT_PUBLIC_SITE_URL`.
+   - **Resend** → emails (contacto, garantía, newsletter, pedidos B2B).
+   - **Google Analytics 4** → `G-FR8KN76LQ2` en `layout.tsx`.
+   - **Upstash Redis** → sesiones admin, leads, pedidos B2B,
+     configuración de notificaciones, overrides de descargas.
+   - **Vercel Blob** → archivos grandes subidos desde `/admin/descargas`.
+   - **SpecParts API** → catálogo público (~370 productos Griffo).
+   - **Bejerman (middleware ERP Griffo)** → escrita por técnico propio
+     de Griffo. Expuesta para el portal B2B. URL:
+     `http://intranet.remotogriffo.com.ar:86/api`. Credenciales reales
+     pendientes (las del PDF devuelven 401).
+8. **Admin panel** (`/admin`): sesiones reales en Redis, revocables.
+   Rate limit en login, timingSafeEqual para password. Secciones:
+   Dashboard, Banners, Distribuidores, Descargas, Productos, Cobertura,
+   Cache de imágenes, Novedades, Leads, Clientes B2B, Pedidos B2B.
+9. **Portal B2B** (`/cuenta/*`): portal para distribuidores mayoristas
+   (~80 clientes) en **modo demo** hoy — auth mock + datos mock.
+   Cuando lleguen credenciales ERP + Firebase Auth, swap en un punto.
+   Ver sección 5 de este doc para detalle.
 10. **Flujo de cambios**: la cliente sube archivos por GitHub web UI →
     Vercel auto-deploya → staging listo en 1-2 min.
 
@@ -111,6 +122,46 @@
 | Cards del home | `public/products/*` |
 | Paths de assets por página | `src/lib/assets.ts` |
 
+### Portal B2B (`/cuenta/*`) y pedidos
+
+| Quiero cambiar… | Archivo |
+|---|---|
+| Estructura de las 7 tabs del portal | `src/components/cuenta/PortalNav.tsx` |
+| Layout del portal (encabezado, "Modo demo", logout) | `src/app/cuenta/(portal)/layout.tsx` |
+| Pantalla "Resumen" (dashboard con KPIs) | `src/app/cuenta/(portal)/page.tsx` |
+| Pantalla "Armar pedido" (3 tabs) | `src/app/cuenta/(portal)/armar-pedido/page.tsx` + `src/components/cuenta/ArmarPedidoClient.tsx` |
+| Grilla tipo Excel (tab "Por código") | `src/components/cuenta/armar-pedido/TabGrillaCodigo.tsx` |
+| Subida de Excel (tab "Subir Excel") | `src/components/cuenta/armar-pedido/TabSubirExcel.tsx` |
+| Panel "Ir al buscador" (tab del catálogo) | `src/components/cuenta/armar-pedido/TabIrAlCatalogo.tsx` |
+| Preview antes de agregar al carrito | `src/components/cuenta/armar-pedido/PedidoParsePreview.tsx` |
+| Mis pedidos (listado) | `src/app/cuenta/(portal)/pedidos/page.tsx` |
+| Detalle de un pedido | `src/app/cuenta/(portal)/pedidos/[id]/page.tsx` |
+| Botón cancelar del cliente | `src/components/cuenta/CancelarPedidoButton.tsx` |
+| Formulario del perfil (email, password, margen, PVP/compra) | `src/components/cuenta/PerfilForm.tsx` |
+| Hook preferencias B2B (margen + modo precio) | `src/lib/b2b-preferences.ts` |
+| Hook carrito persistente | `src/lib/cart.ts` |
+| Hook sesión mock (luego Firebase) | `src/lib/mock-session.ts` |
+| Mocks del portal (cliente, pedidos, cuenta corriente) | `src/data/mock-b2b.ts` |
+| Admin: lista de pedidos B2B | `src/app/admin/pedidos/page.tsx` |
+| Admin: detalle pedido + acciones | `src/app/admin/pedidos/[id]/page.tsx` + `src/components/admin/AdminPedidoActions.tsx` |
+| Admin: fila expandible con acciones inline | `src/components/admin/AdminPedidoRow.tsx` |
+| Admin: email de notificación de pedidos nuevos | `src/components/admin/PedidosNotifEmailBox.tsx` (UI) + `src/lib/b2b-config.ts` (storage) |
+| Storage de pedidos (Redis) | `src/lib/pedidos.ts` |
+| Tipos de pedido (estados, ítems, factura) | `src/types/pedido.ts` |
+| Templates de email transaccional | `src/lib/emails/pedidos.ts` |
+| Generador del Excel modelo | `src/lib/excel/pedido-modelo.ts` |
+| Parser de Excel/CSV subido | `src/lib/excel/parse-pedido.ts` |
+
+### ERP (Bejerman) y catálogo (SpecParts)
+
+| Quiero cambiar… | Archivo |
+|---|---|
+| Cliente HTTP de SpecParts (catálogo público) | `src/lib/api/specparts.ts` |
+| Cliente HTTP del ERP Griffo (Bejerman) | `src/lib/api/bejerman.ts` |
+| Tipos del ERP (cliente, precios, pedidos, factura) | `src/types/bejerman.ts` |
+| Docs del ERP (endpoints disponibles + pendientes) | `reference/bejerman/README.md` + `Documentación API ERP Griffo v3.pdf` |
+| Admin: listado de clientes del ERP | `src/app/admin/clientes/page.tsx` |
+
 ---
 
 ## 2. Flujo de un request
@@ -167,9 +218,72 @@ src/data/distribuidores.ts  ─────────────────�
 ### Flujo especial: admin
 
 ```
-/admin/login → POST /api/admin/login (valida ADMIN_PASSWORD)
-            → cookie de sesión → /admin (dashboard)
-            → /admin/distribuidores, /admin/productos, /admin/banners
+/admin/login → POST /api/admin/login (valida password, rate-limit por IP)
+            → crea sesión en Redis → cookie httpOnly → /admin (dashboard)
+            → proxy.ts valida la cookie contra Redis en cada request
+```
+
+### Flujo especial: pedido B2B (end-to-end)
+
+```
+1. CLIENTE arma pedido
+   /catalogo (agrega al carrito)         ╮
+   /cuenta/armar-pedido (grilla / Excel) ├─→ localStorage "griffo:cart"
+   ╰─────────────────────────────────────╯
+             │
+             ▼
+   /carrito → "Confirmar pedido" → POST /api/b2b/pedidos
+                                   ├─→ Redis: pedido:<id> + zsets
+                                   ├─→ Email al cliente (Resend)
+                                   └─→ Email a ventas@griffo.com.ar
+                                       (configurable en /admin/pedidos)
+             │
+             ▼
+   ESTADO: procesando (Pendiente de carga)
+   El cliente puede CANCELAR mientras esté en este estado.
+
+2. OPERADOR carga pedido en Bejerman
+   /admin/pedidos → filtra "Pendientes de carga"
+                 → expande la fila
+                 → descarga Excel (o CSV) del pedido
+                 → lo tipea / importa en Bejerman
+                 → Bejerman devuelve número de pedido (ej: PED-23900)
+                 → operador pega el número + fecha despacho
+                 → POST /api/admin/pedidos/{id}/marcar-cargado
+                    ├─→ actualiza pedido en Redis
+                    └─→ Email al cliente (Resend)
+             │
+             ▼
+   ESTADO: en_preparacion (En preparación)
+
+3. OPERADOR factura en Bejerman
+   /admin/pedidos → detalle del pedido en preparación
+                 → marcar como entregado con datos de FC
+                 → POST /api/admin/pedidos/{id}/marcar-entregado
+                    ├─→ guarda la factura en el pedido
+                    └─→ Email al cliente con ref a factura
+             │
+             ▼
+   ESTADO: entregado (Entregado)
+
+[🔵 FUTURO cuando técnico extienda la API]
+   Cron/polling cada 15min → GET /ERP/orders/{id}
+                          → detecta invoice != null
+                          → auto-marcar entregado + mail al cliente
+```
+
+### Flujo especial: modo de precios del cliente B2B
+
+```
+/cuenta/perfil → toggle [Precio de compra | PVP]
+             → si PVP: input de margen %
+             → guarda en localStorage "griffo:b2b:prefs"
+                    │
+                    ▼
+ProductCard / CartContent / Detalle de pedido usan useB2BPreferences()
+   si prefs.priceMode === "compra" → muestra precio neto
+   si prefs.priceMode === "pvp"    → muestra compra × (1 + margen/100)
+Siempre con "+ IVA" al final.
 ```
 
 ---
@@ -189,6 +303,12 @@ src/data/distribuidores.ts  ─────────────────�
 | El logo se ve mal / desalineado | Ver `src/components/Logo.tsx` — primero intenta `/header-icon.svg`, si falla cae al SVG reconstruido |
 | Links rotos después de migrar | Agregar redirect 301 en `next.config.ts` |
 | Un video pesa mucho y tarda en cargar | Comprimir con ffmpeg/HandBrake antes de subir. Ver sección "Pendientes" en `CLAUDE.md` |
+| `/admin/clientes` tira `401 Credenciales inválidas` | Las env vars `BEJERMAN_EMAIL` / `BEJERMAN_PASSWORD` no coinciden con un usuario real de la API. Pedirle al técnico de Griffo credenciales válidas |
+| `/cuenta/pedidos` no muestra los pedidos que carga directo en Bejerman | El endpoint `GET /ERP/clientes/{code}/pedidos` no existe todavía — hay que pedírselo al técnico. Mientras, solo se ven los armados desde la web. Ver `reference/bejerman/README.md` |
+| El carrito se vacía al cambiar de dispositivo | Es esperado — hoy vive en `localStorage`. Cuando se conecte auth real y Firestore/Redis por user, persiste entre dispositivos |
+| Un pedido quedó en "En preparación" pero ya se facturó | Hoy no se detecta automáticamente. El operador tiene que marcar entregado manualmente desde `/admin/pedidos`. Cuando el técnico extienda `GET /ERP/orders/{id}` con el campo `invoice`, se hace polling |
+| El Excel modelo demora en bajar | Genera ~370 filas con metadata en vivo desde SpecParts. Primera descarga del día puede tardar 1-2s; después Vercel lo cachea |
+| Un código del Excel subido no se agrega | El parser lo marca como "inválido" con el motivo (ej: código inexistente, cantidad 0). Revisar el preview antes de confirmar |
 
 ---
 
@@ -223,51 +343,125 @@ src/data/distribuidores.ts  ─────────────────�
 - **Sin MX/SPF/DKIM/DMARC en la migración DNS**: el mail es Zoho. Al cambiar
   DNS para apuntar a Vercel, solo se tocan A/CNAME. **No tocar los registros
   de mail** o se corta el email corporativo.
+- **Los pedidos NO se cargan automáticamente en Bejerman**: la cliente pidió
+  control humano. El cliente confirma → estado "procesando". El operador
+  de Griffo descarga Excel, carga en Bejerman a mano, y recién ahí marca el
+  pedido como "en preparación" con el nº devuelto por Bejerman. Evita
+  pedidos duplicados, errores de precios, clientes con saldo vencido.
+- **Estado inicial del pedido: "procesando" no "pendiente"**: la cliente
+  quería el label "Pendiente de carga" — usamos ese string en el UI pero
+  el ID interno sigue siendo `procesando` para no migrar pedidos viejos en
+  Redis.
+- **Cancelación solo mientras "procesando"**: una vez que Griffo lo cargó
+  al ERP (ya invirtió trabajo), el cliente no puede cancelar desde la web.
+  El admin sí puede seguir cancelando.
+- **Precios son mock hasta que llegue `POST /ERP/prices`**: `getMockCompraPrice(code)`
+  genera un precio determinístico por hash del código (entre $8k y $180k,
+  redondeado a $100). Cuando haya precios reales, `ProductPrice` acepta
+  `compraPrice` como prop y el mock se ignora.
+- **Firebase nuevo, no reusar `griffo-app`**: decisión de la cliente —
+  el proyecto Firebase de la app mobile (mecánicos) queda separado del
+  portal B2B para que no se mezclen pools de usuarios.
+- **Alta de usuarios B2B = autoservicio contra el ERP**: cuando el cliente
+  quiera registrarse, validamos su email/CUIT contra `GET /ERP/Clients`
+  para matchearlo con su `client_id` de Bejerman. Sin match, se rechaza.
+- **Emails transaccionales toleran fallo de Resend**: si la API tira
+  error, el pedido ya quedó en Redis y se puede ver desde admin. Los mails
+  se loguean pero no bloquean la creación del pedido.
+- **Docs API del ERP en `reference/bejerman/`**: la API es de Griffo (la
+  hizo un técnico propio, NO Promotive que iba a ser el proveedor original).
+  Cualquier cambio al schema se negocia con el técnico + se actualiza el
+  PDF v3 + el README.
 
 ---
 
-## 5. TODOs con contexto (qué falta, qué bloquea, qué input hace falta)
+## 5. Portal B2B y pedidos — estado actual
 
-1. **🚨 Login / cuenta corriente / descarga de facturas** *(ambiguo)*
-   La cliente mencionó esto en la primera conversación pero el sitio público
-   no lo tiene. No está claro si vive en `griffo.specparts.shop` (catálogo
-   externo, fuera de alcance) o si es feature nueva. **Preguntar antes de
-   empezar a construir.**
+### ✅ Listo (modo demo con datos mock)
 
-2. **Conectar forms a email real** *(parcial)*
-   Resend ya está integrado. Falta **verificar el dominio `griffo.com.ar`
-   en Resend** para que el sender sea `@griffo.com.ar` en vez de
-   `onboarding@resend.dev`. Requiere acceso a DNS (NIC Argentina).
+- Portal `/cuenta/*` con 7 tabs (Resumen, Armar pedido, Mis pedidos,
+  Facturas, Cuenta corriente, Lista de precios, Mi perfil).
+- Login mock en `/cuenta/login` (setea sesión en `localStorage`).
+- CTA verde en el header con nombre del cliente cuando está logueado.
+- "Armar pedido" con 3 tabs: grilla Excel, subir archivo, link al catálogo.
+- Excel modelo autogenerado con todos los códigos + autofilter.
+- Parser de Excel/CSV + textarea libre con preview de válidos/inválidos.
+- Carrito persistente en `localStorage` (accesible desde catálogo +
+  armar-pedido + cualquier página).
+- Creación de pedido → estado "procesando" + mails al cliente y al
+  operador (ventas@griffo.com.ar, editable desde `/admin/pedidos`).
+- Cancelación por el cliente mientras está en "procesando".
+- Admin: listado de pedidos, fila expandible con Excel + acciones inline,
+  marcar cargado (con nº Bejerman + fecha), marcar entregado (con nº FC),
+  cancelar con motivo. Mails automáticos en cada cambio de estado.
+- `/admin/clientes` lista clientes del ERP cuando hay credenciales.
+- Pedidos locales + pedidos del ERP se mergen en `/cuenta/pedidos`
+  (cuando el endpoint del ERP exista).
 
-3. **Optimizar imágenes pesadas**
-   Varios archivos de empresa pesan 2-9 MB. Script sharp (mozjpeg q82 + png
-   palette + resize 1600px max) ya bajó ~11 MB. Pendiente: nuevas subidas
-   pasarlas por el mismo script. Pedirle a Claude que lo corra.
+### 🟡 Pendiente del técnico del ERP Griffo
 
-4. **Comprimir `comercio-exterior.mp4`** (9 MB)
-   Necesita ffmpeg o HandBrake. La cliente puede hacerlo local y subirlo.
+Ver `reference/bejerman/README.md` — lista completa con formato técnico.
+Resumen:
 
-5. **Páginas stub esperando HTML del sitio viejo**
-   - `/garantia`
-   - `/catalogo/download` (Descargas)
-   - `/novedades/*`
-   Están con `ComingSoon`. Cuando la cliente pase el HTML, reemplazar.
+1. **Credenciales reales** — las del PDF devuelven 401.
+2. **HTTPS** antes de producción (hoy es `http://...`).
+3. **Extender `GET /ERP/orders/{id}`** con `estimatedDispatchDate`,
+   `dispatchedAt`, `invoice`. Habilita auto-detección de facturación.
+4. **Nuevo `GET /ERP/clientes/{code}/pedidos`** para que el cliente vea
+   los pedidos que Griffo cargó directo en Bejerman.
+5. **Importación masiva de Excel en Bejerman** (confirmar si existe).
+6. **Mapeo de códigos Bejerman ↔ SpecParts** (confirmar si son idénticos).
 
-6. **Desarrollo a medida — assets pendientes**
-   21 archivos en `public/images/desarrollo-a-medida/`, `public/videos/` y
-   `public/clientes/`. Mientras no estén, placeholders.
+### 🟡 Pendiente de la cliente
 
-7. **Revisar distribuidores con `Provincia para filtro = "Distribuidores"`**
-   7 filas se reasignaron heurísticamente a Tucumán. La cliente debería
-   confirmar.
+- Crear **proyecto Firebase nuevo** (decisión: no reusar `griffo-app`).
+  Cargar las env vars `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_CREDENTIALS`.
+- Cargar `BEJERMAN_EMAIL` + `BEJERMAN_PASSWORD` en Vercel cuando las
+  reciba del técnico.
+- Verificar `griffo.com.ar` en Resend para enviar desde
+  `@griffo.com.ar` (sino todos los mails salen de `onboarding@resend.dev`).
 
-8. **Admin CRUD real**
-   Vercel KV / Upstash Redis ya está creado por la cliente. Falta conectar
-   los endpoints del admin para que el CRUD persista en vez de ser solo UI.
+### 🟢 Swap del día que todo llegue
 
-9. **Mapa de redirects 301 para la migración**
-   Usar Google Search Console (la cliente tiene acceso) para inventariar
-   URLs del sitio viejo antes del switch y cargarlas en `next.config.ts`.
+Cuando haya creds + Firebase:
+1. `useMockSession` → Firebase Auth (misma API pública del hook).
+2. `mock-b2b.ts` → llamadas reales a `src/lib/api/bejerman.ts` en
+   cada server component del portal.
+3. Mock prices → resultados de `getPrices({clientId, warehouseId, items})`.
+4. Carrito localStorage → Redis por user.
+5. Botón "Confirmar pedido" → también dispara `createOrder(...)` (si la
+   cliente quiere también cargarlo al ERP automáticamente).
+6. Botón PDF de `/cuenta/facturas` → `getComprobantePdf(...)` streameado.
+
+---
+
+## 6. Otros TODOs
+
+1. **Conectar dominio en Resend**
+   Hoy el sender es `onboarding@resend.dev` (sandbox). Al verificar
+   `griffo.com.ar`, cada form puede mandar desde `@griffo.com.ar`.
+   Requiere agregar DNS TXT de verificación en NIC Argentina.
+
+2. **Optimizar imágenes pesadas**
+   Script sharp ya bajó ~11 MB. Nuevas subidas pasarlas por el mismo
+   script.
+
+3. **Comprimir `comercio-exterior.mp4`** (9 MB)
+   ffmpeg o HandBrake.
+
+4. **Desarrollo a medida — assets pendientes**
+   Archivos en `public/images/desarrollo-a-medida/`, `public/videos/`
+   y `public/clientes/`.
+
+5. **Revisar distribuidores con `Provincia para filtro = "Distribuidores"`**
+   7 filas se reasignaron heurísticamente a Tucumán.
+
+6. **Mapa de redirects 301 para la migración**
+   Usar Google Search Console para inventariar URLs del sitio viejo.
+
+7. **Analytics de búsquedas con 0 resultados** (catálogo)
+   Loguear queries que no matchean nada para detectar productos que
+   faltan o códigos que la gente tipea mal.
 
 ---
 
