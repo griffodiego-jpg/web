@@ -57,7 +57,7 @@ export function ProductCard({ product }: ProductCardProps) {
         aria-label={`${product.code} — ${product.product}`}
         className="group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-gray-100 bg-white transition hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
+        <div className="relative aspect-[3/2] w-full overflow-hidden bg-gray-50">
           {featuredSlug ? (
             <span className="absolute left-2 top-2 z-10 rounded bg-primary px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm">
               Destacado
@@ -69,7 +69,7 @@ export function ProductCard({ product }: ProductCardProps) {
               alt={product.description || product.product}
               fill
               sizes="(min-width: 1536px) 18vw, (min-width: 1280px) 22vw, (min-width: 1024px) 28vw, (min-width: 640px) 33vw, 50vw"
-              className="object-contain p-3 transition group-hover:scale-105"
+              className="object-contain p-2 transition group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
