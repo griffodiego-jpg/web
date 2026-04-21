@@ -38,7 +38,7 @@ export function BancoImagenesAdmin({
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const publicUrl = `${siteUrl}/api/descargas/banco-imagenes.zip`;
+  const publicUrl = `${siteUrl}/api/descargas/banco-imagenes`;
 
   // Sugerir regenerar si aumentaron los productos con fotos desde la
   // última vez. Un gap > 3 se considera relevante.
