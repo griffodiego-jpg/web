@@ -354,12 +354,14 @@ function PresentacionBox({ presentacion }: { presentacion: Presentacion }) {
               </h3>
               {modelo.celdas.map((celda, i) => (
                 <div key={i}>
-                  <AssetImage
-                    src={celda.image}
-                    alt={`${modelo.nombre}`}
-                    bare
-                    className="max-w-[250px] max-h-[180px] w-full h-auto object-contain mx-auto"
-                  />
+                  <Lightbox src={celda.image} alt={modelo.nombre}>
+                    <AssetImage
+                      src={celda.image}
+                      alt={`${modelo.nombre}`}
+                      bare
+                      className="max-w-[250px] max-h-[180px] w-full h-auto object-contain mx-auto"
+                    />
+                  </Lightbox>
                   <p className="mt-2 text-sm text-gray-600">{celda.label}</p>
                 </div>
               ))}
@@ -385,12 +387,17 @@ function PresentacionBox({ presentacion }: { presentacion: Presentacion }) {
                     <span className="block mb-1 text-primary text-xs font-semibold">
                       {celda.label}
                     </span>
-                    <AssetImage
+                    <Lightbox
                       src={celda.image}
                       alt={`${modelo.nombre} — ${celda.label}`}
-                      bare
-                      className="w-full h-full max-w-[150px] max-h-[150px] object-contain aspect-square mx-auto"
-                    />
+                    >
+                      <AssetImage
+                        src={celda.image}
+                        alt={`${modelo.nombre} — ${celda.label}`}
+                        bare
+                        className="w-full h-full max-w-[150px] max-h-[150px] object-contain aspect-square mx-auto"
+                      />
+                    </Lightbox>
                     {celda.codigo && (
                       <figcaption className="font-bold mt-1 text-sm text-[#0a2b3d]">
                         {celda.codigo}
