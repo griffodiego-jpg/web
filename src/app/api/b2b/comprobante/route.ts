@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getComprobantePdf } from "@/lib/api/bejerman";
-import { mockCurrentClient } from "@/data/mock-b2b";
+import { getCurrentClient } from "@/lib/b2b/current-client";
 
 /**
  * `GET /api/b2b/comprobante`
@@ -11,8 +11,8 @@ import { mockCurrentClient } from "@/data/mock-b2b";
  *   ?Comp=FC&CompLetra=A&PuntoVenta=0001&CompNro=00017176&CodCliente=000042
  *
  * Validaciones:
- * - Requiere que el CodCliente sea el del usuario logueado. Hoy usamos
- *   `mockCurrentClient`; cuando haya Firebase Auth, leer del token.
+ * - Requiere que el CodCliente sea el del usuario logueado (o el que
+ *   impersona el admin). Cuando haya Firebase Auth, leer del token.
  * - Si Bejerman devuelve 404, devolvemos 404 con un mensaje humano.
  *
  * Se puede llamar directo desde un `<a href>` — el browser descarga.
@@ -35,8 +35,8 @@ export async function GET(req: Request) {
     );
   }
 
-  // Ownership: que el cliente sólo baje sus propios comprobantes.
-  if (codCliente !== mockCurrentClient.client_id) {
+  const client = await getCurrentClient();
+  if (codCliente !== client.client_id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
