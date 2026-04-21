@@ -4,22 +4,67 @@ Documento vivo con el estado de todo el proyecto. Marcar con `[x]` lo
 que se va completando. Cuando una tarea tiene una etiqueta `(yo)` la
 hago yo sin intervención; `(cliente)` necesita algo de vos.
 
-Última actualización: mientras se desarrolla el sitio en la rama
-`claude/rebuild-web-platform-WwmFb`, deploy en
-`https://web-omega-wheat-25.vercel.app`. Destino final:
-`https://www.griffo.com.ar`.
+Última actualización: 2026-04-21. Rama de desarrollo canónica:
+`claude/new-website-2026-g1UGd`. Preview:
+`https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`.
+Destino final: `https://www.griffo.com.ar`.
 
 ---
 
 ## 🔴 Bloqueantes — definiciones abiertas
 
-- [ ] **Login / cuenta corriente / descarga de facturas**: ¿dónde viven?
-  - Opción A: en `griffo.specparts.shop` (catálogo externo) → fuera de
-    alcance, cerramos el tema.
-  - Opción B: en el sitio principal → necesito URLs + screenshots para
-    replicar.
-  - **Sin esta definición no se puede avanzar en la parte "privada" del
-    sitio.**
+- [x] ~~**Login / cuenta corriente / descarga de facturas**~~ — **resuelto**.
+  La cliente confirmó que son features del sitio nuevo. Se construyó el
+  Portal B2B (`/cuenta/*`) con datos mock + integración real del ERP
+  Bejerman para cuenta corriente, facturas, clientes y pedidos. Ver
+  `CLAUDE.md` sección "Portal B2B".
+
+---
+
+## 🟢 Completado — sprint 2026-04 (audit post-factum)
+
+Todo lo siguiente se construyó entre el merge de la rama nueva y el
+2026-04-21, pero no se había marcado acá:
+
+### Catálogo nativo (`/catalogo`)
+- [x] Buscador con 5 tabs (Palabra / Patente / Vehículo / Código / Medidas)
+- [x] Sidebar de filtros facetados (Línea, Tipo, Ubicación, Lado,
+      Marca, Modelo, Motor, Año) con contadores dinámicos
+- [x] URL shareable con back/forward del browser
+- [x] Detalle `/catalogo/[slug]` con masonry de vehículos compatibles
+- [x] Tabla de medidas con 3 sub-tipos + llamadores + modal de versiones
+- [x] `/catalogo/download` con 3 secciones + forms de captura gated
+- [x] Sticky header de una sola fila + imagen de card más compacta
+
+### Portal B2B (`/cuenta/*`)
+- [x] Login mock + `PortalNav` + layout con `ImpersonationBanner`
+- [x] Resumen (KPIs saldo/facturas 12m/pedidos activos)
+- [x] Armar pedido con 3 modos: grilla código / catálogo / Excel + preview
+- [x] Mis pedidos (lista + detalle + cancelar)
+- [x] Facturas con descarga PDF real del ERP (ownership validation)
+- [x] Cuenta corriente con datos reales del ERP
+- [x] Listas de precios (PDF/XLSX publicadas desde admin)
+- [x] Perfil (datos / cambiar contraseña / visualización de precios)
+- [x] Carrito con confirmación → email + persistencia Redis
+
+### Admin (`/admin/*`)
+- [x] Dashboard operativo con semáforos (5 servicios) + widgets
+- [x] `/admin/banners` carousel funcional (no más stub)
+- [x] `/admin/novedades` publicar/despublicar + marcar "Nuevo"
+- [x] `/admin/clientes` + detalle con impersonación y cambio pw
+- [x] `/admin/pedidos` + detalle con acciones inline
+- [x] `/admin/listas-precios` (sube XLSX/PDF + notifica)
+- [x] `/admin/catalogo-imagenes` (tréboles)
+- [x] `/admin/leads` 4 tabs + export CSV por tab
+
+### Novedades (`/novedades`)
+- [x] Auto-detección desde SpecParts + admin para publicar
+- [x] Badge "NUEVO" por vehículo en aplicaciones + modal extendido
+
+### Infra / integración
+- [x] ERP Bejerman: cliente HTTP con cache JWT + re-auth 401
+- [x] Rate-limit en `/api/admin/login` + sesiones Redis revocables
+- [x] Stop hook para recordar docs-sync (`.claude/settings.json`)
 
 ---
 
@@ -113,12 +158,12 @@ hago yo sin intervención; `(cliente)` necesita algo de vos.
       CLS protection.
 - [ ] **Bundle analyzer** configurado para detectar código muerto.
 - [ ] **Preload del LCP** del home (primera imagen visible).
-- [ ] **Security headers** en `next.config.ts` (X-Content-Type-Options,
+- [x] **Security headers** en `next.config.ts` (X-Content-Type-Options,
       X-Frame-Options, Referrer-Policy, Permissions-Policy).
 - [ ] **Image formats** AVIF + WebP en `next.config.ts`.
-- [ ] **PWA manifest** (`public/manifest.webmanifest`) con theme-color
+- [x] **PWA manifest** (`public/manifest.webmanifest`) con theme-color
       y iconos.
-- [ ] **Meta theme-color** en `layout.tsx`.
+- [x] **Meta theme-color** en `layout.tsx`.
 
 ### Accesibilidad
 - [ ] Review de contrastes `text-gray-600` sobre `bg-white` (borderline WCAG AA).
@@ -127,16 +172,14 @@ hago yo sin intervención; `(cliente)` necesita algo de vos.
 - [ ] Tab order en menú mobile / dropdowns.
 
 ### UX / Mejoras
-- [ ] **WhatsApp contextual**: prefill del mensaje según la página
-      (ej. en `/productos/maquina-montadora` → "Hola, quiero consultar
-      por la Máquina Montadora").
-- [ ] **Mejor página 404** con sugerencias de navegación.
+- [x] **WhatsApp contextual**: prefill del mensaje según la página.
+- [x] **Mejor página 404** con sugerencias de navegación.
 - [ ] **Loading states** más consistentes en los forms.
 - [ ] **Error boundary** para capturar errores client-side.
 
 ### Código
-- [ ] `next.config.ts` con `redirects()` skeleton para la migración.
-- [ ] `CLAUDE.md` actualizado con toda la info de migración.
+- [x] `next.config.ts` con `redirects()` skeleton para la migración.
+- [x] `CLAUDE.md` actualizado con toda la info de migración.
 - [ ] Revisar unused imports / dead code.
 
 ---
@@ -144,23 +187,31 @@ hago yo sin intervención; `(cliente)` necesita algo de vos.
 ## 🔵 Pendientes — necesitan tu intervención
 
 ### Conexión de servicios externos
-- [ ] **Resend** (o Brevo / Mailgun) — conectar los 3 forms a email real:
-  - [ ] Crear cuenta en https://resend.com (3000 emails/mes gratis)
-  - [ ] Generar API key
-  - [ ] Pasármela para conectar `/api/contacto`, `/api/newsletter` y
-        `/api/garantia`
-  - [ ] Configurar dominio verificado en Resend (necesario para enviar
-        desde `@griffo.com.ar` — requiere DNS TXT records, Zoho no se
-        ve afectado)
+- [x] **Resend** — conectado. Sender `onboarding@resend.dev` (sandbox).
+  - [ ] **Verificar dominio `griffo.com.ar` en Resend** → pasar sender
+        a `contacto@griffo.com.ar` y habilitar destinatarios por form
+        (garantía → `garantia@`, etc).
 - [ ] **reCAPTCHA v3** en los forms: el sitio viejo ya tenía la key
       `6Lcms9MrAAAAAKHK-bI1K_u2Coqp9oEAve3vrpRR`. Podemos reutilizarla
       o generar una nueva desde tu cuenta de Google.
-- [ ] **Analytics**: elegir una opción y crearla:
-  - [ ] **Plausible** (€9/mes, privacy-first, sin cookie banner)
-  - [ ] **Google Analytics 4** (gratis, cookie banner obligatorio)
-- [ ] **Google Search Console**: verificar `web-omega-wheat-25.vercel.app`
-      para ver cómo va el staging (opcional). Lo importante es
-      verificar `griffo.com.ar` después del switch.
+- [x] **Google Analytics 4** — conectado con `G-FR8KN76LQ2`.
+- [ ] **Google Search Console**: verificar dominio actual (preview) y
+      `griffo.com.ar` después del switch.
+
+### ERP Bejerman (Portal B2B)
+- [ ] **Credenciales del usuario API** reales del técnico (las del
+      PDF devuelven 401). Mail borrador en
+      `reference/bejerman/mail-al-proveedor.md`.
+- [ ] **Abrir endpoint `POST /ERP/order`** para nuestro usuario API —
+      hoy el pedido se guarda en Redis pero no se envía al ERP.
+- [ ] **HTTPS en el ERP** — hoy corre sobre HTTP plano.
+
+### Firebase Auth (Portal B2B)
+- [ ] Crear proyecto nuevo dedicado (no reusar `griffo-app`).
+- [ ] Habilitar Email/Password en Authentication.
+- [ ] Cargar en Vercel: `NEXT_PUBLIC_FIREBASE_*` +
+      `FIREBASE_ADMIN_CREDENTIALS`.
+- [ ] Swap `useMockSession` por Firebase Auth (misma API pública).
 
 ### Assets faltantes
 - [ ] Imagen `PinzaParaAbrazadera.webp` (producto Pinza)
@@ -175,9 +226,8 @@ hago yo sin intervención; `(cliente)` necesita algo de vos.
       HandBrake o similar debería quedar en 2-3 MB para 720p h264)
 
 ### Contenido
-- [ ] HTML / contenido real de `/novedades`, `/novedades/lanzamientos`,
-      `/novedades/aplicaciones`
-- [ ] HTML / contenido real de `/catalogo/download` (Descargas)
+- [x] `/novedades` auto-alimentado desde SpecParts + admin para publicar.
+- [x] `/catalogo/download` con 3 secciones + forms de captura.
 - [ ] Verificar que las 7 filas del Excel de distribuidores que se
       reasignaron heurísticamente a Tucumán sean correctas
 - [ ] **Testimonios reales** de clientes (nombre + empresa + foto + frase)
@@ -186,7 +236,8 @@ hago yo sin intervención; `(cliente)` necesita algo de vos.
 ### Decisiones de negocio
 - [ ] **Gotham**: ¿vale la pena comprar la licencia? ($$$). Mientras
       tanto va Montserrat.
-- [ ] **Login / cuenta corriente / facturas** (ver arriba).
+- [x] ~~Login / cuenta corriente / facturas~~ — resuelto, Portal B2B
+      construido.
 
 ---
 

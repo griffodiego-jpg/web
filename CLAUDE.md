@@ -46,6 +46,31 @@ Pautas para no pisarse con otras sesiones paralelas sobre la misma rama:
 - Commit messages en español, primera línea < 72 chars. Ver sección
   "Git / commits".
 
+## 🚨 REGLA #2 — Doc-sync obligatorio antes de cada commit
+
+Si el commit toca `src/*` o agrega/modifica/borra una feature, **antes
+de pushear** verificá si hay que actualizar también:
+
+- **`CLAUDE.md`** (este archivo): cambios de arquitectura, páginas
+  nuevas, rutas que se agregan/renombran, nuevos componentes/hooks/libs,
+  decisiones de negocio, servicios conectados, estado de páginas.
+- **`FLUJOGRAMA.md`**: archivos nuevos en el mapa "quiero tocar X →
+  archivo Y", troubleshooting nuevo, decisiones que convenga preservar
+  con el porqué, TODOs con contexto.
+- **`TASKS.md`**: marcar con `[x]` lo recién terminado, agregar
+  pendientes que aparecieron en el camino.
+- **`reference/bejerman/README.md`** si tocaste la integración con el ERP.
+- **`reference/arquitectura-app-griffo.md`** si tocaste SpecParts.
+
+**Los .md van en el mismo commit que el código**, no en uno aparte.
+Esto vale aunque el cambio parezca chico: una ruta nueva, un hook
+cambiado, una decisión revertida, un servicio conectado. Si la
+siguiente sesión no puede reconstruir el contexto sólo leyendo estos
+archivos, la docs-sync no se hizo.
+
+Hay un hook `Stop` configurado en `.claude/settings.json` que revisa
+esto automáticamente al final de cada respuesta y avisa si hay un gap.
+
 ## Entorno
 
 - **Branch de desarrollo actual**: `claude/new-website-2026-g1UGd` (todos los
@@ -166,8 +191,10 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   con `updated_at` dentro de los últimos 12 meses) como candidatos. Por
   default nada se publica — el admin marca explícitamente cada código
   como Lanzamiento o Nueva aplicación. Ver sección "Novedades".
-- `/cuenta/*`: **portal B2B en modo demo** (datos mock). Ver sección
-  "Portal B2B (/cuenta/*)" más abajo.
+- `/cuenta/*`: **portal B2B parcialmente conectado al ERP**. Facturas,
+  cuenta corriente, lista de clientes, impersonación y descarga de PDFs
+  de comprobantes ya consumen el ERP real. Login y precios siguen mock
+  hasta que Firebase esté listo. Ver sección "Portal B2B (/cuenta/*)".
 
 ## Portal B2B (`/cuenta/*`) + carrito + integración con ERP
 
@@ -176,20 +203,26 @@ del ERP Griffo (middleware sobre Bejerman) documentada en
 `reference/bejerman/`. Cliente HTTP en `src/lib/api/bejerman.ts`,
 tipos en `src/types/bejerman.ts`.
 
-### Resumen ejecutivo del estado (2026-04-17)
+### Resumen ejecutivo del estado (2026-04-21)
 
-- **Scaffolding armado, auth real pendiente.** El portal se ve
-  completo visualmente con datos mock. Al conectar auth + ERP,
-  todo muestra datos reales.
+- **Partially live**. Con `BEJERMAN_EMAIL`/`PASSWORD` en Vercel, la lista
+  de clientes, cuenta corriente, facturas (con descarga PDF) y la
+  impersonación del admin ya consumen el ERP real. Login público y
+  precios siguen mock hasta que haya Firebase.
+- **Pedidos B2B**: `/cuenta/armar-pedido` arma el pedido con 3 modos
+  (grilla por código / ir al catálogo / subir Excel con preview), el
+  usuario lo confirma desde `/carrito`, se persiste en Redis y se
+  manda un email a la dirección configurable en `/admin/pedidos`
+  (no va al ERP todavía — el técnico tiene que abrir el endpoint
+  `POST /ERP/order` para nuestro usuario).
 - **API del ERP**: la hizo un técnico propio de Griffo (no
   Promotive, que originalmente iba a consumirla). Griffo es dueña
   del código. Si el técnico se va, hay que conseguir el repo antes.
-- **URL base**: `http://intranet.remotogriffo.com.ar:86/api`
-  (cambió desde `griffo.stidns.net:86` el 2026-04-17). HTTP sin TLS
-  — el técnico debería habilitar HTTPS antes de producción.
-- **Credenciales del PDF** (`mpinero@promotive.la` / `password`)
-  devuelven 401 "Credenciales inválidas" — eran de ejemplo. La
-  cliente lo pide al técnico el lunes siguiente.
+- **URL base**: `http://intranet.remotogriffo.com.ar:86/api`. HTTP sin
+  TLS — el técnico debería habilitar HTTPS antes de producción.
+- **Login del ERP**: acepta `username` o `email` como claim — la
+  variable se llama `BEJERMAN_EMAIL` por razones históricas, pero
+  cualquiera de los dos funciona (lo resuelve `bejerman.ts`).
 - **Firebase**: decisión de la cliente fue **proyecto nuevo
   dedicado** (no reusar `griffo-app` de la app mobile). Pendiente
   de crear.
@@ -257,12 +290,24 @@ portal:
   últimos 3 pedidos. Sin saludo "Hola, X" — fuera a pedido de la
   cliente.
 - `/cuenta/(portal)/pedidos/page.tsx` — tabla con ERP ID, ref web,
-  fecha, estado, ítems, total.
+  fecha, estado, ítems, total. Estados pintados por `PedidoStatusPill`.
+- `/cuenta/(portal)/pedidos/[id]/page.tsx` — detalle del pedido con
+  items, totales, `CancelarPedidoButton` si está en estado cancelable.
+- `/cuenta/(portal)/armar-pedido/page.tsx` — 3 tabs: **Grilla por
+  código** (autocompletado del catálogo con línea/ubicación/lado/marcas
+  en la sugerencia), **Ir al catálogo** (CTA a `/catalogo`), **Subir
+  Excel** (el admin publica el template en `/api/pedidos/modelo-excel`
+  y el usuario sube el archivo llenado). Al confirmar, `PedidoParsePreview`
+  muestra los items antes de commitear al carrito.
 - `/cuenta/(portal)/facturas/page.tsx` — lista de FC con botón PDF
-  deshabilitado (se habilita al conectar `/ERP/GetComprobante`).
-- `/cuenta/(portal)/cuenta-corriente/page.tsx` — 3 KPIs (saldo /
-  total debe / total haber) + tabla con saldo running.
-- `/cuenta/(portal)/listas/page.tsx` — cards de descarga PDF/XLSX.
+  habilitado que streamea desde `/ERP/GetComprobante`. Valida ownership
+  contra el cliente actual antes de servir el archivo.
+- `/cuenta/(portal)/cuenta-corriente/page.tsx` — KPIs + tabla completa
+  con saldo running. Datos reales del ERP (`account-status.ts`).
+  Tolera códigos de pago alternos (ver `movement-classifier.ts`).
+- `/cuenta/(portal)/listas/page.tsx` — descarga listas PVP (PDF/XLSX)
+  que el admin sube en `/admin/listas-precios`. Banner si la lista
+  activa tiene más de 14 días de antigüedad.
 - `/cuenta/(portal)/perfil/page.tsx` — **3 secciones**:
   * **Datos de cuenta**: razón social + código readonly (los
     maneja Griffo), email editable.
@@ -276,16 +321,35 @@ portal:
 ### Componentes clave del portal
 
 - `components/cuenta/PortalNav.tsx` — tabs del sub-nav
-  (Resumen / Mis pedidos / Facturas / Cuenta corriente / Lista de
-  precios / Mi perfil).
+  (Resumen / Armar pedido / Mis pedidos / Facturas / Cuenta corriente /
+  Lista de precios / Mi perfil).
+- `components/cuenta/LoginForm.tsx` — form del login.
 - `components/cuenta/PerfilForm.tsx` — client component con las 3
   secciones del perfil.
-- `components/cuenta/CerrarSesionButton.tsx` — logout del mock.
+- `components/cuenta/CerrarSesionButton.tsx` — logout (mock + real).
+- `components/cuenta/ImpersonationBanner.tsx` — banner rojo que sale
+  cuando un admin está impersonando a un cliente (ver admin/clientes).
+- `components/cuenta/PedidoStatusPill.tsx` — pill de color por estado
+  del pedido (pendiente / en preparación / despachado / cancelado).
+- `components/cuenta/CancelarPedidoButton.tsx` — botón con confirmación
+  inline en el detalle del pedido; sólo se habilita si el estado lo
+  permite.
+- `components/cuenta/ArmarPedidoClient.tsx` — orquesta las 3 tabs
+  (grilla / catálogo / Excel) de `/cuenta/armar-pedido`. Sub-componentes
+  en `components/cuenta/armar-pedido/`:
+  * `TabGrillaCodigo.tsx` — grilla estilo Excel, cada fila con
+    autocompletado del catálogo (incluye línea + ubicación + lado +
+    top 3 marcas para desambiguar).
+  * `TabIrAlCatalogo.tsx` — CTA a `/catalogo`.
+  * `TabSubirExcel.tsx` — upload del Excel modelo.
+  * `PedidoParsePreview.tsx` — preview de items antes de confirmar.
 - `components/cart/CartIndicator.tsx` — ícono + badge con `count`
   del carrito. Siempre visible en el header (también en mobile,
   fuera del hamburger).
 - `components/cart/CartContent.tsx` — tabla de items con precio
-  unitario + subtotal + total + "+ IVA" + contador por modo.
+  unitario + subtotal + total + "+ IVA" + contador por modo + botón
+  "Confirmar pedido" que llama a `/api/b2b/checkout` → emails a
+  pedidos@ y persiste en Redis.
 - `components/catalog/AddToCartButton.tsx` — 3 estados:
   * Sin items: botón azul "Agregar".
   * Expandido: [− N +] + OK / ×.
@@ -298,6 +362,8 @@ portal:
   ERP; por defecto usa `getMockCompraPrice()`.
 
 ### Hooks / libs del portal
+
+Client hooks (browser):
 
 - `src/lib/mock-session.ts` — `useMockSession()`. Persiste
   `{email, loggedAt}` en `localStorage["griffo:b2b:session"]`.
@@ -320,6 +386,51 @@ portal:
   $100. `formatARSNeto(value)` → `"$12.345,00 + IVA"`. Cuando
   `/ERP/prices` esté activo, pasar `compraPrice` real como prop
   a `ProductPrice` y el mock se ignora.
+
+Server libs (`src/lib/b2b/` — todo server-only):
+
+- `current-client.ts` — resuelve el cliente activo de la sesión:
+  normalmente el dueño del login, pero si hay impersonación activa
+  (cookie `admin-impersonate`), devuelve ese cliente del ERP y
+  marca la respuesta como impersonada. **Usar en todos los server
+  components del portal** para evitar filtrar data cruzada.
+- `client-loader.ts` — `getClients()` cacheado 60s. Una sola llamada
+  a `GET /ERP/Clients`, compartida por admin y portal.
+- `account-status.ts` — normaliza `GET /ERP/ClientAccountStatus/<code>`
+  a `{facturas[], comprobantes[], saldo}`. Aplica `movement-classifier`
+  para separar FC de otros movimientos.
+- `movement-classifier.ts` — mapea el campo `comp` del ERP a 3 grupos
+  (factura / pago / otros). Acepta variantes históricas (RE/RC/NC/ND).
+- `credentials.ts` — lee `BEJERMAN_EMAIL`/`BEJERMAN_PASSWORD` con
+  fallback y valida presencia; expone un error amigable para admin-health.
+- `impersonation.ts` — helpers para empezar/terminar la impersonación
+  del admin: seta/borra la cookie y valida que el admin esté logueado.
+
+Otros libs server-only:
+
+- `src/lib/pedidos.ts` — persistencia de pedidos en Redis (LPUSH en
+  `pedidos:<clientCode>` + hash `pedido:<id>`), notificación por
+  email al destinatario configurado, flujo de cancelación.
+- `src/lib/b2b-config.ts` — config del portal (destinatario del mail
+  de pedidos en hash Redis `b2b:config`).
+- `src/lib/excel/parse-pedido.ts` — parsea el Excel subido por el
+  cliente en `/cuenta/armar-pedido` (SheetJS server-side). Valida
+  headers y tipos de dato.
+- `src/lib/excel/pedido-modelo.ts` — genera el Excel modelo
+  (headers + ejemplo) que el cliente se baja desde el tab "Subir
+  Excel". Streameado desde `/api/pedidos/modelo-excel`.
+- `src/lib/emails/pedidos.ts` — template del email que se manda al
+  confirmar un pedido.
+- `src/lib/emails/price-lists.ts` — template del email para la
+  notificación de nueva lista de precios publicada.
+- `src/lib/price-lists.ts` — store de listas de precios (PDF/XLSX)
+  subidas desde admin. Metadata en Redis (`price-lists:current`),
+  archivos en Vercel Blob.
+- `src/lib/banners-store.ts` — store del carousel del home. Metadata
+  en Redis (`banners:items`), imágenes en Blob.
+- `src/lib/catalogo-imagenes-store.ts` — URLs custom para imágenes
+  fijas del catálogo (ej. "medidas-treboles"). Override en Redis
+  (`catalogo-imagenes:<key>`), fallback a la imagen default.
 
 ### Datos mock para demo
 
@@ -355,34 +466,38 @@ El detalle `/catalogo/[slug]` tiene un panel arriba del fold con
 precio grande + `AddToCartButton` no-compact + MercadoLibre como
 CTA secundario si el producto lo tiene.
 
-### Admin `/admin/clientes`
-
-Server component que lee `getClients()` del ERP y los lista en una
-tabla (código, razón social, email, nro de depósitos). Protegido
-por el proxy admin estándar. Si faltan `BEJERMAN_EMAIL`/`PASSWORD`
-renderiza un instructivo con los pasos para cargarlas en Vercel.
-
 ### Qué falta para activar end-to-end
 
-1. Recibir credenciales API reales del técnico (mail ya redactado
-   en `reference/bejerman/mail-al-proveedor.md`).
-2. Crear proyecto Firebase nuevo + config + Authentication con
-   Email/Password habilitado.
-3. Cargar en Vercel las env vars:
-   - `BEJERMAN_EMAIL`, `BEJERMAN_PASSWORD`
-   - `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_CREDENTIALS`
-4. Reemplazar:
-   - `useMockSession` por Firebase Auth (misma API pública).
-   - `mock-b2b.ts` por llamadas a `src/lib/api/bejerman.ts` en
-     cada server component del portal.
-   - Mock prices en `ProductPrice`/`CartContent` por resultados
-     de `getPrices({clientId, warehouseId, items})`.
-5. Mover carrito de localStorage a Redis por user.
-6. Conectar `/api/b2b/checkout` → `createOrder(...)` en el botón
-   "Confirmar pedido" de `CartContent`.
-7. Conectar botón PDF de `/cuenta/facturas` →
-   `getComprobantePdf(...)` y streamear al usuario.
-8. Pedirle al técnico habilitar HTTPS antes de producción.
+**Hecho ya**:
+- `/admin/clientes` + detalle `/admin/clientes/[code]` con impersonación
+  y cambio de contraseña (consume el ERP real).
+- `/cuenta/facturas` con botón PDF conectado a `getComprobantePdf(...)`
+  (valida ownership contra `getCurrentClient()`).
+- `/cuenta/cuenta-corriente` con datos reales del ERP.
+- `/cuenta/listas` consumiendo las listas que sube el admin desde
+  `/admin/listas-precios`.
+- Pedidos B2B end-to-end desde `/cuenta/armar-pedido` → `/carrito` →
+  `/api/b2b/checkout` → Redis + email al destinatario configurado en
+  `/admin/pedidos`.
+
+**Todavía pendiente**:
+
+1. **Credenciales públicas del ERP**: la cliente debería obtener del
+   técnico las creds del usuario "API" dedicado (no las del PDF, que
+   devuelven 401).
+2. **Firebase Auth real**: reemplazar `useMockSession` por Firebase
+   (misma API pública del hook), y cargar `NEXT_PUBLIC_FIREBASE_*` +
+   `FIREBASE_ADMIN_CREDENTIALS` en Vercel.
+3. **Precios reales**: reemplazar `mock-prices.ts` por llamadas a
+   `getPrices({clientId, warehouseId, items})`. Cuando el usuario
+   esté logueado el backend sabe qué lista aplicar y con qué margen.
+4. **Carrito server-side**: migrar de `localStorage` a Redis por user
+   (hoy dura mientras el browser no limpia storage).
+5. **Endpoint `POST /ERP/order`**: el técnico tiene que abrirlo para
+   nuestro usuario API. Hoy el pedido se persiste en Redis y se
+   notifica por mail, pero no se envía al ERP.
+6. **HTTPS del ERP**: pedirle al técnico habilitar TLS antes de
+   producción (hoy HTTP).
 
 ## Catálogo de productos (SpecParts)
 
@@ -440,7 +555,7 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
 
 ### Filtros facetados (sidebar)
 
-6 grupos, estilo Mercado Libre:
+8 grupos, estilo Mercado Libre:
 
 | Grupo | Fuente | Notas |
 |---|---|---|
@@ -449,7 +564,9 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
 | Ubicación | attribute cuyo name incluye "ubicaci" | Valores dinámicos (ej. LADO RUEDA, LADO CAJA). |
 | Lado | attribute cuyo name incluye "lado" | "Izquierdo y/o Derecho (según vehículo)" NO aparece como opción — se expande para que Izquierdo y Derecho incluyan esos productos. |
 | Marca | `vehicles[].brand` | Top 5 alfabético + "Ver N más" + buscador. Excluye AGRALE/IVECO/UNIVERSAL. |
-| Modelo | `vehicles[].master_model` | Depende de Marca: solo aparece si hay marca(s) tildada(s). Top 5 + "Ver más" + buscador. |
+| Modelo | `vehicles[].master_model` | Se muestra siempre (antes requería marca tildada). Top 5 + "Ver más" + buscador. |
+| Motor | `vehicles[].engine` | Se muestra siempre, se habilita al tildar un modelo. Buscador incluido. |
+| Año | `vehicles[].sold_from_year` | Se muestra siempre, se habilita al tildar un modelo. Buscador incluido. |
 
 **Comportamiento**:
 
@@ -463,9 +580,25 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
 - Tab Medidas: sidebar **oculto** (la tabla tiene su propia dinámica).
 - Mobile: drawer con botón "Filtros" y badge del count activo.
 
+### Sticky header del buscador
+
+El header del `/catalogo` es **una sola fila** (`CatalogSearch.tsx`):
+tabs (Palabra / Patente / Vehículo / Código / Medidas) a la izquierda,
+form del tab activo con `flex-1` al medio, `StatusBadge` + botón
+Filtros (mobile) a la derecha. El hint de "buscá en N productos" va
+dentro del placeholder del input de Palabra, no como subtítulo — así
+el sticky queda en ~60px en vez de los ~150px que tenía antes.
+
+El `FiltersSidebar` se pega justo debajo con la CSS var
+`--catalog-header-bottom` que calcula un `ResizeObserver` al montar
+(ver `useLayoutEffect` en `CatalogSearch.tsx`). No hay magic numbers
+de `top-[192px]`.
+
 ### ProductCard
 
-- Imagen cuadrada (`next/image`), código azul grande, producto uppercase.
+- Imagen `aspect-[3/2]` (`next/image`) con `object-contain` y `p-2` —
+  más compacta que cuadrada, se ven ~2 filas más de productos por
+  pantalla sin scrollear. Código azul grande, producto uppercase.
 - **Descripción** = vehículos agrupados por marca sin motor, marca en
   negrita: `**FORD** (KUGA - RANGER), **CHEVROLET** (S-10)`.
 - Botón "Ver N vehículos compatibles" abre modal `VehiclesModal` con
@@ -596,8 +729,10 @@ desde el dashboard de Upstash → invalida todos los logins activos.
 ### Sidebar agrupado (`src/app/admin/layout.tsx`)
 
 Grupos:
-- **Diseño de web**: Banners, Distribuidores, Descargas
-- **Administración de catálogo**: Productos destacados, Cobertura, Cache de imágenes
+- **Diseño de web**: Banners, Distribuidores, Descargas, Novedades
+- **Administración de catálogo**: Productos destacados, Cobertura,
+  Imágenes del catálogo, Cache de imágenes
+- **Portal B2B**: Clientes, Pedidos, Listas de precios
 - **Formularios**: Leads capturados
 - **Vista pública**: link externo a `/catalogo`
 - Footer: `<LogoutButton />` (`components/admin/LogoutButton.tsx`) que
@@ -606,11 +741,12 @@ Grupos:
 ### Páginas
 
 - `/admin` — **Dashboard operativo** (primera pantalla al entrar).
-  Semáforos de servicios (SpecParts / Redis / Blob / Resend), alertas
-  de configuración (env vars faltantes, dominio en preview, Resend sin
-  verificar, destacados sin link ML, distribuidores sin email), widgets
-  de leads (últimos 7 días por tipo), novedades (publicadas/sin publicar/
-  ocultas), descargas (slots configurados), dashboard de SpecParts
+  Semáforos de servicios (SpecParts / Redis / Blob / Resend / ERP
+  Bejerman), alertas de configuración (env vars faltantes, dominio en
+  preview, Resend sin verificar, destacados sin link ML, distribuidores
+  sin email, Bejerman sin creds), widgets de leads (últimos 7 días por
+  tipo), novedades (publicadas/sin publicar/ocultas), descargas (slots
+  configurados), pedidos B2B recientes, dashboard de SpecParts
   (breakdown por línea, productos sin foto/vehículos/atributos/descripción,
   discontinuados pero activos) con lista de los primeros 10 productos
   problemáticos, y log de errores (últimos 100 en Redis, botón "Limpiar").
@@ -618,21 +754,50 @@ Grupos:
   `admin-catalog-issues.ts`, `admin-log.ts`.
 - `/admin/distribuidores` — CRUD (lee CSV estático, edits futuros a Redis).
 - `/admin/productos` — Editor de links externos de productos destacados.
-- `/admin/banners` — Stub para banners del home (pendiente).
+- `/admin/banners` — **Funcional**. Manager del carousel del home:
+  subir/ordenar/desactivar banners. Imágenes en Blob, metadata en
+  Redis (`src/lib/banners-store.ts`). Componente
+  `components/admin/BannersAdmin.tsx`.
 - `/admin/descargas` — Gestión de archivos de `/catalogo/download`.
   Subida directa cliente → Vercel Blob (evita el límite de 4.5 MB de
   serverless functions); URL se guarda en Redis (`downloads:urls`).
   Ver `src/lib/descargas-store.ts`.
+- `/admin/novedades` — Ver sección "Novedades" más abajo.
 - `/admin/leads` — Lista de leads capturados por los forms públicos
-  (contacto, newsletter, descargas). 3 tabs con contadores, buscador
-  in-memory, export CSV por tab. Persistencia en Redis
+  (contacto, newsletter, descargas, garantía). 4 tabs con contadores,
+  buscador in-memory, export CSV por tab. Persistencia en Redis
   (`src/lib/leads.ts`).
 - `/admin/cobertura` — Matriz vehículo × tipo de producto (18 columnas
   agrupadas en Dirección/Suspensión/Transmisión). Detecta huecos del
   catálogo. Filter + sort + sticky headers. Export CSV **respeta el
   filtro activo** (ver `src/components/admin/CoverageTable.tsx`).
   Lógica en `src/lib/catalog/coverage.ts`.
+- `/admin/catalogo-imagenes` — Administra imágenes fijas del catálogo
+  (hoy la única es `medidas-treboles`, usada en tab Medidas). Sube a
+  Blob, guarda URL en Redis (`catalogo-imagenes:<key>`). Componente
+  `components/admin/CatalogoImagenesManager.tsx`.
 - `/admin/cache` — Pre-warming del CDN de imágenes.
+- `/admin/clientes` — Lista de clientes del ERP (código, razón social,
+  email, nro de sucursales unificadas en una sola fila).
+- `/admin/clientes/[code]` — **Detalle del cliente**: datos, sucursales
+  (warehouses), cuenta corriente, facturas, pedidos, acciones:
+  * `ClientPasswordForm` — cambia la contraseña del cliente B2B.
+  * `ImpersonateButton` — inicia sesión "como" ese cliente; seta la
+    cookie `admin-impersonate` y redirige a `/cuenta`. Desde ahí el
+    banner rojo `ImpersonationBanner` recuerda que se está impersonando
+    y permite cortar.
+  * `/admin/clientes/[code]/debug-cuenta` — vista raw del payload del
+    ERP para debuggear casos raros de cuenta corriente.
+- `/admin/pedidos` — Lista de pedidos B2B capturados en Redis. Columnas:
+  ID web, cliente, fecha, estado, items, total, mail enviado.
+  `AdminPedidoRow` expande acciones inline (cambiar estado, cancelar,
+  copiar nº Bejerman). `PedidosNotifEmailBox` arriba para configurar
+  la dirección de mail que recibe notificaciones de pedidos nuevos.
+- `/admin/pedidos/[id]` — Detalle de un pedido con todo el desglose.
+- `/admin/listas-precios` — Sube/rota las listas de precios (PDF/XLSX)
+  que descargan los clientes B2B. Al publicar una nueva, manda
+  (opcionalmente) un mail a los clientes. Componente
+  `components/admin/PriceListsAdmin.tsx`.
 
 ### API admin (`/api/admin/*`)
 
