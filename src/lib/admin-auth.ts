@@ -98,3 +98,26 @@ export async function destroySession(): Promise<void> {
   }
   store.delete(ADMIN_COOKIE_NAME);
 }
+
+/**
+ * Valida que haya una sesión de admin activa. Devuelve true si la
+ * cookie existe y matchea una key viva en Redis; false en cualquier
+ * otro caso (sin cookie, Redis caído, sesión revocada).
+ *
+ * Defensa en profundidad: la usa el layout (protected) de admin para
+ * no depender exclusivamente del proxy, que puede saltearse en
+ * prefetches o con cache de CDN.
+ */
+export async function hasValidAdminSession(): Promise<boolean> {
+  const store = await cookies();
+  const sessionId = store.get(ADMIN_COOKIE_NAME)?.value;
+  if (!sessionId) return false;
+  const redis = getRedis();
+  if (!redis) return false;
+  try {
+    const session = await redis.get(SESSION_KEY_PREFIX + sessionId);
+    return !!session;
+  } catch {
+    return false;
+  }
+}
