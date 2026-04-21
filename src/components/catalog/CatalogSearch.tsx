@@ -988,14 +988,14 @@ function MeasureRowView({
               type="button"
               onClick={() => onImageClick(row.imageUrl!, row.productName || row.code)}
               aria-label={`Ampliar foto del producto ${row.code}`}
-              className="inline-block overflow-hidden rounded border border-gray-200 bg-white p-1 transition hover:border-accent hover:shadow-sm"
+              className="inline-block overflow-hidden rounded border border-gray-200 bg-white p-1 transition hover:border-accent hover:shadow-sm cursor-zoom-in"
             >
               <Image
                 src={row.imageUrl}
                 alt={row.productName || row.code}
-                width={40}
-                height={40}
-                className="h-10 w-10 object-contain"
+                width={72}
+                height={72}
+                className="h-16 w-16 object-contain"
               />
             </button>
             {/* Preview flotante al hover — desktop only. Aparece a la izquierda
