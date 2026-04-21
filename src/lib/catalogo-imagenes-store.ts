@@ -11,6 +11,9 @@
  *   3. undefined (el botón que la usa queda deshabilitado).
  */
 
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 import { getRedis } from "@/lib/kv";
 
 const HASH_KEY = "catalogo:imagenes";
@@ -68,10 +71,15 @@ export async function clearImageOverride(id: CatalogoImagenId): Promise<void> {
 
 /**
  * Resuelve la URL efectiva: override Redis primero, fallback estático
- * después, undefined si no hay ninguna de las dos.
+ * después (solo si el archivo existe en /public), undefined si no hay
+ * ninguna de las dos. Así evitamos que la UI habilite botones que
+ * terminan mostrando una imagen rota.
  */
 export async function resolveImageUrl(id: CatalogoImagenId): Promise<string | undefined> {
   const overrides = await readImageOverrides();
+  if (overrides[id]) return overrides[id];
   const slot = CATALOGO_IMAGENES.find((i) => i.id === id);
-  return overrides[id] || slot?.fallback;
+  if (!slot?.fallback) return undefined;
+  const absPath = path.join(process.cwd(), "public", slot.fallback.replace(/^\//, ""));
+  return existsSync(absPath) ? slot.fallback : undefined;
 }
