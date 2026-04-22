@@ -544,6 +544,12 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
    Índice `_searchText` se construye **client-side** con `indexProducts()`
    al montar (ahorra ~150KB en el payload inicial). Concatena código,
    descripción, producto, categoría, slug, vehículos, atributos, etc.
+   Si el texto matchea formato de patente argentina (`ABC123` vieja o
+   `AB123CD` Mercosur, helper `detectPlate`), arriba de los resultados
+   se muestra `DetectedPlateHint` — banner no-intrusivo que ofrece saltar
+   al tab Patente con la patente ya cargada y disparando la búsqueda.
+   No auto-switch: la decisión queda en el usuario (así no rompemos a
+   quien busca un código raro que matchea por casualidad).
 2. **Patente**: llama `/api/catalog/plate` → filtra por `brand` + `master_model`
    o `model`.
 3. **Vehículo**: selects cascada Marca → Modelo → Año. Excluye AGRALE, IVECO,

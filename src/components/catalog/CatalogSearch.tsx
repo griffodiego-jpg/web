@@ -72,6 +72,17 @@ const FILTER_GROUPS: FilterGroup[] = [
   "anio",
 ];
 
+/**
+ * Detecta si un texto ingresado en Palabra matchea formato de patente
+ * argentina (vieja ABC123 o Mercosur AB123CD). Normaliza sacando espacios
+ * y pasando a mayúsculas. Devuelve la patente normalizada o null.
+ */
+const PLATE_REGEX = /^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$/;
+function detectPlate(input: string): string | null {
+  const cleaned = input.replace(/[\s-]/g, "").toUpperCase();
+  return PLATE_REGEX.test(cleaned) ? cleaned : null;
+}
+
 /** Lee el estado inicial del catálogo desde los query params de la URL. */
 function readStateFromParams(sp: URLSearchParams) {
   const tabParam = sp.get("tab");
@@ -346,6 +357,16 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
   const showSidebar = tab !== "medidas";
   const activeFilters = countActiveFilters(filters);
 
+  // Si el usuario tipea algo con forma de patente en Palabra, ofrecemos un
+  // atajo al tab Patente. No es auto-switch — la decisión queda en el usuario.
+  const detectedPlate = tab === "palabra" ? detectPlate(keyword) : null;
+  const handleSwitchToPlate = useCallback(() => {
+    if (!detectedPlate) return;
+    setTab("patente");
+    setPlate(detectedPlate);
+    searchPlate(detectedPlate);
+  }, [detectedPlate, searchPlate]);
+
   return (
     <>
       {/* ---------------- Sticky header con tabs + form ---------------- */}
@@ -489,6 +510,9 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
           ) : null}
 
           <div>
+            {tab === "palabra" && detectedPlate ? (
+              <DetectedPlateHint plate={detectedPlate} onConfirm={handleSwitchToPlate} />
+            ) : null}
             {tab === "patente" && tabState.kind === "results" && tabState.plateVehicle ? (
               <PlateVehicleHeader vehicle={tabState.plateVehicle} />
             ) : null}
@@ -689,6 +713,38 @@ function MeasuresSelector({
 /* ========================================================================== */
 /*  RESULT VIEWS                                                               */
 /* ========================================================================== */
+
+function DetectedPlateHint({
+  plate,
+  onConfirm,
+}: {
+  plate: string;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="mb-4 flex flex-col gap-2 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        <span aria-hidden className="text-xl leading-none">🚗</span>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Parece una patente
+          </p>
+          <p className="text-sm text-[#0a2b3d]">
+            Detectamos el formato <span className="font-black">{plate}</span>. ¿Querés
+            buscar por patente?
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onConfirm}
+        className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary-dark"
+      >
+        Buscar como patente →
+      </button>
+    </div>
+  );
+}
 
 function PlateVehicleHeader({ vehicle }: { vehicle: SpecPartsPlateResponse }) {
   return (
