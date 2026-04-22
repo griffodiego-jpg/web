@@ -139,9 +139,20 @@ async function requestBinary(
   };
 }
 
-/** Lista todos los clientes registrados en el ERP con sus depósitos. */
-export function getClients(): Promise<BejermanClient[]> {
-  return request<BejermanClient[]>("/ERP/Clients");
+/**
+ * Lista todos los clientes registrados en el ERP con sus depósitos.
+ *
+ * El middleware devuelve el CUIT como `tax_id`. Acá lo mapeamos a `cuit`
+ * que es el nombre que usa la web. Cualquier otro campo que el ERP
+ * agregue en el futuro se propaga tal cual.
+ */
+export async function getClients(): Promise<BejermanClient[]> {
+  type Raw = BejermanClient & { tax_id?: string };
+  const raws = await request<Raw[]>("/ERP/Clients");
+  return raws.map((r) => ({
+    ...r,
+    cuit: r.cuit ?? r.tax_id,
+  }));
 }
 
 /** Cotiza precios + stock para un cliente + depósito + set de códigos. */

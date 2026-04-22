@@ -284,23 +284,39 @@ código.
    Necesitamos un ejemplo real de payload de `/ERP/prices` para confirmar.
    Si no coinciden, hay que armar tabla de mapeo.
 
-3. **`clientId` format:** ¿qué formato tiene? ¿Es número, código
-   alfanumérico, CUIT? Hace falta un ejemplo real del `GET /ERP/Clients`.
+3. **`clientId` format:**
+   ✅ **Resuelto (2026-04-21):** `client_id` es **alfanumérico** con
+   zero-padding (ej. `"000001"`). Es string, no numérico.
 
-4. **Email del cliente:** ¿todos los clientes tienen email cargado en
-   Bejerman? Si un cliente no tiene email, el matcheo por email en el
-   alta autoservicio no sirve para ese cliente. Alternativa: matchear
-   por **CUIT** — pero el endpoint no devuelve CUIT. Sería valioso que
-   el proveedor lo incluya.
+4. **CUIT / Email del cliente:**
+   ✅ **Resuelto (2026-04-21):** `GET /ERP/Clients` ahora devuelve
+   `tax_id` (CUIT sin guiones, ej. `"30701532933"`). La web lo mapea
+   a `cuit` al leer la respuesta (ver `getClients()` en
+   `src/lib/api/bejerman.ts`). Los emails vienen en `email` — no todos
+   los clientes tienen uno, así que el matcheo puede ser por CUIT
+   también.
 
    ✅ **Resuelto (2026-04-21):** `GET /ERP/Clients.client_id` y
-   `ClientAccountStatus.client_code`/`cliCod` son el **mismo valor**,
-   alfanumérico. Es consistente entre endpoints. Sin cambios
-   necesarios del lado web — ya los usamos como si fueran el mismo.
+   `ClientAccountStatus.client_code`/`cliCod` son el **mismo valor**.
+   Sin cambios necesarios del lado web.
 
-5. **Depósito en el pedido:** `POST /ERP/order` NO pide `warehouseId`.
-   Si un cliente tiene varios depósitos, ¿cómo sabe el ERP dónde enviar?
-   ¿Agarra el depósito por default? Confirmar con proveedor.
+5. **Depósito en el pedido (`warehouse_id`):**
+   ✅ **Resuelto (2026-04-21):** El `warehouses[]` que viene en
+   `/ERP/Clients` NO son las sucursales del cliente — son los
+   **depósitos de Griffo** (Thompson = TH, Cochabamba = DCO) asignados
+   a esa sucursal del cliente. Cada fila del response es una
+   sucursal distinta del cliente, y el warehouse es el depósito de
+   Griffo que la abastece.
+
+   Implicancia para la web: cuando armamos un pedido, el
+   `warehouseId` que mandamos a `/ERP/prices` y `/ERP/order` es el
+   depósito Griffo correspondiente a la sucursal del cliente que
+   elegimos. No es una elección del cliente — está pre-asignado.
+
+   Para la UX del portal, el selector "Sucursal" debe mostrar las
+   **sucursales del cliente** (Paraná / Rosario / Villa María) y
+   al seleccionar, internamente se usa el warehouse_id Griffo
+   asociado (DCO, TH, etc.).
 
 6. **`orderStatus` al crear pedido:** ¿qué valores acepta? ¿Se puede
    mandar "Pendiente aprobación" para que quede en cola antes de pasar
@@ -309,8 +325,16 @@ código.
 7. **`platformOrderId`:** asumo que es un ID nuestro (UUID generado en
    la web) para trackear el pedido. Confirmar.
 
-8. **Estados de pedido (`Status`):** ¿qué valores devuelve
-   `GET /ERP/orders/{id}`? Muestra `"Confirmado"` — lista completa?
+8. **Estados de pedido (`Status`):**
+   ✅ **Resuelto (2026-04-21):** El ERP sólo maneja **2 estados**:
+   - `"Pendiente"` → pedido cargado en Bejerman pero no facturado.
+   - `"Facturado"` → pedido facturado (podemos considerar "entregado"
+     del lado del cliente cuando pasa a este estado).
+
+   Para el portal web mantenemos nuestros 4 estados propios
+   (`procesando` / `en_preparacion` / `entregado` / `cancelado`)
+   y el polling cuando esté `Facturado` → web pasa a `entregado`
+   automáticamente.
 
 9. **Webhooks:** ¿el middleware soporta avisar cambios (estado de pedido,
    nueva factura, nuevo pago)? Si no, vamos a hacer polling.
