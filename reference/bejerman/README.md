@@ -293,10 +293,10 @@ código.
    por **CUIT** — pero el endpoint no devuelve CUIT. Sería valioso que
    el proveedor lo incluya.
 
-   **Nota:** `GET /ERP/Clients` devuelve `client_id` pero
-   `ClientAccountStatus` recibe `client_code` (y devuelve `cliCod`).
-   Confirmar que son el mismo identificador — probablemente sí, pero
-   el cambio de nombre es una trampa fácil de tropezar.
+   ✅ **Resuelto (2026-04-21):** `GET /ERP/Clients.client_id` y
+   `ClientAccountStatus.client_code`/`cliCod` son el **mismo valor**,
+   alfanumérico. Es consistente entre endpoints. Sin cambios
+   necesarios del lado web — ya los usamos como si fueran el mismo.
 
 5. **Depósito en el pedido:** `POST /ERP/order` NO pide `warehouseId`.
    Si un cliente tiene varios depósitos, ¿cómo sabe el ERP dónde enviar?
