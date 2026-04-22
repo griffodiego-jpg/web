@@ -582,17 +582,31 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
 
 ### Sticky header del buscador
 
-El header del `/catalogo` es **una sola fila** (`CatalogSearch.tsx`):
-tabs (Palabra / Patente / Vehículo / Código / Medidas) a la izquierda,
-form del tab activo con `flex-1` al medio, `StatusBadge` + botón
-Filtros (mobile) a la derecha. El hint de "buscá en N productos" va
-dentro del placeholder del input de Palabra, no como subtítulo — así
-el sticky queda en ~60px en vez de los ~150px que tenía antes.
+El header del `/catalogo` es **dos filas centradas** (`CatalogSearch.tsx`),
+con `max-w-3xl` para que no se pierdan en pantallas anchas:
+
+- **Fila 1**: tabs (Palabra / Patente / Vehículo / Código / Medidas)
+  con `justify-center`.
+- **Fila 2**: form del tab activo (input de palabra/código/patente, o
+  selects de vehículo, o pills de medidas).
+
+El `StatusBadge` y el botón **Filtros** (mobile) viven **flotando a la
+derecha** con `position: absolute`, fuera del flujo del bloque centrado
+para no romper la simetría tabs+input.
+
+El hint "Buscá en N productos: marca, modelo, código, categoría…"
+va dentro del **placeholder** del input de Palabra (no como subtítulo
+arriba), así se ahorra una fila completa.
 
 El `FiltersSidebar` se pega justo debajo con la CSS var
 `--catalog-header-bottom` que calcula un `ResizeObserver` al montar
 (ver `useLayoutEffect` en `CatalogSearch.tsx`). No hay magic numbers
 de `top-[192px]`.
+
+⚠️ **Histórico**: el commit `539f7d0` probó una versión "single-row"
+(tabs + input en la misma fila) pero la cliente prefirió volver a las
+dos filas centradas porque el bloque inline se sentía amontonado.
+No volver a esa variante sin pedirle confirmación.
 
 ### ProductCard
 

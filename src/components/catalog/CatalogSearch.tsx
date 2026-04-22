@@ -353,91 +353,20 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
         ref={stickyBarRef}
         className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}
       >
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 lg:px-6">
-          <nav
-            role="tablist"
-            aria-label="Tipos de búsqueda"
-            className="flex shrink-0 flex-wrap gap-0.5"
-          >
-            {TABS.map((t) => {
-              const active = tab === t.key;
-              return (
-                <button
-                  key={t.key}
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setTab(t.key)}
-                  type="button"
-                  className={[
-                    "relative px-3 py-2 text-sm font-bold transition",
-                    active
-                      ? "text-primary after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-accent"
-                      : "text-gray-400 hover:text-primary",
-                  ].join(" ")}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Form — flex-1 para ocupar el espacio restante en la misma fila.
-              En tabs simples (palabra/código/patente) queda inline con los
-              tabs; en vehículo/medidas el form wrappea debajo si no entra. */}
-          <div className="min-w-[240px] flex-1">
-            {tab === "palabra" ? (
-              <KeywordForm
-                value={keyword}
-                onChange={setKeyword}
-                placeholder={`Buscá en ${products.length} productos: marca, modelo, código, categoría…`}
-              />
-            ) : null}
-            {tab === "patente" ? (
-              <PlateForm
-                value={plate}
-                onChange={setPlate}
-                onSubmit={() => searchPlate(plate)}
-                pending={platePending}
-              />
-            ) : null}
-            {tab === "vehiculo" ? (
-              <VehicleForm
-                tree={vehicleTree}
-                brand={brand}
-                model={model}
-                year={year}
-                onBrand={(v) => {
-                  setBrand(v);
-                  setModel("");
-                  setYear("");
-                }}
-                onModel={(v) => {
-                  setModel(v);
-                  setYear("");
-                }}
-                onYear={setYear}
-              />
-            ) : null}
-            {tab === "codigo" ? <CodeForm value={code} onChange={setCode} /> : null}
-            {tab === "medidas" ? (
-              <div className="flex flex-col gap-2">
-                <MeasuresSelector value={measureType} onChange={setMeasureType} />
-                <MedidaShortcuts
-                  measureType={measureType}
-                  trebolesUrl={trebolesUrl}
-                  onOpenTreboles={() => setTrebolesOpen(true)}
-                />
-              </div>
-            ) : null}
+        <div className="relative px-4 py-2.5 lg:px-6">
+          {/* StatusBadge + botón Filtros (mobile) flotando a la derecha,
+              fuera del flujo del bloque centrado para no romper la simetría
+              de tabs + input. */}
+          <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 items-center gap-2 lg:flex">
+            {status ? <StatusBadge status={status} /> : null}
           </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="absolute right-4 top-2 flex items-center gap-2 lg:hidden">
             {status ? <StatusBadge status={status} /> : null}
             {showSidebar ? (
               <button
                 type="button"
                 onClick={() => setFiltersOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary lg:hidden"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary"
               >
                 <FilterIcon /> Filtros
                 {activeFilters > 0 ? (
@@ -447,6 +376,84 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
                 ) : null}
               </button>
             ) : null}
+          </div>
+
+          {/* Bloque centrado: tabs arriba + input abajo. max-w acota el ancho
+              para que el buscador no se vea perdido en pantallas anchas. */}
+          <div className="mx-auto max-w-3xl">
+            <nav
+              role="tablist"
+              aria-label="Tipos de búsqueda"
+              className="flex flex-wrap justify-center gap-1 border-b border-gray-100"
+            >
+              {TABS.map((t) => {
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(t.key)}
+                    type="button"
+                    className={[
+                      "relative px-3 py-2 text-sm font-bold transition",
+                      active
+                        ? "text-primary after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:bg-accent"
+                        : "text-gray-400 hover:text-primary",
+                    ].join(" ")}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-2.5">
+              {tab === "palabra" ? (
+                <KeywordForm
+                  value={keyword}
+                  onChange={setKeyword}
+                  placeholder={`Buscá en ${products.length} productos: marca, modelo, código, categoría…`}
+                />
+              ) : null}
+              {tab === "patente" ? (
+                <PlateForm
+                  value={plate}
+                  onChange={setPlate}
+                  onSubmit={() => searchPlate(plate)}
+                  pending={platePending}
+                />
+              ) : null}
+              {tab === "vehiculo" ? (
+                <VehicleForm
+                  tree={vehicleTree}
+                  brand={brand}
+                  model={model}
+                  year={year}
+                  onBrand={(v) => {
+                    setBrand(v);
+                    setModel("");
+                    setYear("");
+                  }}
+                  onModel={(v) => {
+                    setModel(v);
+                    setYear("");
+                  }}
+                  onYear={setYear}
+                />
+              ) : null}
+              {tab === "codigo" ? <CodeForm value={code} onChange={setCode} /> : null}
+              {tab === "medidas" ? (
+                <div className="flex flex-col gap-2">
+                  <MeasuresSelector value={measureType} onChange={setMeasureType} />
+                  <MedidaShortcuts
+                    measureType={measureType}
+                    trebolesUrl={trebolesUrl}
+                    onOpenTreboles={() => setTrebolesOpen(true)}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
