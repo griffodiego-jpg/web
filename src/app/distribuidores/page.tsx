@@ -113,9 +113,9 @@ export default function DistribuidoresPage() {
       ) : (
         <>
           {/* Desktop: tabla con columnas ordenables */}
-          <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
+          <div className="hidden md:block border border-gray-200 rounded-lg">
             <table className="w-full">
-              <thead className="bg-primary text-white">
+              <thead className="bg-primary text-white sticky top-14 z-10 shadow-sm">
                 <tr>
                   <SortableTh
                     label="Nombre"

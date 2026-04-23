@@ -1,5 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
-import { AssetImage } from "@/components/AssetImage";
 import { RegistroDescargaForm } from "@/components/RegistroDescargaForm";
 import type { RecursoGated } from "@/data/descargas";
 import { productosDetalle } from "@/data/productos";
@@ -23,18 +23,7 @@ export default async function DescargasPage() {
     navigation.find((i) => i.label === "Productos destacados")?.children ?? [];
 
   return (
-    <div className="container mx-auto max-w-4xl px-5 py-10 lg:py-14">
-      <header className="mb-6 lg:mb-8">
-        <h1 className="text-3xl lg:text-4xl font-black text-[#0a2b3d]">
-          Descargas
-        </h1>
-        <p className="mt-2 text-sm text-gray-600 max-w-2xl">
-          Catálogo en PDF, material comercial por producto y recursos para
-          distribuidores (banco de imágenes y base de datos) — todo en un solo
-          lugar.
-        </p>
-      </header>
-
+    <div className="container mx-auto max-w-4xl px-5 py-6 lg:py-10">
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden divide-y divide-gray-100">
         {/* 1. Catálogo general */}
         {catalogoGeneralPdf ? (
@@ -96,11 +85,11 @@ function ListRow({
     <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 p-4 hover:bg-gray-50 transition">
       <div className="shrink-0 w-16 h-16 rounded-lg bg-gray-50 overflow-hidden flex items-center justify-center border border-gray-100">
         {imagen ? (
-          <AssetImage
+          <img
             src={imagen}
             alt={titulo}
-            bare
             className="w-full h-full object-contain p-1"
+            loading="lazy"
           />
         ) : (
           <DocIcon />
