@@ -186,7 +186,21 @@ async function trySaveToRedis(products: CatalogProduct[]): Promise<void> {
  *   3. Fetch a SpecParts — la fuente real.
  * Deduplica requests concurrentes con `inflightProducts`.
  */
-export async function listCatalog(): Promise<CatalogProduct[]> {
+/**
+ * Lista todo el catálogo GRIFFO. 4 niveles de caché:
+ *   1. Memoria del proceso (30 min) — más rápido.
+ *   2. Redis (30 min) — sobrevive cold starts, shared entre instancias.
+ *   3. Fetch a SpecParts — la fuente real.
+ *   4. Último backup en Vercel Blob — **fallback de último recurso** si
+ *      SpecParts se cae. Se lee del hash `catalog-backup:snapshots` y se
+ *      baja el JSON del snapshot más reciente. Se salta si
+ *      `opts.skipFallback === true` (lo usa el cron para no enmascarar
+ *      fallas del proveedor con data vieja).
+ * Deduplica requests concurrentes con `inflightProducts`.
+ */
+export async function listCatalog(
+  opts: { skipFallback?: boolean } = {},
+): Promise<CatalogProduct[]> {
   if (productsCache && Date.now() < productsCache.expiresAt) {
     return productsCache.products;
   }
@@ -209,6 +223,17 @@ export async function listCatalog(): Promise<CatalogProduct[]> {
     } catch (err) {
       const { logAdminError } = await import("@/lib/admin-log");
       await logAdminError("specparts", err);
+
+      if (opts.skipFallback) throw err;
+
+      // Nivel 4: último backup conocido. Mejor servir data de hace 1-2
+      // días que un 500. El admin ve el error en el log igual.
+      const fallback = await tryLoadFromBackup().catch(() => null);
+      if (fallback && fallback.length > 0) {
+        // No cacheamos en memoria — queremos que el próximo request reintente
+        // el fetch real. Sólo devolvemos esto para la respuesta actual.
+        return fallback;
+      }
       throw err;
     }
   })().finally(() => {
@@ -216,6 +241,21 @@ export async function listCatalog(): Promise<CatalogProduct[]> {
   });
 
   return inflightProducts;
+}
+
+/**
+ * Baja el JSON del último snapshot desde Vercel Blob. Devuelve null si
+ * no hay snapshots o si algo falla bajándolo. Import dinámico para no
+ * meter el cliente de Blob + ExcelJS en el bundle cuando no hay fallback.
+ */
+async function tryLoadFromBackup(): Promise<CatalogProduct[] | null> {
+  const { readLatestSnapshot } = await import("@/lib/catalog-backup");
+  const snap = await readLatestSnapshot();
+  if (!snap) return null;
+  const res = await fetch(snap.jsonUrl, { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = (await res.json()) as CatalogProduct[];
+  return Array.isArray(data) ? data : null;
 }
 
 export async function getProductBySlug(slug: string): Promise<CatalogProduct | null> {

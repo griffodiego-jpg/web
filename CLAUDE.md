@@ -833,6 +833,15 @@ Grupos:
   (hoy la única es `medidas-treboles`, usada en tab Medidas). Sube a
   Blob, guarda URL en Redis (`catalogo-imagenes:<key>`). Componente
   `components/admin/CatalogoImagenesManager.tsx`.
+- `/admin/catalogo-backup` — **Backup diario del catálogo SpecParts**.
+  Cron en `vercel.json` (`0 4 * * *`) genera snapshot diario
+  (JSON + Excel con 3 hojas: Productos, Vehículos, Atributos) y lo
+  sube a Vercel Blob. Metadata en Redis
+  (`catalog-backup:snapshots`, array de últimas 30 entradas).
+  Admin puede regenerar a mano y descargar cualquier snapshot del
+  historial. **Además funciona como fallback**: `listCatalog()` cae
+  al último snapshot si SpecParts no responde (ver nivel 4 del cache
+  chain en `src/lib/api/specparts.ts`). Lib: `src/lib/catalog-backup.ts`.
 - `/admin/cache` — Pre-warming del CDN de imágenes.
 - `/admin/banco-imagenes` — Genera y mantiene un ZIP con **todas las
   fotos del catálogo** (organizadas por código de producto) para
