@@ -273,6 +273,23 @@ Notas:
   Habría que confirmar con la cliente si se muestran todos o sólo
   los de los últimos N meses.
 
+### 🔴 PDF de Nota de Pedido (NP) — pendiente
+
+Probado 2026-04-21: `GET /ERP/GetComprobante?Comp=NP&CompLetra=X&...`
+devuelve 404. El endpoint genérico **no soporta descargar NPs**.
+
+Pedido al técnico: cómo baja la web el PDF de una Nota de Pedido de
+Bejerman. Opciones:
+- Agregar soporte `Comp=NP` a `GetComprobante` (con su CompLetra
+  correspondiente, o que el endpoint acepte sin letra para NPs).
+- O exponer un endpoint dedicado tipo
+  `GET /ERP/GetNotaPedido?CompNro={erpOrderId}&CodCliente={code}`.
+
+Mientras tanto, la UI muestra "No disponible" en el botón y el
+usuario contacta a Griffo por mail si lo necesita.
+
+### Uso del endpoint de pedidos
+
 Se usa en `/cuenta/pedidos` para mostrar al cliente **todos** sus
 pedidos vivos, no sólo los armados desde la web.
 `getPendingOrdersForClient()` en `src/lib/api/bejerman.ts` ya está

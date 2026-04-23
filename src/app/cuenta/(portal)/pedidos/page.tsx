@@ -4,6 +4,7 @@ import { getPendingOrdersForClient } from "@/lib/api/bejerman";
 import { formatARS, formatDate } from "@/data/mock-b2b";
 import { getCurrentClient } from "@/lib/b2b/current-client";
 import { PedidoStatusPill } from "@/components/cuenta/PedidoStatusPill";
+import { NotaPedidoPdfButton } from "@/components/cuenta/NotaPedidoPdfButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mis pedidos" };
@@ -159,20 +160,7 @@ export default async function PedidosPage() {
                     <span className="text-[10px] text-gray-500">+ IVA</span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <a
-                      href={`/api/b2b/nota-pedido?erpOrderId=${encodeURIComponent(o.erpOrderId)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-primary text-primary hover:bg-primary hover:text-white font-bold text-[10px] transition whitespace-nowrap"
-                      title="Descargar Nota de Pedido"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      Ver pedido
-                    </a>
+                    <NotaPedidoPdfButton erpOrderId={o.erpOrderId} />
                   </td>
                 </tr>
               ))}
