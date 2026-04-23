@@ -32,12 +32,14 @@ export async function GET(req: Request) {
   const client = await getCurrentClient();
 
   try {
+    // La API valida CompLetra como [Required] y rechaza string vacío.
+    // Probamos con 'X' como placeholder (convención interna de
+    // comprobantes no fiscales tipo recibo). Si el endpoint no
+    // soporta NP en absoluto, esto va a fallar con un 404 distinto
+    // y sabemos que hay que pedirle al técnico el endpoint correcto.
     const { buffer, contentType } = await getComprobantePdf({
       Comp: "NP",
-      // La NP no tiene letra ni punto de venta en la notación típica,
-      // mandamos vacíos. Si el endpoint del técnico los requiere,
-      // ajustar acá.
-      CompLetra: "",
+      CompLetra: "X",
       PuntoVenta: "0001",
       CompNro: erpOrderId,
       CodCliente: client.client_id,
