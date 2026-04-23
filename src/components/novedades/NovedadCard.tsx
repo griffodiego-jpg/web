@@ -1,8 +1,8 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { useState } from "react";
-import { AssetImage } from "@/components/AssetImage";
 import { VehiclesModal } from "@/components/catalog/VehiclesModal";
 import { vehicleKey, type Novedad } from "@/lib/novedades";
 
@@ -44,14 +44,16 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
         </div>
 
         <div className="flex gap-3 px-4 pt-1 pb-3">
-          {/* Imagen chica */}
+          {/* Imagen chica. Uso <img> nativo para evitar el bug de
+              AssetImage en contenedores chicos con object-contain, que
+              dejaba el cuadrado vacío sin transicionar del skeleton. */}
           {novedad.imagen && (
             <div className="w-24 h-24 shrink-0 bg-gray-50 rounded-lg p-2 flex items-center justify-center">
-              <AssetImage
+              <img
                 src={novedad.imagen}
                 alt={novedad.titulo}
-                bare
                 className="max-h-full max-w-full object-contain"
+                loading="lazy"
               />
             </div>
           )}

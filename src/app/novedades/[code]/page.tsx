@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AssetImage } from "@/components/AssetImage";
 import {
   BreadcrumbJsonLd,
   ProductJsonLd,
@@ -153,11 +152,12 @@ export default async function NovedadDetallePage({
         <div className="mt-6 grid md:grid-cols-[auto_1fr] gap-6 items-start">
           {novedad.imagen && (
             <div className="bg-gray-50 rounded-lg p-5 flex items-center justify-center md:w-64 aspect-square">
-              <AssetImage
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={novedad.imagen}
                 alt={novedad.titulo}
-                bare
                 className="max-h-full max-w-full object-contain"
+                loading="lazy"
               />
             </div>
           )}
