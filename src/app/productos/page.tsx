@@ -40,7 +40,7 @@ export default function ProductosPage() {
               </div>
 
               {/* Imagen */}
-              <div className="aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
+              <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center p-2 overflow-hidden">
                 {detalle?.image ? (
                   <AssetImage
                     src={detalle.image}
