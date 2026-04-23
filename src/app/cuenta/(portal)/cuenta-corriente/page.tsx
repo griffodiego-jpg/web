@@ -37,15 +37,21 @@ function matchesFilter(item: BejermanAccountStatusItem, filtro: Filtro): boolean
   return true;
 }
 
+/** Codes que sí tienen PDF descargable en GetComprobante. */
+const PDF_AVAILABLE_COMPS = new Set(["FC", "NC", "ND", "RC"]);
+
 export default async function CuentaCorrientePage({
   searchParams,
 }: {
-  searchParams: Promise<{ filtro?: string }>;
+  searchParams: Promise<{ filtro?: string; periodo?: string }>;
 }) {
-  const { filtro: filtroParam } = await searchParams;
+  const params = await searchParams;
+  const filtroParam = params.filtro;
   const active: Filtro = (["todos", "FC", "NC", "RE"].includes(filtroParam ?? "")
     ? filtroParam
     : "todos") as Filtro;
+  /** "12m" (últimos 12 meses, default) o "all" (histórico). */
+  const periodo: "12m" | "all" = params.periodo === "all" ? "all" : "12m";
 
   const client = await getCurrentClient();
   const { items: accountItems, source, error } = await getAccountStatusForClient(
@@ -74,12 +80,32 @@ export default async function CuentaCorrientePage({
       saldo: running,
     };
   });
+  // Filtro temporal: por default solo últimos 12 meses para evitar
+  // renderizar cientos de filas de hace años. El saldo running se
+  // computa sobre TODO igual — sólo recortamos la visualización.
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 12);
+  const inPeriodo = (it: BejermanAccountStatusItem) =>
+    periodo === "all" || new Date(it.emision) >= cutoff;
+
+  const olderCount = accountItems.filter((x) => !inPeriodo(x)).length;
+
   const visible = withRunning
-    .filter((x) => matchesFilter(x, active))
+    .filter((x) => matchesFilter(x, active) && inPeriodo(x))
     .reverse();
 
   function countFor(filtro: Filtro): number {
-    return accountItems.filter((x) => matchesFilter(x, filtro)).length;
+    return accountItems
+      .filter((x) => matchesFilter(x, filtro) && inPeriodo(x))
+      .length;
+  }
+
+  function buildHref(nextFiltro: Filtro, nextPeriodo: "12m" | "all"): string {
+    const sp = new URLSearchParams();
+    if (nextFiltro !== "todos") sp.set("filtro", nextFiltro);
+    if (nextPeriodo === "all") sp.set("periodo", "all");
+    const qs = sp.toString();
+    return qs ? `/cuenta/cuenta-corriente?${qs}` : "/cuenta/cuenta-corriente";
   }
 
   return (
@@ -155,40 +181,49 @@ export default async function CuentaCorrientePage({
               </div>
             )}
 
-          {/* Filtro por tipo */}
-          <nav className="flex gap-1 border-b border-gray-200 overflow-x-auto">
-            {(
-              [
-                { key: "todos", label: "Todos los movimientos" },
-                { key: "FC", label: "Facturas" },
-                { key: "NC", label: "Notas de crédito" },
-                { key: "RE", label: "Pagos / Recibos" },
-              ] as Array<{ key: Filtro; label: string }>
-            ).map((f) => {
-              const count = countFor(f.key);
-              const isActive = active === f.key;
-              const href =
-                f.key === "todos"
-                  ? "/cuenta/cuenta-corriente"
-                  : `/cuenta/cuenta-corriente?filtro=${f.key}`;
-              return (
-                <Link
-                  key={f.key}
-                  href={href}
-                  className={`px-4 py-2 text-sm font-semibold border-b-2 whitespace-nowrap transition ${
-                    isActive
-                      ? "border-primary text-[#0a2b3d] font-black"
+          {/* Filtro por tipo + toggle de periodo */}
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-200">
+            <nav className="flex gap-1 overflow-x-auto -mb-px">
+              {(
+                [
+                  { key: "todos", label: "Todos los movimientos" },
+                  { key: "FC", label: "Facturas" },
+                  { key: "NC", label: "Notas de crédito" },
+                  { key: "RE", label: "Pagos / Recibos" },
+                ] as Array<{ key: Filtro; label: string }>
+              ).map((f) => {
+                const count = countFor(f.key);
+                const isActive = active === f.key;
+                const href = buildHref(f.key, periodo);
+                return (
+                  <Link
+                    key={f.key}
+                    href={href}
+                    className={`px-4 py-2 text-sm font-semibold border-b-2 whitespace-nowrap transition ${
+                      isActive
+                        ? "border-primary text-[#0a2b3d] font-black"
                       : "border-transparent text-gray-600 hover:text-[#0a2b3d]"
                   }`}
                 >
-                  {f.label}{" "}
-                  <span className="text-xs text-gray-400 font-normal">
-                    ({count})
-                  </span>
-                </Link>
-              );
-            })}
-          </nav>
+                    {f.label}{" "}
+                    <span className="text-xs text-gray-400 font-normal">
+                      ({count})
+                    </span>
+                  </Link>
+                );
+              })}
+            </nav>
+            {olderCount > 0 && (
+              <Link
+                href={buildHref(active, periodo === "12m" ? "all" : "12m")}
+                className="px-3 py-1.5 mb-1 text-xs font-semibold text-primary hover:bg-primary hover:text-white border border-primary rounded-md transition whitespace-nowrap"
+              >
+                {periodo === "12m"
+                  ? `Ver historial completo (+${olderCount} más)`
+                  : "Ver sólo últimos 12 meses"}
+              </Link>
+            )}
+          </div>
 
           {/* Movimientos */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -230,7 +265,12 @@ export default async function CuentaCorrientePage({
                   <tbody className="divide-y divide-gray-100">
                     {visible.map((r, idx) => {
                       const numero = `${r.compLetra}${r.puntoVenta}-${r.compNro}`;
-                      const puedeDescargar = r.hasPdf !== false;
+                      // PDF disponible solo para FC, NC, ND y RC. Otros
+                      // movimientos internos (CG, CIB, etc.) no tienen
+                      // comprobante descargable.
+                      const puedeDescargar =
+                        r.hasPdf !== false &&
+                        PDF_AVAILABLE_COMPS.has((r.comp ?? "").toUpperCase());
                       return (
                         <tr key={`${numero}-${idx}`} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
