@@ -86,19 +86,26 @@ export function countCompCodes(
 
 /**
  * Normaliza `debe`/`haber` de un item a la convención contable estándar
- * (debe: cargas, haber: abonos). Algunos ERPs — como el middleware de
- * Griffo — mandan pagos (RC) y notas de crédito con el monto en `debe`
- * y `haber: 0`, o con signos invertidos, lo que hace que el saldo
- * sume el pago como deuda en vez de restarlo.
+ * (debe: cargas positivas, haber: abonos positivos).
  *
- * Reglas:
- *  - Si el item es "pago" o "nota_credito" con `debe > 0` y `haber == 0`,
- *    movemos el importe al `haber` (convención correcta).
- *  - Si cualquier item tiene `debe < 0`, lo convertimos en `haber > 0`
- *    (un débito negativo = crédito).
- *  - Si cualquier item tiene `haber < 0`, lo convertimos en `debe > 0`.
+ * El middleware del ERP Griffo usa varias convenciones mezcladas:
+ *  - Facturas (FC/ND): `debe: positivo, haber: 0` ✓ correcto.
+ *  - Recibos (RC): `debe: 0, haber: negativo` ← el signo negativo
+ *    representa la rebaja de deuda. Hay que flipear.
+ *  - Notas de crédito (NC): varían (vimos casos con `haber < 0`).
  *
- * Devuelve los valores normalizados — no modifica el objeto original.
+ * Reglas por categoría:
+ *
+ * Pagos y NCs (deben reducir deuda):
+ *  - `haber < 0` → `haber = |haber|` (es la convención del ERP).
+ *  - `debe < 0` → mover su valor absoluto a `haber`.
+ *  - `debe > 0, haber = 0` → mover el importe a `haber`.
+ *
+ * Resto (facturas, ND, otros — deben aumentar deuda):
+ *  - `debe < 0` → mover a `haber` (es crédito, no débito).
+ *  - `haber < 0` → mover a `debe`.
+ *
+ * Devuelve valores normalizados — no modifica el objeto original.
  */
 export function normalizeAmounts(item: BejermanAccountStatusItem): {
   debe: number;
@@ -108,20 +115,31 @@ export function normalizeAmounts(item: BejermanAccountStatusItem): {
   let haber = item.haber ?? 0;
   const cat = classifyComp(item.comp);
 
-  // Invertir signos negativos a la columna correcta.
-  if (debe < 0) {
-    haber += -debe;
-    debe = 0;
+  if (cat === "pago" || cat === "nota_credito") {
+    // El ERP usa signo negativo en haber para representar la rebaja.
+    if (haber < 0) haber = -haber;
+    // Débito negativo: es un crédito disfrazado.
+    if (debe < 0) {
+      haber += -debe;
+      debe = 0;
+    }
+    // El importe quedó en la columna incorrecta (debe en vez de haber).
+    if (debe > 0 && haber === 0) {
+      haber = debe;
+      debe = 0;
+    }
+  } else {
+    // Facturas/ND: signo flipped es un crédito oculto.
+    if (debe < 0) {
+      haber += -debe;
+      debe = 0;
+    }
+    if (haber < 0) {
+      debe += -haber;
+      haber = 0;
+    }
   }
-  if (haber < 0) {
-    debe += -haber;
-    haber = 0;
-  }
-  // Los pagos y NCs que vienen cargados como `debe` se convierten.
-  if ((cat === "pago" || cat === "nota_credito") && debe > 0 && haber === 0) {
-    haber = debe;
-    debe = 0;
-  }
+
   return { debe, haber };
 }
 
