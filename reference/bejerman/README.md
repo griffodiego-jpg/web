@@ -237,14 +237,11 @@ Consecuencias:
   que el ERP devuelve para ese cliente — sirve para identificar
   códigos nuevos y extenderlos en `movement-classifier.ts`.
 
-### Sucursal en comprobantes (opcional)
+### Sucursal en comprobantes
 
-`GET /ERP/ClientAccountStatus/{client_code}` devuelve los movimientos
-de cuenta corriente sin identificar qué sucursal generó cada uno. Hoy
-la pantalla de cuenta corriente los muestra unificados. Si la cliente
-quiere desglosar por sucursal, pedirle al técnico agregar un campo
-`warehouseId` en cada item. No es bloqueante — la cuenta corriente a
-nivel cliente es lo habitual.
+✅ **Descartado (2026-04-21):** la cliente confirmó que la cuenta
+corriente se muestra unificada por cliente (sin desglosar por
+sucursal). No hace falta pedirle nada al técnico.
 
 ### Endpoint nuevo (pendiente)
 
@@ -279,10 +276,10 @@ código.
 1. **HTTPS:** ¿el middleware va a tener HTTPS antes de producción? Si no,
    cualquier tráfico que pase por internet va en claro.
 
-2. **`productCode`:** los códigos de producto de Bejerman, ¿son los
-   mismos que los de SpecParts (ej. `076-35`, `950-32B`, `AB 25-40`)?
-   Necesitamos un ejemplo real de payload de `/ERP/prices` para confirmar.
-   Si no coinciden, hay que armar tabla de mapeo.
+2. **`productCode`:**
+   ✅ **Resuelto (2026-04-21):** Los códigos de producto de Bejerman
+   son **iguales** a los de SpecParts (ej. `076-35`, `950-32B`,
+   `AB 25-40`). Se pueden usar directo sin tabla de mapeo.
 
 3. **`clientId` format:**
    ✅ **Resuelto (2026-04-21):** `client_id` es **alfanumérico** con
