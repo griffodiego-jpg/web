@@ -20,10 +20,29 @@ export async function getAccountStatusForClient(
   clientCode: string,
 ): Promise<AccountStatusResult> {
   try {
-    const items = await getClientAccountStatus(clientCode);
-    return { items, source: "erp" };
+    const raw = await getClientAccountStatus(clientCode);
+    // Defensa: si el ERP devuelve algo que no es array, lo tratamos
+    // como un error en lugar de `[]` silencioso. Así el usuario ve el
+    // UnavailableBox con el detalle técnico en lugar de una cuenta
+    // corriente vacía silenciosa.
+    if (!Array.isArray(raw)) {
+      const sample = JSON.stringify(raw ?? null).slice(0, 200);
+      console.error(
+        `[account-status] ${clientCode}: respuesta inesperada (no array):`,
+        sample,
+      );
+      throw new Error(`Respuesta inesperada del ERP (no array): ${sample}`);
+    }
+    console.log(
+      `[account-status] ${clientCode}: ${raw.length} movimientos del ERP`,
+    );
+    return { items: raw, source: "erp" };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[account-status] ${clientCode}: falló la consulta al ERP:`,
+      error,
+    );
     if (clientCode === mockCurrentClient.client_id) {
       return { items: mockAccountStatus, source: "mock" };
     }

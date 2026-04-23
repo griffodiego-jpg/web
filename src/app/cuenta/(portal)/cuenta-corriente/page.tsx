@@ -183,9 +183,25 @@ export default async function CuentaCorrientePage({
           {/* Movimientos */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             {visible.length === 0 ? (
-              <p className="p-8 text-center text-sm text-gray-500">
-                No hay movimientos para mostrar.
-              </p>
+              <div className="p-8 text-center text-sm">
+                <p className="text-gray-700 font-semibold">
+                  {accountItems.length === 0
+                    ? "El ERP no devolvió movimientos para este cliente."
+                    : "No hay movimientos para este filtro."}
+                </p>
+                {accountItems.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Puede ser que el cliente no tenga historial de cuenta
+                    corriente, o que la integración con el ERP todavía no
+                    esté trayendo datos. Para diagnosticar, entrá desde
+                    admin a{" "}
+                    <code className="bg-gray-100 px-1 rounded">
+                      /admin/clientes/{client.client_id}/debug-cuenta
+                    </code>
+                    .
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
