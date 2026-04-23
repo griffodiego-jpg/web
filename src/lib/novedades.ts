@@ -38,13 +38,21 @@ const NUEVOS_KEY_PREFIX = "novedades:nuevos:"; // código → set de "BRAND:MODE
  */
 const FECHA_KEY_PREFIX = "novedades:fecha:"; // código → "YYYY-MM"
 const FECHA_INDEX_KEY = "novedades:fecha-index";
-/** Flag en Redis para correr la migración de fechas de lanzamientos una sola vez. */
-const FECHA_MIGRATION_FLAG = "novedades:fecha-migration:v1";
+/**
+ * Flag en Redis para correr la migración de fechas de lanzamientos.
+ * v1 usaba las letras sufijo en minúscula (184-32a, 149-32a, 149-32b)
+ * pero SpecParts devuelve los códigos en mayúscula (184-32A, etc) —
+ * las claves quedaban huérfanas y no se encontraban en el lookup.
+ * v2 reescribe con mayúsculas y borra los remanentes de v1.
+ */
+const FECHA_MIGRATION_FLAG = "novedades:fecha-migration:v2";
 
 /**
  * Lanzamientos con fecha preasignada por la cliente (sprint 2026-04).
  * Una vez corrida la migración, la cliente puede editarlos desde
- * `/admin/novedades` como cualquier otro.
+ * `/admin/novedades` como cualquier otro. **Los códigos van en el
+ * case exacto con el que SpecParts los devuelve** (mayúsculas para
+ * los sufijos de variante: A, B, etc).
  */
 const LANZAMIENTOS_INICIALES: Record<string, string> = {
   "277-32": "2025-08",
@@ -55,12 +63,22 @@ const LANZAMIENTOS_INICIALES: Record<string, string> = {
   "2022-97": "2025-08",
   "184-32": "2025-10",
   "185-35": "2025-10",
-  "184-32a": "2025-10",
+  "184-32A": "2025-10",
   "414-32": "2025-10",
   "149-32": "2025-11",
-  "149-32a": "2025-11",
-  "149-32b": "2025-11",
+  "149-32A": "2025-11",
+  "149-32B": "2025-11",
 };
+
+/**
+ * Códigos de v1 que quedaron con claves en minúscula — los borramos
+ * en la migración a v2 para no dejar overrides huérfanos.
+ */
+const LANZAMIENTOS_INICIALES_V1_HUERFANOS: string[] = [
+  "184-32a",
+  "149-32a",
+  "149-32b",
+];
 
 /** Ventana de tiempo para considerar una novedad. */
 const WINDOW_MONTHS = 12;
@@ -336,6 +354,14 @@ async function seedLanzamientosInicialesIfNeeded(): Promise<void> {
     const done = await redis.get(FECHA_MIGRATION_FLAG);
     if (done) return;
     const pipe = redis.multi();
+    // Borramos las claves huérfanas de v1 (letras sufijo en minúscula).
+    for (const code of LANZAMIENTOS_INICIALES_V1_HUERFANOS) {
+      pipe.del(TIPO_KEY_PREFIX + code);
+      pipe.srem(TIPO_INDEX_KEY, code);
+      pipe.del(FECHA_KEY_PREFIX + code);
+      pipe.srem(FECHA_INDEX_KEY, code);
+    }
+    // Seedeamos con las claves correctas (mayúsculas).
     for (const [code, fecha] of Object.entries(LANZAMIENTOS_INICIALES)) {
       pipe.set(TIPO_KEY_PREFIX + code, "lanzamiento");
       pipe.sadd(TIPO_INDEX_KEY, code);
@@ -345,7 +371,7 @@ async function seedLanzamientosInicialesIfNeeded(): Promise<void> {
     pipe.set(FECHA_MIGRATION_FLAG, "done");
     await pipe.exec();
     console.log(
-      `[novedades] seeded ${Object.keys(LANZAMIENTOS_INICIALES).length} lanzamientos iniciales con fechas`
+      `[novedades] seeded ${Object.keys(LANZAMIENTOS_INICIALES).length} lanzamientos iniciales con fechas + cleanup v1`
     );
   } catch (e) {
     console.error("[novedades] error seedeando lanzamientos iniciales:", e);
