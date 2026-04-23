@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { siteConfig } from "@/lib/site-config";
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -17,7 +14,6 @@ function WhatsAppIcon({ className = "" }: { className?: string }) {
 }
 
 export function WhatsappFloat() {
-  const [open, setOpen] = useState(false);
   const message = encodeURIComponent(
     "Hola, estoy visitando la web de Griffo y tengo una consulta."
   );
@@ -25,52 +21,15 @@ export function WhatsappFloat() {
 
   return (
     <aside className="fixed bottom-5 right-5 z-40">
-      {open && (
-        <div className="mb-3 overflow-hidden bg-white rounded min-w-[300px] pb-2.5 shadow-xl">
-          <div className="bg-primary flex gap-2.5 p-5 items-start">
-            <WhatsAppIcon className="w-12 h-12 text-white shrink-0" />
-            <div className="max-w-[220px]">
-              <h2 className="text-white text-xl font-bold">Consultas</h2>
-              <p className="text-white text-sm">
-                ¡Hola! Hacé clic para chatear por WhatsApp
-              </p>
-            </div>
-          </div>
-          <small className="text-gray-500 px-5 block my-2.5">
-            Solemos contestar en breve
-          </small>
-          <ul className="space-y-2.5 px-2.5">
-            <li>
-              <a
-                href={waHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between gap-5 border-l-primary border-l-2 p-2.5 rounded group hover:bg-primary transition"
-              >
-                <div className="flex gap-2.5 items-center">
-                  <WhatsAppIcon className="w-9 h-9 text-primary group-hover:text-white" />
-                  <div>
-                    <h3 className="group-hover:text-white font-semibold">
-                      Atención
-                    </h3>
-                    <p className="text-gray-500 text-sm group-hover:text-white">
-                      {siteConfig.whatsapp.label}
-                    </p>
-                  </div>
-                </div>
-              </a>
-            </li>
-          </ul>
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Abrir consultas por WhatsApp"
-        className="w-16 h-16 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-105 transition cursor-pointer"
+      <a
+        href={waHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Consultanos por WhatsApp"
+        className="w-16 h-16 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-105 transition"
       >
         <WhatsAppIcon className="w-9 h-9" />
-      </button>
+      </a>
     </aside>
   );
 }
