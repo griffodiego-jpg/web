@@ -202,7 +202,9 @@ export function getComprobantePdf(q: BejermanComprobanteQuery) {
     CompNro: q.CompNro,
     CodCliente: q.CodCliente,
   });
-  if (q.CompLetra) params.set("CompLetra", q.CompLetra);
+  // La API exige que CompLetra esté presente aunque sea vacía
+  // (error 400 "The CompLetra field is required" si se omite).
+  params.set("CompLetra", q.CompLetra ?? "");
   return requestBinary(`/ERP/GetComprobante?${params.toString()}`);
 }
 
