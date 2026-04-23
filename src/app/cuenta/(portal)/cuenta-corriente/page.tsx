@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  computeSaldo,
   formatARS,
   formatDate,
 } from "@/data/mock-b2b";
@@ -8,7 +7,9 @@ import { getAccountStatusForClient } from "@/lib/b2b/account-status";
 import { getCurrentClient } from "@/lib/b2b/current-client";
 import {
   classifyComp,
+  computeNormalizedSaldo,
   isLikelyPago,
+  normalizeAmounts,
 } from "@/lib/b2b/movement-classifier";
 import type { BejermanAccountStatusItem } from "@/types/bejerman";
 
@@ -51,9 +52,10 @@ export default async function CuentaCorrientePage({
     client.client_id,
   );
 
-  const saldo = computeSaldo(accountItems);
-  const debe = accountItems.reduce((a, x) => a + x.debe, 0);
-  const haber = accountItems.reduce((a, x) => a + x.haber, 0);
+  // Aplicamos normalización para tolerar pagos/NCs que el ERP manda
+  // con monto en `debe` en vez de `haber` (u otras inversiones de
+  // signo). Sin esto, los recibos suman deuda en lugar de restarla.
+  const { saldo, debe, haber } = computeNormalizedSaldo(accountItems);
 
   // Saldo running sobre TODA la cuenta (no sobre el filtro).
   const sorted = [...accountItems].sort(
@@ -61,8 +63,16 @@ export default async function CuentaCorrientePage({
   );
   let running = 0;
   const withRunning = sorted.map((item) => {
-    running += item.debe - item.haber;
-    return { ...item, saldo: running };
+    const n = normalizeAmounts(item);
+    running += n.debe - n.haber;
+    // Devolvemos también los valores normalizados para que la tabla
+    // muestre los recibos en la columna correcta.
+    return {
+      ...item,
+      debe: n.debe,
+      haber: n.haber,
+      saldo: running,
+    };
   });
   const visible = withRunning
     .filter((x) => matchesFilter(x, active))
