@@ -336,8 +336,29 @@ código.
    y el polling cuando esté `Facturado` → web pasa a `entregado`
    automáticamente.
 
-9. **Webhooks:** ¿el middleware soporta avisar cambios (estado de pedido,
-   nueva factura, nuevo pago)? Si no, vamos a hacer polling.
+9. **Webhooks:**
+   ✅ **Resuelto (2026-04-21):** El técnico implementó webhooks.
+   Dispara POST al endpoint configurado con este payload:
+
+   ```json
+   {
+     "event": "order.invoiced",
+     "occurredAt": "2026-04-22T10:00:00Z",
+     "order": { "ErpOrderId": "...", "Status": "...", "invoice": {...} }
+   }
+   ```
+
+   Eventos: `order.invoiced` (aparece factura nueva) y
+   `order.status_changed` (cualquier otro cambio de estado).
+
+   La web tiene el receptor en **`POST /api/webhooks/bejerman`** con
+   auth por secret header. Al técnico le pasamos la URL + header +
+   secret. Cuando llega `order.invoiced`, la web busca el pedido local
+   por `erpOrderNumber`, lo marca como `entregado` y manda mail al
+   cliente. Si no matchea (pedido directo del ERP), se loguea.
+
+   **Esto resuelve también el ítem 4** (extender `GET /ERP/orders/{id}`):
+   no hace falta polling, el webhook nos avisa en tiempo real.
 
 10. **Rate limits:** ¿cuántos req/seg tolera? Esto define cuán agresivo
     podemos ser cacheando y cuántos códigos podemos pedir en batch a

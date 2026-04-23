@@ -57,6 +57,12 @@ export interface Pedido {
   total: number;
   status: PedidoStatus;
 
+  /** Status crudo del ERP (`Pendiente` / `Facturado`). Lo mantenemos
+   *  para debugging y para que las otras sesiones puedan verlo al
+   *  consultar el detalle admin. El status del flujo web es el de
+   *  arriba — son dos conceptos distintos. */
+  erpStatus?: string;
+
   /** Número de nota de pedido que devuelve Bejerman al cargarlo manual.
    *  Se llena cuando el operador pasa el pedido a `en_preparacion`. */
   erpOrderNumber?: string;

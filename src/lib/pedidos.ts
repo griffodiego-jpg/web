@@ -248,6 +248,23 @@ export async function markEntregado(
   return pedido;
 }
 
+/**
+ * Guarda el status del ERP (`Pendiente` / `Facturado` / lo que venga)
+ * sin cambiar el status interno de la web. Se dispara desde el webhook
+ * ante eventos `order.status_changed` que no alcanzan para mover el
+ * pedido a otro estado del flujo web (ese es `order.invoiced`).
+ */
+export async function persistErpStatus(
+  id: string,
+  erpStatus: string,
+): Promise<Pedido> {
+  const pedido = await getPedido(id);
+  if (!pedido) throw new Error(`Pedido ${id} no existe`);
+  pedido.erpStatus = erpStatus || undefined;
+  await persist(pedido);
+  return pedido;
+}
+
 export async function cancelPedido(
   id: string,
   reason?: string,
