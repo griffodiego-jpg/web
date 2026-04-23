@@ -1,21 +1,32 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getProductByCode } from "@/lib/api/specparts";
-import { setTipo, type TipoNovedad } from "@/lib/novedades";
+import {
+  clearFecha,
+  setFecha,
+  setTipo,
+  type TipoNovedad,
+} from "@/lib/novedades";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Override de tipo para una novedad. Se usa principalmente para marcar
- * algunos códigos como "Lanzamiento" — el resto queda como "Nueva
- * aplicación" por default sin necesidad de tocar nada.
+ * Override de tipo (y opcionalmente fecha) para una novedad.
+ *
+ * Body:
+ *   - code: string (requerido)
+ *   - tipo: "lanzamiento" | "aplicacion" (requerido)
+ *   - fecha: "YYYY-MM" (opcional) — si viene, setea el override de fecha.
+ *     Si viene string vacío explícito, borra el override existente.
+ *     Si no viene la prop → no toca la fecha.
  */
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       code?: string;
       tipo?: TipoNovedad;
+      fecha?: string;
     };
 
     if (!body.code || !body.tipo) {
@@ -41,6 +52,20 @@ export async function POST(request: Request) {
     }
 
     await setTipo(product.code, body.tipo);
+
+    if (typeof body.fecha === "string") {
+      if (body.fecha === "") {
+        await clearFecha(product.code);
+      } else if (/^\d{4}-\d{2}$/.test(body.fecha)) {
+        await setFecha(product.code, body.fecha);
+      } else {
+        return NextResponse.json(
+          { error: "Fecha inválida (formato YYYY-MM)" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Refrescamos las páginas públicas que muestran la novedad para que
     // el ISR refleje el cambio inmediatamente.
     revalidatePath("/novedades");

@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { vehicleKey, type Novedad, type TipoNovedad } from "@/lib/novedades";
+import {
+  formatFechaMes,
+  vehicleKey,
+  type Novedad,
+  type TipoNovedad,
+} from "@/lib/novedades";
 
 type Filtro = "sin-publicar" | "publicadas" | TipoNovedad | "ocultas";
 
@@ -28,6 +33,17 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
     const init: Record<string, Set<string>> = {};
     for (const n of novedades) {
       init[n.code] = new Set(n.nuevosVehiculos);
+    }
+    return init;
+  });
+  /**
+   * Estado local del mes de lanzamiento por código (formato YYYY-MM).
+   * Inicializa con el override actual si existe.
+   */
+  const [fechaByCode, setFechaByCode] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const n of novedades) {
+      if (n.fechaMes) init[n.code] = n.fechaMes;
     }
     return init;
   });
@@ -71,14 +87,14 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
     return list;
   }, [novedades, filtro, query]);
 
-  async function setTipo(code: string, tipo: TipoNovedad) {
+  async function setTipo(code: string, tipo: TipoNovedad, fecha?: string) {
     setBusy(code);
     setError(null);
     try {
       const res = await fetch("/api/admin/novedades/publicar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, tipo }),
+        body: JSON.stringify({ code, tipo, ...(fecha !== undefined && { fecha }) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error");
@@ -284,18 +300,58 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
                 </p>
                 <p className="text-xs text-gray-500">
                   {n.vehiculos.length} vehículo
-                  {n.vehiculos.length !== 1 ? "s" : ""} · actualizado{" "}
-                  {n.fecha.toLocaleDateString("es-AR")}
+                  {n.vehiculos.length !== 1 ? "s" : ""}
+                  {n.fechaMes ? (
+                    <> · lanzamiento {formatFechaMes(n.fechaMes)}</>
+                  ) : (
+                    <> · actualizado {n.fecha.toLocaleDateString("es-AR")}</>
+                  )}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {/* Input de mes de lanzamiento. Para lanzamientos entra
+                    en la publicación; para aplicaciones es opcional. */}
+                {(() => {
+                  const fechaLocal = fechaByCode[n.code] ?? "";
+                  const fechaDirty =
+                    n.published && fechaLocal !== (n.fechaMes ?? "");
+                  return (
+                    <label className="inline-flex items-center gap-1 text-[10px] text-gray-500 font-semibold">
+                      <span>Mes</span>
+                      <input
+                        type="month"
+                        value={fechaLocal}
+                        onChange={(e) =>
+                          setFechaByCode((prev) => ({
+                            ...prev,
+                            [n.code]: e.target.value,
+                          }))
+                        }
+                        className="rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                      {n.published && fechaDirty && (
+                        <button
+                          type="button"
+                          onClick={() => setTipo(n.code, n.tipo, fechaLocal)}
+                          disabled={busy === n.code}
+                          className="ml-1 rounded bg-primary text-white px-2 py-1 text-[10px] font-bold hover:bg-primary-dark transition cursor-pointer disabled:opacity-50"
+                        >
+                          Guardar
+                        </button>
+                      )}
+                    </label>
+                  );
+                })()}
+
                 {!n.published ? (
                   // SIN PUBLICAR: 2 botones para elegir tipo y publicar
                   <>
                     <button
                       type="button"
-                      onClick={() => setTipo(n.code, "lanzamiento")}
+                      onClick={() =>
+                        setTipo(n.code, "lanzamiento", fechaByCode[n.code] || "")
+                      }
                       disabled={busy === n.code}
                       className="rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-bold hover:bg-primary-dark transition cursor-pointer disabled:opacity-50"
                     >
@@ -303,7 +359,9 @@ export function NovedadesAdmin({ novedades }: { novedades: Novedad[] }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setTipo(n.code, "aplicacion")}
+                      onClick={() =>
+                        setTipo(n.code, "aplicacion", fechaByCode[n.code] || "")
+                      }
                       disabled={busy === n.code}
                       className="rounded-lg bg-accent text-white px-3 py-1.5 text-xs font-bold hover:bg-primary transition cursor-pointer disabled:opacity-50"
                     >

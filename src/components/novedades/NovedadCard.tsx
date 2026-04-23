@@ -30,15 +30,17 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
   return (
     <>
       <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden">
-        {/* Header: badge + fecha */}
+        {/* Header: badge + fecha (solo si corresponde) */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
           <TipoBadge tipo={novedad.tipo} />
-          <time
-            className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide"
-            dateTime={novedad.fecha.toISOString()}
-          >
-            {formatFecha(novedad.fecha)}
-          </time>
+          {shouldShowFecha(novedad) ? (
+            <time
+              className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide"
+              dateTime={novedad.fecha.toISOString()}
+            >
+              {formatFecha(novedad)}
+            </time>
+          ) : null}
         </div>
 
         <div className="flex gap-3 px-4 pt-1 pb-3">
@@ -235,12 +237,48 @@ function totalTruncatedModels(brands: GroupedBrand[]) {
   );
 }
 
-function formatFecha(date: Date): string {
-  return date.toLocaleDateString("es-AR", {
+/**
+ * Regla de display de fecha en las cards de novedades:
+ *   - Lanzamientos: siempre (override si existe, sino updated_at).
+ *   - Nuevas aplicaciones: solo si el admin cargó explícitamente un mes.
+ * Esto respeta lo pedido por la cliente: las aplicaciones ya cargadas no
+ * tienen fecha visible; las nuevas pueden ser publicadas con mes.
+ */
+function shouldShowFecha(n: {
+  tipo: "lanzamiento" | "aplicacion";
+  fechaMes: string | null;
+}): boolean {
+  if (n.tipo === "lanzamiento") return true;
+  return !!n.fechaMes;
+}
+
+function formatFecha(n: { fecha: Date; fechaMes: string | null }): string {
+  if (n.fechaMes) return formatMesAno(n.fechaMes);
+  return n.fecha.toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
+}
+
+function formatMesAno(yyyymm: string): string {
+  const meses = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
+  const [y, m] = yyyymm.split("-");
+  const idx = parseInt(m, 10) - 1;
+  return `${meses[idx] ?? m}-${y.slice(-2)}`;
 }
 
 function ArrowIcon() {

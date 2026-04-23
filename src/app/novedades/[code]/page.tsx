@@ -8,6 +8,27 @@ import {
 } from "@/components/StructuredData";
 import { getNovedad } from "@/lib/novedades";
 
+/** YYYY-MM → "agosto 2025" (full month para el header del detalle). */
+function formatFechaMesHeader(yyyymm: string): string {
+  const meses = [
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+  ];
+  const [y, m] = yyyymm.split("-");
+  const idx = parseInt(m, 10) - 1;
+  return `${meses[idx] ?? m} ${y}`;
+}
+
 type Params = Promise<{ code: string }>;
 
 export const revalidate = 300;
@@ -98,16 +119,22 @@ export default async function NovedadDetallePage({
           >
             {tipoLabel}
           </span>
-          <time
-            className="text-xs text-gray-500 font-semibold uppercase tracking-wide"
-            dateTime={novedad.fecha.toISOString()}
-          >
-            {novedad.fecha.toLocaleDateString("es-AR", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </time>
+          {/* Fecha: siempre en Lanzamientos; en Aplicaciones solo si el
+              admin cargó un mes. */}
+          {(novedad.tipo === "lanzamiento" || novedad.fechaMes) && (
+            <time
+              className="text-xs text-gray-500 font-semibold uppercase tracking-wide"
+              dateTime={novedad.fecha.toISOString()}
+            >
+              {novedad.fechaMes
+                ? formatFechaMesHeader(novedad.fechaMes)
+                : novedad.fecha.toLocaleDateString("es-AR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+            </time>
+          )}
         </div>
 
         <p className="text-primary font-mono font-black text-3xl lg:text-4xl leading-none">

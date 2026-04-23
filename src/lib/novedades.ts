@@ -30,6 +30,37 @@ const TIPO_INDEX_KEY = "novedades:tipo-index";
 const HIDDEN_KEY = "novedades:hidden"; // set de códigos ocultos
 /** Set de claves de vehículos marcados como "nuevos" por el admin. */
 const NUEVOS_KEY_PREFIX = "novedades:nuevos:"; // código → set de "BRAND:MODEL"
+/**
+ * Fecha de lanzamiento override. Formato "YYYY-MM" (ej. "2025-08").
+ * Si no está seteada:
+ *   - Lanzamientos → cae a updated_at del producto.
+ *   - Aplicaciones → no se muestra fecha (null).
+ */
+const FECHA_KEY_PREFIX = "novedades:fecha:"; // código → "YYYY-MM"
+const FECHA_INDEX_KEY = "novedades:fecha-index";
+/** Flag en Redis para correr la migración de fechas de lanzamientos una sola vez. */
+const FECHA_MIGRATION_FLAG = "novedades:fecha-migration:v1";
+
+/**
+ * Lanzamientos con fecha preasignada por la cliente (sprint 2026-04).
+ * Una vez corrida la migración, la cliente puede editarlos desde
+ * `/admin/novedades` como cualquier otro.
+ */
+const LANZAMIENTOS_INICIALES: Record<string, string> = {
+  "277-32": "2025-08",
+  "0102-97": "2025-08",
+  "238-32": "2025-08",
+  "1523-97": "2025-08",
+  "4007-97": "2025-08",
+  "2022-97": "2025-08",
+  "184-32": "2025-10",
+  "185-35": "2025-10",
+  "184-32a": "2025-10",
+  "414-32": "2025-10",
+  "149-32": "2025-11",
+  "149-32a": "2025-11",
+  "149-32b": "2025-11",
+};
 
 /** Ventana de tiempo para considerar una novedad. */
 const WINDOW_MONTHS = 12;
@@ -158,7 +189,18 @@ export type Novedad = {
   published: boolean;
   titulo: string;
   descripcion: string;
-  fecha: Date; // fecha de actualización en SpecParts (es lo único que expone la API)
+  /**
+   * Fecha efectiva para sort/display:
+   *  - Si hay override "YYYY-MM" → primer día de ese mes.
+   *  - Si no → updated_at de SpecParts.
+   */
+  fecha: Date;
+  /**
+   * Fecha override en formato "YYYY-MM" si el admin la seteó. Usado para
+   * renderizar "ago-25" en las cards. null → cae al updated_at (solo se
+   * muestra en Lanzamientos; en Aplicaciones sin override se oculta).
+   */
+  fechaMes: string | null;
   linea: string | null; // product.category
   imagen: string | null;
   vehiculos: VehiculoNovedad[];
@@ -229,6 +271,84 @@ async function readHidden(): Promise<Set<string>> {
   } catch (e) {
     console.error("[novedades] error leyendo hidden:", e);
     return new Set();
+  }
+}
+
+/**
+ * Override de fecha de lanzamiento (formato "YYYY-MM"). Mantiene el index.
+ * Valida que el string matchee el formato para evitar basura en Redis.
+ */
+export async function setFecha(code: string, fecha: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) throw new Error("Redis no configurado");
+  if (!/^\d{4}-\d{2}$/.test(fecha)) {
+    throw new Error("Fecha inválida — formato esperado YYYY-MM");
+  }
+  const pipe = redis.multi();
+  pipe.set(FECHA_KEY_PREFIX + code, fecha);
+  pipe.sadd(FECHA_INDEX_KEY, code);
+  await pipe.exec();
+}
+
+/** Borra el override de fecha (el código vuelve a caer al updated_at). */
+export async function clearFecha(code: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) throw new Error("Redis no configurado");
+  const pipe = redis.multi();
+  pipe.del(FECHA_KEY_PREFIX + code);
+  pipe.srem(FECHA_INDEX_KEY, code);
+  await pipe.exec();
+}
+
+/** Lee todos los overrides de fecha en un solo roundtrip (set index + mget). */
+async function readFechaOverrides(): Promise<Map<string, string>> {
+  const redis = getRedis();
+  if (!redis) return new Map();
+  try {
+    const codes = (await redis.smembers(FECHA_INDEX_KEY)) as string[] | null;
+    if (!codes || codes.length === 0) return new Map();
+    const keys = codes.map((c) => FECHA_KEY_PREFIX + c);
+    const values = await redis.mget<(string | null)[]>(...keys);
+    const map = new Map<string, string>();
+    codes.forEach((code, i) => {
+      const v = values[i];
+      if (typeof v === "string" && /^\d{4}-\d{2}$/.test(v)) {
+        map.set(code, v);
+      }
+    });
+    return map;
+  } catch (e) {
+    console.error("[novedades] error leyendo fechas:", e);
+    return new Map();
+  }
+}
+
+/**
+ * Migración idempotente que carga los 13 lanzamientos iniciales con su
+ * fecha. Corre una vez por Redis (flag `novedades:fecha-migration:v1`).
+ * Si la cliente después edita estos códigos desde el admin, los cambios
+ * persisten — la migración no los pisa.
+ */
+async function seedLanzamientosInicialesIfNeeded(): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    const done = await redis.get(FECHA_MIGRATION_FLAG);
+    if (done) return;
+    const pipe = redis.multi();
+    for (const [code, fecha] of Object.entries(LANZAMIENTOS_INICIALES)) {
+      pipe.set(TIPO_KEY_PREFIX + code, "lanzamiento");
+      pipe.sadd(TIPO_INDEX_KEY, code);
+      pipe.set(FECHA_KEY_PREFIX + code, fecha);
+      pipe.sadd(FECHA_INDEX_KEY, code);
+    }
+    pipe.set(FECHA_MIGRATION_FLAG, "done");
+    await pipe.exec();
+    console.log(
+      `[novedades] seeded ${Object.keys(LANZAMIENTOS_INICIALES).length} lanzamientos iniciales con fechas`
+    );
+  } catch (e) {
+    console.error("[novedades] error seedeando lanzamientos iniciales:", e);
   }
 }
 
@@ -345,16 +465,27 @@ function enrichProduct(
   published: boolean,
   hidden: boolean,
   nuevosVehiculos: string[],
+  fechaOverride: string | null,
   getSlug: (code: string) => string | null
 ): Novedad {
   const display = getDisplayApplication(product);
+  // Si hay override, la fecha efectiva es el primer día de ese mes.
+  // Si no, cae al updated_at del producto en SpecParts.
+  let fecha: Date;
+  if (fechaOverride) {
+    const [y, m] = fechaOverride.split("-").map((x) => parseInt(x, 10));
+    fecha = new Date(Date.UTC(y, m - 1, 1));
+  } else {
+    fecha = new Date(product.updated_at);
+  }
   return {
     code: product.code,
     tipo,
     published,
     titulo: product.product || product.description || product.code,
     descripcion: product.description || "",
-    fecha: new Date(product.updated_at),
+    fecha,
+    fechaMes: fechaOverride,
     linea: product.category ?? null,
     imagen: firstPictureUrl(product),
     vehiculos: product.vehicles.map((v) => ({
@@ -388,6 +519,8 @@ export async function listNovedades(): Promise<Novedad[]> {
 export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
   // Migramos datos del modelo viejo si todavía hay (idempotente).
   await migrateLegacyIfNeeded();
+  // Seedea los 13 lanzamientos iniciales con fecha si todavía no se hizo.
+  await seedLanzamientosInicialesIfNeeded();
 
   let products: CatalogProduct[];
   try {
@@ -403,11 +536,13 @@ export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
     return new Date(p.updated_at).getTime() >= cutoff;
   });
 
-  const [tipoOverrides, hiddenSet, { getFeaturedSlug }] = await Promise.all([
-    readTipoOverrides(),
-    readHidden(),
-    import("@/data/featured-products"),
-  ]);
+  const [tipoOverrides, hiddenSet, fechaOverrides, { getFeaturedSlug }] =
+    await Promise.all([
+      readTipoOverrides(),
+      readHidden(),
+      readFechaOverrides(),
+      import("@/data/featured-products"),
+    ]);
 
   // Batch de los sets de "nuevos vehículos" en un solo pipeline de
   // Redis. Antes hacíamos N roundtrips (uno por candidato) = ~300 ms
@@ -424,6 +559,7 @@ export async function listNovedadesIncludingHidden(): Promise<Novedad[]> {
       override !== undefined, // published = tiene override
       hiddenSet.has(p.code),
       nuevosPorCodigo.get(p.code) ?? [],
+      fechaOverrides.get(p.code) ?? null,
       getFeaturedSlug
     );
   });
@@ -442,11 +578,12 @@ export async function getNovedad(code: string): Promise<Novedad | null> {
   const updated = new Date(product.updated_at).getTime();
   if (updated < windowStart().getTime()) return null;
 
-  const [tipoOverrides, hiddenSet, nuevos, { getFeaturedSlug }] =
+  const [tipoOverrides, hiddenSet, nuevos, fechaOverrides, { getFeaturedSlug }] =
     await Promise.all([
       readTipoOverrides(),
       readHidden(),
       readNuevosVehiculos(product.code),
+      readFechaOverrides(),
       import("@/data/featured-products"),
     ]);
 
@@ -461,6 +598,31 @@ export async function getNovedad(code: string): Promise<Novedad | null> {
     true,
     false,
     nuevos,
+    fechaOverrides.get(product.code) ?? null,
     getFeaturedSlug
   );
+}
+
+/**
+ * Formatea YYYY-MM a "ago-25" (mes abreviado en español + año de 2 dígitos).
+ * Usado para renderizar la fecha en cards/detalle de novedades.
+ */
+export function formatFechaMes(yyyymm: string): string {
+  const meses = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
+  const [y, m] = yyyymm.split("-");
+  const idx = parseInt(m, 10) - 1;
+  return `${meses[idx] ?? m}-${y.slice(-2)}`;
 }
