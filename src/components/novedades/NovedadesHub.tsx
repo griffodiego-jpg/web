@@ -36,8 +36,10 @@ export function NovedadesHub({
 
   return (
     <div className="container mx-auto max-w-6xl px-5 pt-5 pb-14">
-      {/* Tabs (sin título — el menú activo ya dice "Novedades") */}
-      <div className="flex items-start gap-1 border-b border-gray-200 mb-5 overflow-x-auto">
+      {/* Tabs sticky — quedan visibles al scrollear para que se vea en
+          qué sección está parado el usuario (Lanzamientos vs Nuevas
+          aplicaciones). */}
+      <div className="sticky top-14 z-20 bg-white flex items-start gap-1 border-b border-gray-200 mb-5 overflow-x-auto shadow-sm">
         <Tab
           active={filtro === "todas"}
           onClick={() => setFiltro("todas")}
