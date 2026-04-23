@@ -144,7 +144,9 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 - `components/AssetVideo.tsx` — `<video>` con fallback a placeholder con botón
   de play.
 - `components/Newsletter.tsx` — form con estado idle/loading/ok/error.
-- `components/WhatsappFloat.tsx` — botón flotante con panel desplegable.
+- `components/WhatsappFloat.tsx` — botón flotante verde, click va
+  directo a `wa.me/<numero>?text=<mensaje>` (antes abría un panel
+  intermedio "Consultas / Atención" que sólo agregaba un click extra).
 - `components/ContactForm.tsx` — form de contacto (client).
 - `components/PageHero.tsx` — ya solo exporta `ComingSoon` (el hero original
   fue removido). Se usa en páginas stub.
@@ -162,8 +164,13 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 
 ## Estado de las páginas
 
-- `/` home: **completa**. Banner vectorial clickeable a /catalogo +
-  TrustStrip + 3 cards destacadas.
+- `/` home: **completa**. Carousel administrable (BannerCarousel)
+  con buscador de patente como slide built-in + TrustStrip + 3 cards
+  destacadas (Productos / **Catálogo online** / Lanzamientos). El
+  label "Catálogo online" diferencia el buscador digital del catálogo
+  físico (foto del PDF impreso). En el nav del header sigue diciendo
+  "Catálogo" solo (con "online" no entraba el nav en laptop común y
+  pisaba el slogan).
 - `/empresa`: **completa** con contenido real del sitio original.
 - `/desarrollo-a-medida`: **completa + formulario de consulta**
   (DesarrolloForm → `/api/desarrollo`). Algunos assets pendientes.
@@ -746,12 +753,42 @@ renombrado por Next.js 16):
 Si se sospecha de sesión comprometida: borrar las keys `admin:session:*`
 desde el dashboard de Upstash → invalida todos los logins activos.
 
+### Defensa en profundidad — route group `(protected)`
+
+El proxy edge no alcanza como única capa. Los docs de Next dicen
+explícito que prefetches, caché de CDN o errores silenciosos pueden
+dejar pasar requests. La evidencia: con cookie vacía, el sidebar se
+veía igual al navegar entre rutas admin.
+
+Estructura actual:
+
+- **`src/app/admin/layout.tsx`** — wrapper mínimo (sólo Metadata +
+  `<>{children}</>`). No verifica nada.
+- **`src/app/admin/login/page.tsx`** — fuera del grupo protegido,
+  visible sin sesión.
+- **`src/app/admin/(protected)/layout.tsx`** — chrome del admin
+  (sidebar + LogoutButton). En cada render llama a
+  `hasValidAdminSession()` (server-side, lee cookie + valida en Redis)
+  y `redirect('/admin/login')` si falla. Antes de que se pinte
+  cualquier página hija.
+- **Todas las páginas admin** (banners, clientes, pedidos, etc) viven
+  dentro de `(protected)/`. Los route groups `(name)` no afectan la
+  URL — `/admin/clientes` sigue siendo `/admin/clientes`.
+
+Resultado: dos capas independientes (proxy + layout server). El
+proxy redirige rápido en el borde; si por algún motivo se saltea, el
+layout server frena antes del primer byte de HTML protegido.
+
+Helper: `hasValidAdminSession()` en `src/lib/admin-auth.ts`. Devuelve
+true sólo si hay cookie + matchea key viva en Redis. Cualquier otro
+caso (sin cookie, sin Redis, sesión revocada) → false.
+
 ### Sidebar agrupado (`src/app/admin/layout.tsx`)
 
 Grupos:
 - **Diseño de web**: Banners, Distribuidores, Descargas, Novedades
 - **Administración de catálogo**: Productos destacados, Cobertura,
-  Imágenes del catálogo, Cache de imágenes
+  Imagen tréboles, **Banco de imágenes**, Cache de imágenes
 - **Portal B2B**: Clientes, Pedidos, Listas de precios
 - **Formularios**: Leads capturados
 - **Vista pública**: link externo a `/catalogo`
@@ -797,6 +834,17 @@ Grupos:
   Blob, guarda URL en Redis (`catalogo-imagenes:<key>`). Componente
   `components/admin/CatalogoImagenesManager.tsx`.
 - `/admin/cache` — Pre-warming del CDN de imágenes.
+- `/admin/banco-imagenes` — Genera y mantiene un ZIP con **todas las
+  fotos del catálogo** (organizadas por código de producto) para
+  mandárselo a clientes. Botón "Regenerar ahora" + cron semanal
+  (vercel.json, lunes 4 AM UTC con `CRON_SECRET`). Link público fijo:
+  `/api/descargas/banco-imagenes` (302 → Blob actual). Alerta amarilla
+  cuando hay productos nuevos con fotos sin incluir. Lib en
+  `src/lib/banco-imagenes.ts` — fetch paralelo (concurrency 8),
+  JSZip, upload Blob público, metadata en hash Redis
+  `banco-imagenes:meta`. Borra el blob anterior al subir el nuevo.
+  ⚠️ La generación tarda ~30-60s (>10s timeout de Hobby) — requiere
+  Vercel Pro o pasar a background job.
 - `/admin/clientes` — Lista de clientes del ERP (código, razón social,
   email, nro de sucursales unificadas en una sola fila).
 - `/admin/clientes/[code]` — **Detalle del cliente**: datos, sucursales
@@ -840,25 +888,29 @@ Protegido por el proxy (excepto la whitelist descrita arriba).
 
 ## Descargas (`/catalogo/download`)
 
-Tres secciones:
+**Layout actual** (rediseñado 2026-04-21): una sola lista compacta
+sin scroll molesto, sin título redundante, sin nav sticky interno.
+Cada fila tiene thumbnail 64×64 + título + botones de acción.
+Wrapper `max-w-4xl`. Items en orden:
 
-1. **Catálogo de productos en PDF** — primer PDF en `/public/pdfs/`
-   distinto de `garantia.pdf`.
-2. **Material por producto** — por cada slug de destacado, escanea
-   `/public/downloads/productos/<slug>/` y toma el primer PDF como
-   "Flyer" y el primer MP4 como "Video para redes". El slug
-   `abrazaderas-universales` y `kit-de-proteccion-para-suspension-deportiva`
-   fueron removidos a pedido de la cliente.
-3. **Material para catalogar** — **Banco de imágenes** (.zip) +
-   **Base de datos de productos** (.xlsx) en `/public/downloads/`.
-   Ambas detrás de un form de registro (nombre, empresa, email,
-   teléfono, "a quién le compra Griffo"). **Los forms se muestran
-   siempre** (aunque el archivo no esté subido) para capturar leads;
-   si hay archivo se dispara la descarga, si no, muestra "te lo
-   mandamos por email cuando esté listo".
+1. **Catálogo de productos** — thumb `/products/catalogo-card.jpg` +
+   botón "Descargar PDF". El PDF sale del primer archivo en
+   `/public/pdfs/` distinto de `garantia.pdf`.
+2-6. **Material por producto** — uno por destacado (Máquina Montadora,
+   Fuelle Universal de Transmisión, Extractor, Pinza, Fuelle Dirección).
+   Cada fila: thumb del producto + botones "Flyer" + "Video". Escanea
+   `/public/downloads/productos/<slug>/` y toma el primer PDF/MP4.
+7-8. **Recursos gated** — Banco de imágenes (.zip) + Base de datos
+   (.xlsx). Cada fila usa `<details>` nativo: click expande el form
+   inline (nombre, empresa, email, teléfono, "a quién le compra
+   Griffo"). Sin modal, sin JS extra. **Los forms se muestran
+   siempre** aunque el archivo no esté subido — capturan leads y
+   muestran "te lo mandamos por email" si el archivo no existe.
 
-Sticky anchor nav arriba (`bg-primary-dark`) con 3 anclas — avisa que
-hay 3 bloques abajo sin obligar a scrollear.
+Thumbnails: `<img>` nativo dentro de un contenedor fijo `w-16 h-16`
+con `object-contain`. Antes usaba `AssetImage` con `aspect-[4/3]` que
+tenía problemas de sizing en contenedores chiquitos (algunas filas
+quedaban con cuadrado vacío).
 
 ### Resolución de URLs (`src/lib/descargas-store.ts`)
 

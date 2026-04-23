@@ -99,6 +99,8 @@
 | Newsletter | `src/components/Newsletter.tsx` + `src/app/api/newsletter/route.ts` |
 | Registro antes de descargar catálogo | `src/components/RegistroDescargaForm.tsx` + `src/app/api/descargas/registro/route.ts` |
 | Login del admin | `src/app/admin/login/page.tsx` + `src/app/api/admin/login/route.ts` + `src/lib/admin-auth.ts` |
+| Verificación de sesión admin (defensa en profundidad) | `src/lib/admin-auth.ts` (`hasValidAdminSession`) — usado por `src/app/admin/(protected)/layout.tsx` además del proxy edge |
+| Páginas admin protegidas | `src/app/admin/(protected)/*` — el route group obliga a pasar por el layout que valida sesión |
 | Destinatarios de los emails | `src/lib/resend.ts` |
 
 ### SEO
@@ -160,7 +162,20 @@
 | Cliente HTTP del ERP Griffo (Bejerman) | `src/lib/api/bejerman.ts` |
 | Tipos del ERP (cliente, precios, pedidos, factura) | `src/types/bejerman.ts` |
 | Docs del ERP (endpoints disponibles + pendientes) | `reference/bejerman/README.md` + `Documentación API ERP Griffo v3.pdf` |
-| Admin: listado de clientes del ERP | `src/app/admin/clientes/page.tsx` |
+| Admin: listado de clientes del ERP | `src/app/admin/(protected)/clientes/page.tsx` |
+| Admin: detalle del cliente B2B (datos + password + impersonar) | `src/app/admin/(protected)/clientes/[code]/page.tsx` |
+| Admin: form para cambiar password de un cliente | `src/components/admin/ClientPasswordForm.tsx` + `src/app/api/admin/clientes/password/route.ts` |
+| Admin: botón "Loguear como" un cliente | `src/components/admin/ImpersonateButton.tsx` + `src/app/api/admin/clientes/impersonate/route.ts` |
+| Banner rojo "vista de admin" en el portal | `src/components/cuenta/ImpersonationBanner.tsx` |
+| Login real del cliente B2B (valida pass override o GRIFFO+CUIT) | `src/app/api/b2b/login/route.ts` |
+| Lib de credenciales del cliente B2B (scrypt en Redis) | `src/lib/b2b/credentials.ts` |
+| Lib de impersonación (cookie httpOnly) | `src/lib/b2b/impersonation.ts` |
+| Lib de carga de clientes (ERP + fallback mock) | `src/lib/b2b/client-loader.ts` |
+| Lib de "cliente actual" (impersonación + fallback) | `src/lib/b2b/current-client.ts` |
+| Cuenta corriente real desde el ERP | `src/lib/b2b/account-status.ts` |
+| Banco de imágenes (ZIP auto-generado) | `src/lib/banco-imagenes.ts` + `src/app/admin/(protected)/banco-imagenes/page.tsx` + `src/app/api/admin/banco-imagenes/regenerar/route.ts` |
+| Endpoint público del banco de imágenes (link estable) | `src/app/api/descargas/banco-imagenes/route.ts` |
+| Cron semanal de banco de imágenes | `src/app/api/cron/banco-imagenes/route.ts` + `vercel.json` |
 
 ---
 
@@ -337,6 +352,31 @@ Siempre con "+ IVA" al final.
   → mixed content. Todos los assets se bajan y se suben al repo.
 - **No se replica `Novedades` ni `Catálogo`**: el catálogo vive en
   `griffo.specparts.shop` (externo, fuera de alcance).
+- **Admin protegido en dos capas (proxy + layout server)**: el proxy
+  edge solo no alcanza — Next docs lo dicen explícito ("Proxy should
+  not be your only line of defense"). Los prefetches de `<Link>`,
+  caché de CDN o errores silenciosos pueden dejar pasar requests. Por
+  eso `(protected)/layout.tsx` valida la sesión en server con
+  `hasValidAdminSession()` y redirige antes de renderizar nada.
+- **Login B2B con default GRIFFO+CUIT**: la cliente quería que el
+  alta de usuarios no requiera ningún paso técnico. Default
+  predecible (`GRIFFO` + CUIT sin guiones, mayúsculas), admin puede
+  cambiarlo desde `/admin/clientes/[code]`. Override se guarda
+  hasheado scrypt en Redis. Si no hay override, valida contra el
+  default computado.
+- **Banco de imágenes regenerado vs vivo**: bajar 500+ fotos de
+  SpecParts cada request es lento (30-60s). Por eso el ZIP se
+  cachea en Blob; el cron semanal lo refresca y el admin puede
+  forzar regeneración. El link público es estable — siempre apunta
+  al último ZIP, así se manda al cliente una vez.
+- **WhatsApp directo sin panel**: el panel intermedio "Consultas /
+  Atención" forzaba dos clicks para algo que ya está claro por el
+  ícono. Ahora un click → chat.
+- **Catálogo card del home dice "Catálogo online"**: la foto de la
+  card muestra el catálogo físico (PDF impreso) — el label aclara
+  que el destino es el buscador digital, no el descargable. En el
+  nav del header sigue siendo "Catálogo" porque "online" no entraba
+  sin pisar el slogan del logo en laptops 1280-1440.
 - **Site URL centralizado en `NEXT_PUBLIC_SITE_URL`**: sitemap, robots,
   JSON-LD, canonicals, OpenGraph — todo lee de la env var. El día del switch
   de dominio no hay cambios de código, solo se setea la env var en Vercel.

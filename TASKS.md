@@ -4,7 +4,7 @@ Documento vivo con el estado de todo el proyecto. Marcar con `[x]` lo
 que se va completando. Cuando una tarea tiene una etiqueta `(yo)` la
 hago yo sin intervención; `(cliente)` necesita algo de vos.
 
-Última actualización: 2026-04-21. Rama de desarrollo canónica:
+Última actualización: 2026-04-23. Rama de desarrollo canónica:
 `claude/new-website-2026-g1UGd`. Preview:
 `https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`.
 Destino final: `https://www.griffo.com.ar`.
@@ -56,6 +56,11 @@ Todo lo siguiente se construyó entre el merge de la rama nueva y el
 - [x] `/admin/listas-precios` (sube XLSX/PDF + notifica)
 - [x] `/admin/catalogo-imagenes` (tréboles)
 - [x] `/admin/leads` 4 tabs + export CSV por tab
+- [x] `/admin/banco-imagenes` ZIP auto-generado con todas las fotos
+      del catálogo + cron semanal + link público estable
+- [x] **Defensa en profundidad**: route group `(protected)` con
+      verificación server-side de la sesión en cada render del
+      layout. Cierra el gap de prefetches/CDN del proxy edge solo.
 
 ### Novedades (`/novedades`)
 - [x] Auto-detección desde SpecParts + admin para publicar
@@ -65,6 +70,22 @@ Todo lo siguiente se construyó entre el merge de la rama nueva y el
 - [x] ERP Bejerman: cliente HTTP con cache JWT + re-auth 401
 - [x] Rate-limit en `/api/admin/login` + sesiones Redis revocables
 - [x] Stop hook para recordar docs-sync (`.claude/settings.json`)
+- [x] Login B2B real (`/api/b2b/login`) — valida contra password
+      override (scrypt en Redis) o default `GRIFFO+CUIT`
+- [x] Cuenta corriente del portal con datos reales del ERP
+      (fallback a mock si código coincide con cliente mock,
+      "no disponible" si es otro)
+
+### UX (sprint 2026-04 final)
+- [x] Productos destacados: grilla compacta — entra sin scroll
+- [x] Distribuidores: thead sticky con headers visibles al scrollear
+- [x] Descargas: rediseño compacto en una lista única + thumbnails
+      64px + recursos gated con `<details>` inline (sin modal)
+- [x] WhatsApp flotante: click directo al chat (sin panel intermedio)
+- [x] Tréboles: el botón se deshabilita si el archivo no existe en
+      `/public/catalogo/` (antes abría lightbox vacío)
+- [x] Catálogo: lightbox al click en fotos de presentación de
+      productos destacados + thumbnails de tabla medidas a 64px
 
 ---
 
