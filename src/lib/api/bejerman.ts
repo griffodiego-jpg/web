@@ -220,21 +220,19 @@ export function changeApiPassword(
 /**
  * Lista los pedidos pendientes de entrega para un cliente.
  *
- * ⚠ Endpoint tentativo — al 2026-04 el middleware NO expone este
- * endpoint. Se le pidió al técnico agregarlo:
+ * Endpoint confirmado por el técnico el 2026-04-21:
  *
  *   GET /ERP/clientes/{clientCode}/pedidos
  *
- * Devuelve los pedidos cargados en Bejerman para ese cliente que
- * todavía no fueron facturados (independiente de si se crearon
- * desde la web o directo en Bejerman).
+ * Devuelve los pedidos cargados en Bejerman para ese cliente
+ * (independiente de si se crearon desde la web o directo en el ERP).
+ * Los pedidos vienen ordenados por fecha descendente — los más nuevos
+ * primero. El historial incluye pedidos viejos con estado "Pendiente"
+ * (en el ERP sólo hay 2 estados: Pendiente / Facturado).
  *
- * Mientras no exista, esta función captura 404/500 y devuelve [].
- * Así el portal muestra sólo los pedidos locales hasta que el
- * técnico lo habilite — y cuando lo haga, empieza a funcionar
- * solo sin cambios acá.
- *
- * Shape esperado (sujeto a confirmación con el técnico):
+ * Si el endpoint falla (credenciales ausentes, red caída, 5xx), se
+ * loguea y se devuelve []. Así el portal sigue mostrando al menos los
+ * pedidos locales.
  */
 export interface BejermanPendingOrder {
   erpOrderId: string;
@@ -255,11 +253,12 @@ export async function getPendingOrdersForClient(
       `/ERP/clientes/${encodeURIComponent(clientCode)}/pedidos`,
     );
   } catch (e) {
-    // Endpoint todavía no implementado o credenciales no cargadas —
-    // es OK que falle silenciosamente; mostramos sólo los locales.
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("[bejerman] getPendingOrdersForClient falló:", e);
-    }
+    // Logueamos siempre (no sólo en dev) porque ahora el endpoint
+    // existe — cualquier fallo es un bug real que hay que mirar.
+    console.error(
+      `[bejerman] getPendingOrdersForClient(${clientCode}) falló:`,
+      e,
+    );
     return [];
   }
 }

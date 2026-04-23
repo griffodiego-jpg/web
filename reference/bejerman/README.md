@@ -243,26 +243,35 @@ Consecuencias:
 corriente se muestra unificada por cliente (sin desglosar por
 sucursal). No hace falta pedirle nada al técnico.
 
-### Endpoint nuevo (pendiente)
+### Endpoint confirmado
 
-**`GET /ERP/clientes/{clientCode}/pedidos`**
+**`GET /ERP/clientes/{clientCode}/pedidos`** ✅ Activo.
 
 Lista los pedidos pendientes de entrega de un cliente — los cargados
 directamente en Bejerman **y** los que llegaron por web que después
-fueron cargados en el ERP. Respuesta tentativa:
+fueron cargados en el ERP. Respuesta real (ejemplo verificado con el
+técnico el 2026-04-21):
 
 ```json
 [
   {
-    "erpOrderId": "PED-23900",
-    "createdAt": "2026-04-20T10:15:00Z",
-    "estimatedDispatchDate": "2026-04-25T00:00:00Z",
-    "status": "En preparación",
-    "itemCount": 12,
-    "total": 487600
+    "erpOrderId": "00030824",
+    "createdAt": "2026-04-09T00:00:00",
+    "estimatedDispatchDate": "2026-06-01T00:00:00",
+    "status": "Pendiente",
+    "itemCount": 47,
+    "total": 2428124
   }
 ]
 ```
+
+Notas:
+- Las fechas vienen sin TZ (`...T00:00:00` sin Z). JavaScript las
+  interpreta como hora local — OK para este caso.
+- El `status` sólo tiene 2 valores posibles: `Pendiente` / `Facturado`.
+- Incluye pedidos viejos (vimos ejemplos de 2023/2024 en `Pendiente`).
+  Habría que confirmar con la cliente si se muestran todos o sólo
+  los de los últimos N meses.
 
 Se usa en `/cuenta/pedidos` para mostrar al cliente **todos** sus
 pedidos vivos, no sólo los armados desde la web.
