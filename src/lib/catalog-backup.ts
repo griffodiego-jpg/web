@@ -26,9 +26,14 @@
  *
  * Idempotencia: si hoy ya hay un snapshot, se sobreescribe. La entrada
  * en el array se actualiza en lugar de agregarse.
+ *
+ * Nota: este módulo es server-only de hecho (depende de @vercel/blob y
+ * exceljs, que no corren en browser). Antes tenía `import "server-only"`
+ * explícito, pero Turbopack seguía el dynamic import desde specparts.ts
+ * aunque el bundler de cliente no lo iba a cargar en runtime, y tiraba
+ * error al compilar. Lo removimos — si algún día alguien lo importa de
+ * un client component, va a romper igual por las deps nativas.
  */
-
-import "server-only";
 
 import { del, put } from "@vercel/blob";
 import ExcelJS from "exceljs";
