@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ProductGallery } from "@/components/catalog/ProductGallery";
-import { ProductPrice } from "@/components/catalog/ProductPrice";
-import { AddToCartButton } from "@/components/catalog/AddToCartButton";
+import { PriceOrML } from "@/components/catalog/PriceOrML";
 import { BreadcrumbJsonLd, ProductJsonLd } from "@/components/StructuredData";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getProductBySlug, listCatalog } from "@/lib/api/specparts";
 import { getMercadoLibreUrl } from "@/lib/catalog/utils";
+import { getLinkForCodigo } from "@/lib/mercadolibre-links-store";
 import { getDisplayApplication } from "@/lib/catalog/display";
 import { SITE_URL } from "@/lib/site-url";
 import type { SpecPartsAttribute, SpecPartsVehicle } from "@/types/specparts";
@@ -64,7 +64,12 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
   }
 
   const primaryImage = product.pictures?.[0]?.image_url ?? "";
-  const meliUrl = getMercadoLibreUrl(product);
+  // El mapa subido desde /admin/links-mercadolibre tiene prioridad; si
+  // ese código no está, caemos al link que pueda haber devuelto la API
+  // de SpecParts (campo links[] del producto).
+  const meliUrl =
+    (await getLinkForCodigo(product.code).catch(() => null)) ??
+    getMercadoLibreUrl(product);
   const productUrl = `${SITE_URL}/catalogo/${slug}`;
 
   const vehiclesByBrand = groupVehiclesByBrand(product.vehicles ?? []);
@@ -152,25 +157,14 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
 
           {/* 4. Precio + CTAs arriba del fold */}
           <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3">
-            <ProductPrice productCode={product.code} size="lg" />
-            <div className="flex items-center gap-2">
-              <AddToCartButton
-                productCode={product.code}
-                slug={product.slug}
-                name={product.product}
-                image={product.pictures?.[0]?.image_url}
-              />
-              {meliUrl ? (
-                <a
-                  href={meliUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1 rounded-md bg-[#FFE600] px-3 py-1.5 text-xs font-bold text-[#333] transition hover:brightness-95"
-                >
-                  MercadoLibre ↗
-                </a>
-              ) : null}
-            </div>
+            <PriceOrML
+              productCode={product.code}
+              slug={product.slug}
+              productName={product.product}
+              image={product.pictures?.[0]?.image_url}
+              mlLink={meliUrl}
+              size="detail"
+            />
           </div>
 
           {/* 5. Medidas técnicas compactas */}

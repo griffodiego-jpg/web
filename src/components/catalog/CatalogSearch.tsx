@@ -48,6 +48,8 @@ type Props = {
   status?: CatalogStatus;
   /** URL de la imagen 'Medidas de Tréboles'. Si no hay, el botón queda deshabilitado. */
   trebolesUrl?: string;
+  /** Mapa código → link de Mercado Libre (subido por admin). */
+  mlLinks?: Record<string, string>;
 };
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -163,7 +165,7 @@ function buildQueryString(state: {
   return p.toString();
 }
 
-export function CatalogSearch({ products, status, trebolesUrl }: Props) {
+export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -526,6 +528,7 @@ export function CatalogSearch({ products, status, trebolesUrl }: Props) {
                 total={baseResults.length}
                 filtersActive={hasActiveFilters(filters)}
                 onClearFilters={onClearFilters}
+                mlLinks={mlLinks}
               />
             ) : null}
           </div>
@@ -770,11 +773,13 @@ function ResultsGrid({
   total,
   filtersActive,
   onClearFilters,
+  mlLinks,
 }: {
   results: CatalogProduct[];
   total: number;
   filtersActive: boolean;
   onClearFilters: () => void;
+  mlLinks: Record<string, string>;
 }) {
   if (total === 0) {
     return <EmptyState message="No se encontraron productos." />;
@@ -806,7 +811,11 @@ function ResultsGrid({
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {results.map((p) => (
-          <ProductCard key={p.id} product={p} />
+          <ProductCard
+            key={p.id}
+            product={p}
+            mlLink={mlLinks[p.code.toUpperCase()] ?? null}
+          />
         ))}
       </div>
     </div>

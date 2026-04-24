@@ -10,14 +10,15 @@ import { getFeaturedSlug } from "@/data/featured-products";
 import { getDisplayApplication } from "@/lib/catalog/display";
 
 import { VehiclesModal } from "./VehiclesModal";
-import { AddToCartButton } from "./AddToCartButton";
-import { ProductPrice } from "./ProductPrice";
+import { PriceOrML } from "./PriceOrML";
 
 type ProductCardProps = {
   product: CatalogProduct;
+  /** Link de Mercado Libre mapeado por código (subido por admin). */
+  mlLink?: string | null;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, mlLink }: ProductCardProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -125,23 +126,21 @@ export function ProductCard({ product }: ProductCardProps) {
           ) : null}
 
           <div className="mt-auto flex flex-col gap-2 pt-2">
-            <ProductPrice productCode={product.code} size="md" />
-            <div className="flex items-center justify-between gap-2">
-              <Link
-                href={detailHref}
-                onClick={(e) => e.stopPropagation()}
-                className="text-[11px] font-bold text-primary hover:text-primary-dark"
-              >
-                Ver detalle →
-              </Link>
-              <AddToCartButton
-                productCode={product.code}
-                slug={product.slug}
-                name={product.product}
-                image={primaryImage}
-                compact
-              />
-            </div>
+            <PriceOrML
+              productCode={product.code}
+              slug={product.slug}
+              productName={product.product}
+              image={primaryImage}
+              mlLink={mlLink}
+              size="card"
+            />
+            <Link
+              href={detailHref}
+              onClick={(e) => e.stopPropagation()}
+              className="self-start text-[11px] font-bold text-primary hover:text-primary-dark"
+            >
+              Ver detalle →
+            </Link>
           </div>
         </div>
       </article>

@@ -163,13 +163,20 @@ function procesar(rows: string[][]): ParsedResult {
   };
 }
 
-export function MercadoLibreUploader() {
+export function MercadoLibreUploader({
+  hasExistingData = false,
+}: {
+  hasExistingData?: boolean;
+}) {
   const [result, setResult] = useState<ParsedResult | null>(null);
   const [filename, setFilename] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [busqueda, setBusqueda] = useState<string>("");
   const [dragOver, setDragOver] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<string>("");
+  const [saveError, setSaveError] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function procesarArchivo(file: File) {
@@ -233,6 +240,34 @@ export function MercadoLibreUploader() {
     a.download = "productos-mercadolibre.json";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function guardar() {
+    if (!result) return;
+    setSaving(true);
+    setSaveError("");
+    setSavedAt("");
+    try {
+      const res = await fetch("/api/admin/mercadolibre-links", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          productos: result.productos.map((p) => ({
+            codigo: p.codigo,
+            link: p.link,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const msg = (await res.json().catch(() => null))?.error;
+        throw new Error(msg ?? `Error ${res.status}`);
+      }
+      setSavedAt(new Date().toLocaleTimeString("es-AR"));
+    } catch (e) {
+      setSaveError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function copiarTypeScript() {
@@ -369,10 +404,32 @@ export function MercadoLibreUploader() {
             </p>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            <button
+              onClick={guardar}
+              disabled={saving}
+              className="px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+            >
+              {saving
+                ? "Guardando…"
+                : hasExistingData
+                  ? "Reemplazar los links guardados"
+                  : "Guardar y publicar en el sitio"}
+            </button>
+            {savedAt && (
+              <span className="text-sm font-semibold text-emerald-700">
+                ✓ Guardado a las {savedAt}
+              </span>
+            )}
+            {saveError && (
+              <span className="text-sm font-semibold text-red-600">
+                Error: {saveError}
+              </span>
+            )}
+            <div className="w-full" />
             <button
               onClick={descargarJSON}
-              className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition cursor-pointer"
+              className="px-4 py-2 bg-white border border-gray-300 text-[#0a2b3d] text-sm font-bold rounded-lg hover:bg-gray-50 transition cursor-pointer"
             >
               Descargar JSON
             </button>
@@ -387,6 +444,8 @@ export function MercadoLibreUploader() {
                 setResult(null);
                 setFilename("");
                 setError("");
+                setSavedAt("");
+                setSaveError("");
                 if (inputRef.current) inputRef.current.value = "";
               }}
               className="px-4 py-2 bg-white border border-gray-300 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-50 transition cursor-pointer"
