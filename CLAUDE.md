@@ -548,9 +548,13 @@ params con brackets, usar **`https` nativo de Node + `zlib.gunzip`**, NUNCA
 ### Búsqueda — 5 tabs
 
 1. **Palabra**: multi-word AND, accent-insensitive (`normalizeSearch`).
-   Índice `_searchText` se construye **client-side** con `indexProducts()`
-   al montar (ahorra ~150KB en el payload inicial). Concatena código,
-   descripción, producto, categoría, slug, vehículos, atributos, etc.
+   Índice `_searchText` se construye **client-side** con `indexProducts()`,
+   **lazy** — recién la primera vez que el usuario tipea 2+ chars en este
+   tab. Si entra directo a Patente/Vehículo/Código/Medidas, el índice no
+   se construye nunca. Ahorra 100-300ms en móvil para esos users, y
+   evita enviar el índice pre-computado desde el server (~150KB menos
+   en el payload inicial). Concatena código, descripción, producto,
+   categoría, slug, vehículos, atributos, etc.
    Si el texto matchea formato de patente argentina (`ABC123` vieja o
    `AB123CD` Mercosur, helper `detectPlate`), arriba de los resultados
    se muestra `DetectedPlateHint` — banner no-intrusivo que ofrece saltar

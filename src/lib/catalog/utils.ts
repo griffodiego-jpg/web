@@ -10,6 +10,39 @@ import type {
   SpecPartsVehicle,
 } from "@/types/specparts";
 
+/**
+ * Campos de SpecParts que nunca usamos en el cliente — se stripean antes
+ * de serializar el payload al browser para reducir ~10-15% el HTML.
+ *
+ * Algunos vienen siempre vacíos (seller, company_id, observation,
+ * national_industry), otros son redundantes (safe_code = code sin
+ * guiones) o no-renderizados (oem top-level). El resto del shape queda
+ * igual — sí mantenemos cross, reference, ean, components porque
+ * alimentan la búsqueda por palabra (ver buildSearchText).
+ *
+ * Usar SÓLO para payloads que van al browser. El backup y otros
+ * consumidores server-side usan la data cruda de listCatalog().
+ */
+export function stripForClient(p: CatalogProduct): CatalogProduct {
+  const {
+    safe_code: _safe,
+    observation: _obs,
+    oem: _oem,
+    national_industry: _nat,
+    seller: _sel,
+    company_id: _cid,
+    ...rest
+  } = p;
+  // Cast: el tipo original pide estos campos aunque sean unused. Los
+  // dejamos como defaults neutros para no romper consumidores que
+  // accedan con `?.` o a un array vacío.
+  return rest as CatalogProduct;
+}
+
+export function stripProductsForClient(products: CatalogProduct[]): CatalogProduct[] {
+  return products.map(stripForClient);
+}
+
 /** Marcas que se excluyen del filtro de "Por Vehículo" (no se venden en AR). */
 const EXCLUDED_VEHICLE_BRANDS = new Set(["AGRALE", "IVECO", "UNIVERSAL"]);
 

@@ -219,9 +219,21 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
 
   const vehicleTree = useMemo(() => buildVehicleTree(products), [products]);
 
-  // Índice de búsqueda (keyword) — se construye en el cliente al montar.
-  // Ahorra ~150KB en el payload inicial vs enviarlo pre-computado del server.
-  const indexedProducts = useMemo(() => indexProducts(products), [products]);
+  // Índice de búsqueda (keyword) — lazy. Se construye la PRIMERA vez que
+  // el usuario efectivamente busca por palabra (tab=palabra + 2+ chars).
+  // Ahorra ~100-300ms en móviles para usuarios que entran a un tab distinto
+  // (Patente/Vehículo/Código/Medidas). El índice se cachea una vez
+  // construido — los siguientes keystrokes lo reusan.
+  const [indexReady, setIndexReady] = useState(false);
+  const indexedProducts = useMemo(
+    () => (indexReady ? indexProducts(products) : null),
+    [products, indexReady],
+  );
+  useEffect(() => {
+    if (!indexReady && tab === "palabra" && keyword.trim().length >= 2) {
+      setIndexReady(true);
+    }
+  }, [indexReady, tab, keyword]);
 
   const onToggleFilter = useCallback((group: FilterGroup, value: string) => {
     setFilters((f) => toggleFilter(f, group, value));
@@ -303,6 +315,11 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
     if (tab === "palabra") {
       if (keyword.trim().length < 2) {
         return { kind: "empty" as const, message: "Escribí al menos 2 letras para buscar." };
+      }
+      if (!indexedProducts) {
+        // Índice recién empezó a construirse (primer keystroke ≥ 2 chars).
+        // En 1 frame el memo se rebuilda y esta rama deja de devolver empty.
+        return { kind: "empty" as const, message: "Preparando búsqueda…" };
       }
       return { kind: "results" as const, products: searchByKeyword(indexedProducts, keyword) };
     }
