@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 import { hasValidAdminSession } from "@/lib/admin-auth";
 import {
@@ -8,6 +9,17 @@ import {
 } from "@/lib/mercadolibre-links-store";
 
 export const runtime = "nodejs";
+
+/**
+ * Invalida el cache ISR de las páginas del catálogo para que los
+ * cambios en el mapa de links se vean inmediatamente después del
+ * POST/DELETE. Sin esto, /catalogo y /catalogo/[slug] siguen
+ * sirviendo el HTML prerendereado hasta que expire `revalidate`.
+ */
+function revalidateCatalog() {
+  revalidatePath("/catalogo", "page");
+  revalidatePath("/catalogo/[slug]", "page");
+}
 
 /**
  * GET → estado actual del mapa guardado (o null si nunca se subió).
@@ -55,6 +67,7 @@ export async function POST(req: Request) {
           link: typeof p.link === "string" ? p.link : null,
         })),
     });
+    revalidateCatalog();
     return NextResponse.json({ data: saved });
   } catch (e) {
     return NextResponse.json(
@@ -72,5 +85,6 @@ export async function DELETE() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   await clearLinks();
+  revalidateCatalog();
   return NextResponse.json({ ok: true });
 }
