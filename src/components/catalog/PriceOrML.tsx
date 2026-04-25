@@ -106,7 +106,7 @@ export function PriceOrML({
         disabled
         className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-lg bg-gray-200 px-5 py-3 text-sm font-bold text-gray-500 cursor-not-allowed"
       >
-        Sin link
+        Comprar Mercadolibre
       </button>
     );
   }
@@ -129,7 +129,7 @@ export function PriceOrML({
       onClick={(e) => e.stopPropagation()}
       className="inline-flex items-center justify-center w-full rounded-md bg-gray-100 px-2.5 py-1.5 text-[11px] font-bold text-gray-400 cursor-not-allowed"
     >
-      Sin link
+      Comprar Mercadolibre
     </button>
   );
 }
