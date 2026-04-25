@@ -47,7 +47,7 @@ function Credential({
     <div className="flex items-center gap-4 lg:px-6 text-left">
       <div className="text-primary shrink-0">{icon}</div>
       <div>
-        <p className="font-extrabold text-sm lg:text-base text-primary leading-tight uppercase">
+        <p className="font-black text-sm lg:text-base text-primary leading-tight uppercase">
           {title}
         </p>
         <p className="text-xs lg:text-sm text-gray-600 leading-tight mt-0.5">

@@ -1,28 +1,33 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useState } from "react";
+import imageDimensions from "@/lib/image-dimensions.json";
 
-type Status = "loading" | "ok" | "failed";
+const dims = imageDimensions as unknown as Record<string, [number, number]>;
 
 /**
- * Imagen con fallback visual automático.
+ * Imagen con fallback visual automático y optimización vía next/image.
  *
- * Se apoya directamente en `onLoad` / `onError` del `<img>` renderizado
- * — sin preload con `new Image()` paralelo (antes duplicaba la request
- * de cada imagen). Cuando falla, reemplaza el `<img>` por un placeholder
- * estilizado. Durante la carga, el `<img>` se renderiza oculto
- * (display:none) con un skeleton arriba para no dejar el espacio
- * colapsado.
+ * Si la imagen está rasterizada (jpg/png/webp/avif) y existe en
+ * `image-dimensions.json` (generado por `scripts/gen-image-dimensions.mjs`),
+ * se renderiza con `<Image>` de next/image — Next genera AVIF/WebP, srcset
+ * responsive y reserva el espacio para evitar CLS.
+ *
+ * Para SVGs (logos, iconos) se usa `<img>` regular: next/image no los
+ * optimiza y agrega complejidad sin beneficio.
  *
  * Modos:
- *   - default: `<img>` a tamaño natural (w-full h-auto). Fallback es
- *     un placeholder estilizado con aspecto fijo.
- *   - `fill`:  `<img>` posicionada absoluta que llena el contenedor
- *     padre con object-cover.
- *   - `bare`:  sin clases default — solo usa el className del consumidor.
- *     Útil para iconos/logos con tamaño fijo. Fallback es un rectángulo
- *     gris que respeta el className.
+ *   - default: imagen al ancho del padre, alto auto (`w-full h-auto`).
+ *   - `fill`:  llena el contenedor padre con object-cover.
+ *   - `bare`:  sin clases default — solo el className del consumidor
+ *              (para iconos / logos con tamaño fijo).
+ *
+ * Props nuevas:
+ *   - `priority`: marca como recurso crítico (LCP).
+ *   - `sizes`:   override del sizes de next/image cuando el default
+ *                no encaja (default: "100vw" en mobile, 1200px en desktop).
  */
 export function AssetImage({
   src,
@@ -33,6 +38,8 @@ export function AssetImage({
   variant = "photo",
   fill = false,
   bare = false,
+  priority = false,
+  sizes,
 }: {
   src: string;
   alt: string;
@@ -42,16 +49,12 @@ export function AssetImage({
   variant?: "photo" | "video";
   fill?: boolean;
   bare?: boolean;
+  priority?: boolean;
+  sizes?: string;
 }) {
-  const [status, setStatus] = useState<Status>("loading");
+  const [failed, setFailed] = useState(false);
 
-  // Reset status cuando cambia el src (ej. cambio de producto en un modal).
-  useEffect(() => {
-    setStatus("loading");
-  }, [src]);
-
-  // Si falla: render solo el placeholder (sin <img> roto).
-  if (status === "failed") {
+  if (failed) {
     if (bare) {
       return (
         <div
@@ -81,79 +84,95 @@ export function AssetImage({
     );
   }
 
-  // Handlers compartidos.
-  const onLoad = () => setStatus("ok");
-  const onError = () => setStatus("failed");
+  const isSvg = src.endsWith(".svg");
+  const dim = dims[src];
+  const onError = () => setFailed(true);
 
-  // Render OK / cargando — el <img> va siempre (para que el browser
-  // empiece a cargarlo). Durante loading lo escondemos y mostramos un
-  // skeleton con bg-gray-100.
-  const isLoading = status === "loading";
-
-  if (bare) {
-    return (
-      <>
+  // SVGs y assets sin dimensiones conocidas: <img> regular con lazy loading.
+  // (next/image no optimiza SVGs y requiere width/height para no-fill.)
+  if (isSvg || (!fill && !dim)) {
+    if (bare) {
+      return (
         <img
           src={src}
           alt={alt}
           className={className}
-          onLoad={onLoad}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
           onError={onError}
-          style={isLoading ? { display: "none" } : undefined}
         />
-        {isLoading && (
-          <div
-            className={`${className} bg-gray-100 rounded`}
-            aria-busy="true"
-            aria-label="Cargando"
-          />
-        )}
-      </>
+      );
+    }
+    if (fill) {
+      return (
+        <img
+          src={src}
+          alt={alt}
+          className={`absolute inset-0 w-full h-full object-cover ${className}`}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          onError={onError}
+        />
+      );
+    }
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-auto ${className}`}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        onError={onError}
+      />
     );
   }
 
   if (fill) {
     return (
-      <>
-        <img
-          src={src}
-          alt={alt}
-          className={`absolute inset-0 w-full h-full object-cover ${className}`}
-          onLoad={onLoad}
-          onError={onError}
-          style={isLoading ? { display: "none" } : undefined}
-        />
-        {isLoading && (
-          <div
-            className={`absolute inset-0 ${className} bg-gray-100`}
-            aria-busy="true"
-          />
-        )}
-      </>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes ?? "(max-width: 1024px) 100vw, 50vw"}
+        priority={priority}
+        className={`object-cover ${className}`}
+        onError={onError}
+      />
+    );
+  }
+
+  const [w, h] = dim!;
+  const responsiveSizes = sizes ?? "(max-width: 1024px) 100vw, 1200px";
+
+  if (bare) {
+    return (
+      <Image
+        src={src}
+        alt={alt}
+        width={w}
+        height={h}
+        sizes={responsiveSizes}
+        priority={priority}
+        className={className}
+        onError={onError}
+      />
     );
   }
 
   return (
-    <>
-      <img
-        src={src}
-        alt={alt}
-        className={`w-full h-auto ${className}`}
-        onLoad={onLoad}
-        onError={onError}
-        style={isLoading ? { display: "none" } : undefined}
-      />
-      {isLoading && (
-        <div
-          className={`${fallbackAspect} ${className} bg-gray-100 rounded`}
-          aria-busy="true"
-        />
-      )}
-    </>
+    <Image
+      src={src}
+      alt={alt}
+      width={w}
+      height={h}
+      sizes={responsiveSizes}
+      priority={priority}
+      className={`w-full h-auto ${className}`}
+      onError={onError}
+    />
   );
 }
 
-/* Icono pequeño de imagen para el placeholder bare */
 function IconPlaceholder() {
   return (
     <svg

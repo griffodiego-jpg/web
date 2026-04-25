@@ -37,7 +37,7 @@ export default function DesarrolloAMedidaPage() {
           </div>
           <div className="flex justify-center lg:justify-end">
             <AssetImage
-              src="/images/desarrollo-a-medida/header.png"
+              src="/images/desarrollo-a-medida/header.jpg"
               alt="Piezas de caucho desarrollo a medida"
               caption="Piezas header"
               bare
@@ -75,7 +75,7 @@ export default function DesarrolloAMedidaPage() {
         <div className="h-full min-h-[300px] lg:min-h-[400px]">
           <AssetVideo
             src="/videos/tecnologia.mp4"
-            poster="/images/desarrollo-a-medida/tecnologia.png"
+            poster="/images/desarrollo-a-medida/tecnologia.jpg"
             label="Video: Tecnología"
             className="w-full h-full object-cover"
           />
@@ -112,7 +112,7 @@ export default function DesarrolloAMedidaPage() {
         <div className="h-full min-h-[300px] lg:min-h-[400px]">
           <AssetVideo
             src="/videos/medida.mp4"
-            poster="/images/desarrollo-a-medida/laboratorio.png"
+            poster="/images/desarrollo-a-medida/laboratorio.jpg"
             label="Video: Laboratorio"
             className="w-full h-full object-cover"
           />

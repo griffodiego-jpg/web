@@ -11,10 +11,10 @@
  */
 export const localAssets = {
   empresa: {
-    historiaInicios: "/images/empresa/img-historia-inicios.png",
-    historiaHoy: "/images/empresa/img-historia-hoy.png",
+    historiaInicios: "/images/empresa/img-historia-inicios.jpg",
+    historiaHoy: "/images/empresa/img-historia-hoy.jpg",
     familiaFuelle: "/images/empresa/familia-fuelle.jpg",
-    industriales: "/images/empresa/industriales.png",
+    industriales: "/images/empresa/industriales.jpg",
     // Video y poster van en la misma carpeta para simplificar el upload.
     comercioVideo: "/images/empresa/comercio-exterior.mp4",
     comercioPoster: "/images/empresa/video-comercio.png",

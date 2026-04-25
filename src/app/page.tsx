@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BannerCarousel } from "@/components/BannerCarousel";
 import { TrustStrip } from "@/components/TrustStrip";
@@ -82,19 +83,19 @@ function FeatureCardTile({ card }: { card: FeatureCard }) {
   return (
     <Wrapper>
       <article className="relative bg-gray-700 min-h-[340px] flex flex-col items-center justify-center p-10 gap-5">
-        {/* Fondo: imagen del producto en grayscale + oscurecida (efecto 'apagado') */}
-        <div
-          className="absolute inset-0 bg-center bg-cover bg-no-repeat bg-gray-700 grayscale-[85%] brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition duration-500"
-          style={{ backgroundImage: `url(${card.image})` }}
+        <Image
+          src={card.image}
+          alt=""
           aria-hidden
+          fill
+          sizes="(max-width: 1024px) 100vw, 33vw"
+          className="object-cover grayscale-[85%] brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition duration-500"
         />
-        {/* Overlay gris/negro para reforzar el 'apagado' */}
         <div
           className="absolute inset-0 bg-black/55 group-hover:bg-black/30 transition duration-500"
           aria-hidden
         />
 
-        {/* Contenido: título + pill button, centrados */}
         <h3 className="relative text-white text-3xl lg:text-4xl font-black uppercase tracking-wide drop-shadow-md text-center">
           {card.title}
         </h3>

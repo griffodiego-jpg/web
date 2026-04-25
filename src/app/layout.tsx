@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -96,6 +97,16 @@ export default function RootLayout({
           ejecución desde Google Fonts en el navegador del usuario.
           Si el cliente tiene licencia de Gotham, reemplazar por un
           @font-face local en globals.css apuntando a /fonts/.
+
+          Pesos: 400 / 500 / 600 / 700 / 900 (extrabold/800 no se usa
+          en el código — se sacó para reducir el peso del CSS).
+
+          Estrategia de carga no-bloqueante: el `<link>` se inyecta con
+          `media="print"` (no bloquea el render porque "no aplica" aún) y
+          al terminar de descargar, el handler lo cambia a `media="all"`.
+          Esto evita que Google Fonts bloquee el First Contentful Paint.
+          `display=swap` evita el FOIT mostrando la fallback hasta que
+          la web font esté disponible.
         */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -104,29 +115,52 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
+          rel="preload"
+          as="style"
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap"
         />
-        {/* Google Analytics 4 */}
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-FR8KN76LQ2"
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap"
+          media="print"
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-FR8KN76LQ2');
-            `,
+            __html: `(function(){var l=document.querySelector('link[rel="stylesheet"][media="print"][href*="Montserrat"]');if(l){l.addEventListener('load',function(){l.media='all';});}})();`,
           }}
         />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap"
+          />
+        </noscript>
         {/* JSON-LD estructurado global (Organization + WebSite) */}
         <OrganizationJsonLd />
         <WebSiteJsonLd />
       </head>
       <body className="min-h-full flex flex-col bg-white text-foreground">
+        {/*
+          Google Analytics 4 — cargado con strategy="afterInteractive"
+          para que no compita con el renderizado inicial. Antes estaba
+          en el <head> con <script async>, lo que igual entraba al
+          critical path. Con next/script, Next garantiza que se cargue
+          después de la hidratación pero suficientemente pronto para
+          capturar pageviews.
+        */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-FR8KN76LQ2"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-FR8KN76LQ2');
+          `}
+        </Script>
+
         {/* Skip link para accesibilidad — aparece al tabular */}
         <a
           href="#main-content"
