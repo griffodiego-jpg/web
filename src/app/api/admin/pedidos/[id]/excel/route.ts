@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { escapeCsvCell } from "@/lib/escape";
 import { getPedido } from "@/lib/pedidos";
 
 /**
@@ -14,12 +15,6 @@ import { getPedido } from "@/lib/pedidos";
 
 export const dynamic = "force-dynamic";
 
-function csvEscape(v: string | number): string {
-  const s = String(v);
-  if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -32,17 +27,17 @@ export async function GET(
 
   const lines: string[] = [];
   // Encabezado con datos del cliente
-  lines.push(`Pedido;${csvEscape(pedido.id)}`);
-  lines.push(`Fecha;${csvEscape(new Date(pedido.createdAt).toLocaleString("es-AR"))}`);
-  lines.push(`Cliente;${csvEscape(pedido.clientName)}`);
-  lines.push(`Código cliente;${csvEscape(pedido.clientId)}`);
-  lines.push(`Email;${csvEscape(pedido.clientEmail)}`);
+  lines.push(`Pedido;${escapeCsvCell(pedido.id)}`);
+  lines.push(`Fecha;${escapeCsvCell(new Date(pedido.createdAt).toLocaleString("es-AR"))}`);
+  lines.push(`Cliente;${escapeCsvCell(pedido.clientName)}`);
+  lines.push(`Código cliente;${escapeCsvCell(pedido.clientId)}`);
+  lines.push(`Email;${escapeCsvCell(pedido.clientEmail)}`);
   lines.push(
-    `Sucursal;${csvEscape(pedido.warehouseDescription || "—")} (${csvEscape(pedido.warehouseId || "—")})`,
+    `Sucursal;${escapeCsvCell(pedido.warehouseDescription || "—")} (${escapeCsvCell(pedido.warehouseId || "—")})`,
   );
-  lines.push(`Estado;${csvEscape(pedido.status)}`);
+  lines.push(`Estado;${escapeCsvCell(pedido.status)}`);
   if (pedido.erpOrderNumber) {
-    lines.push(`Nº nota ERP;${csvEscape(pedido.erpOrderNumber)}`);
+    lines.push(`Nº nota ERP;${escapeCsvCell(pedido.erpOrderNumber)}`);
   }
   lines.push("");
   // Tabla de ítems
@@ -50,16 +45,16 @@ export async function GET(
   for (const it of pedido.items) {
     lines.push(
       [
-        csvEscape(it.productCode),
-        csvEscape(it.name),
-        csvEscape(it.quantity),
-        csvEscape(it.unitPrice.toFixed(2)),
-        csvEscape(it.subtotal.toFixed(2)),
+        escapeCsvCell(it.productCode),
+        escapeCsvCell(it.name),
+        escapeCsvCell(it.quantity),
+        escapeCsvCell(it.unitPrice.toFixed(2)),
+        escapeCsvCell(it.subtotal.toFixed(2)),
       ].join(";"),
     );
   }
   lines.push("");
-  lines.push(`Total (+ IVA);${csvEscape(pedido.total.toFixed(2))}`);
+  lines.push(`Total (+ IVA);${escapeCsvCell(pedido.total.toFixed(2))}`);
 
   // BOM para que Excel detecte UTF-8 y abra bien los acentos.
   const body = "\uFEFF" + lines.join("\n");

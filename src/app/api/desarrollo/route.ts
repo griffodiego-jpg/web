@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml, escapeHtmlMultiline } from "@/lib/escape";
+import { saveLead } from "@/lib/leads";
 import { getResend } from "@/lib/resend";
 import {
   checkFieldLength,
@@ -64,6 +65,21 @@ export async function POST(request: Request) {
         content: buffer,
       });
     }
+
+    // Persiste el lead en Redis primero — si el email a Resend falla
+    // (sender no verificado, etc), igual queda registrado para el admin.
+    await saveLead({
+      kind: "desarrollo",
+      ts: Date.now(),
+      nombre,
+      empresa,
+      email,
+      telefono,
+      industria,
+      cantidad,
+      descripcion,
+      archivoNombre: archivo?.name,
+    });
 
     await getResend().emails.send({
       from: "Griffo Web <onboarding@resend.dev>",

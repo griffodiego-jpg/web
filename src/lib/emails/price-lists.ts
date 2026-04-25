@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/escape";
 import { getResend } from "@/lib/resend";
 import { SITE_URL } from "@/lib/site-url";
 import type { PriceList } from "@/types/price-list";
@@ -41,10 +42,10 @@ export async function sendNewPriceListEmails(
         html: `
           <div style="font-family:Arial,sans-serif;color:#0a2b3d;max-width:600px;margin:0 auto;">
             <h1 style="color:#00549F;">Nueva lista de precios</h1>
-            <p>Hola ${client.name},</p>
-            <p>Publicamos una <strong>nueva versión</strong> de tu lista de precios: <strong>${list.name}</strong>.</p>
+            <p>Hola ${escapeHtml(client.name)},</p>
+            <p>Publicamos una <strong>nueva versión</strong> de tu lista de precios: <strong>${escapeHtml(list.name)}</strong>.</p>
             <p style="color:#6b7280;font-size:13px;">Fecha de publicación: ${formatDate(list.uploadedAt)}.</p>
-            ${list.note ? `<p style="background:#eff6ff;border-left:3px solid #00ADD0;padding:10px 14px;">${list.note}</p>` : ""}
+            ${list.note ? `<p style="background:#eff6ff;border-left:3px solid #00ADD0;padding:10px 14px;">${escapeHtml(list.note)}</p>` : ""}
             <p>
               <a href="${SITE_URL}/cuenta/listas" style="display:inline-block;background:#00549F;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Ver mi lista</a>
             </p>

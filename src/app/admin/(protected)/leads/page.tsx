@@ -6,6 +6,7 @@ import {
   listLeads,
   type ContactoLead,
   type DescargaLead,
+  type DesarrolloLead,
   type GarantiaLead,
   type NewsletterLead,
   type SugerenciaLead,
@@ -28,22 +29,26 @@ export default async function LeadsPage() {
     newsletter,
     garantia,
     sugerencia,
+    desarrollo,
     cntD,
     cntC,
     cntN,
     cntG,
     cntS,
+    cntDes,
   ] = await Promise.all([
     listLeads<DescargaLead>("descarga"),
     listLeads<ContactoLead>("contacto"),
     listLeads<NewsletterLead>("newsletter"),
     listLeads<GarantiaLead>("garantia"),
     listLeads<SugerenciaLead>("sugerencia"),
+    listLeads<DesarrolloLead>("desarrollo"),
     countLeads("descarga"),
     countLeads("contacto"),
     countLeads("newsletter"),
     countLeads("garantia"),
     countLeads("sugerencia"),
+    countLeads("desarrollo"),
   ]);
 
   return (
@@ -70,13 +75,21 @@ export default async function LeadsPage() {
       <div className="mt-8">
         <LeadsTabs
           initialTab="sugerencia"
-          leads={{ descarga, contacto, newsletter, garantia, sugerencia }}
+          leads={{
+            descarga,
+            contacto,
+            newsletter,
+            garantia,
+            sugerencia,
+            desarrollo,
+          }}
           counts={{
             descarga: cntD,
             contacto: cntC,
             newsletter: cntN,
             garantia: cntG,
             sugerencia: cntS,
+            desarrollo: cntDes,
           }}
         />
       </div>

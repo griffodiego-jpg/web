@@ -16,11 +16,19 @@ export const maxDuration = 300;
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+  // Fail-closed: sin CRON_SECRET, no se acepta ningún disparo. La
+  // regeneración baja ~500 fotos y zipea — DoS trivial si quedaba
+  // abierto.
+  if (!secret) {
+    console.error("[cron/banco-imagenes] CRON_SECRET no configurado");
+    return NextResponse.json(
+      { error: "CRON_SECRET no configurado" },
+      { status: 503 },
+    );
+  }
+  const auth = req.headers.get("authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   try {
     const meta = await regenerateBancoImagenes();

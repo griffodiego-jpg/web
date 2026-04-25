@@ -1,6 +1,6 @@
+/* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AssetImage } from "@/components/AssetImage";
 import { navigation } from "@/lib/site-config";
 import { productosDetalle } from "@/data/productos";
 
@@ -39,13 +39,14 @@ export default function ProductosPage() {
                 )}
               </div>
 
-              {/* Imagen */}
+              {/* Imagen — <img> nativo para evitar el bug del AssetImage
+                  bare en contenedores chicos (skeleton que no transiciona). */}
               <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center p-2 overflow-hidden">
                 {detalle?.image ? (
-                  <AssetImage
+                  <img
                     src={detalle.image}
                     alt={p.label}
-                    bare
+                    loading="lazy"
                     className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (

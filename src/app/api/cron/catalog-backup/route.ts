@@ -20,11 +20,21 @@ export const maxDuration = 60;
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+  // Fail-closed: sin CRON_SECRET configurada, no aceptamos ninguna
+  // ejecución. Antes era fail-open (saltaba la validación si la var
+  // estaba vacía), lo que dejaba el endpoint abierto a cualquier IP
+  // que conozca el path. Una regeneración cuesta ~60s de función →
+  // DoS trivial.
+  if (!secret) {
+    console.error("[cron/catalog-backup] CRON_SECRET no configurado");
+    return NextResponse.json(
+      { error: "CRON_SECRET no configurado" },
+      { status: 503 },
+    );
+  }
+  const auth = req.headers.get("authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   try {
     const snapshot = await regenerateCatalogSnapshot();

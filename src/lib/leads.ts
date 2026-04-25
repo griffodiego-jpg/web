@@ -14,7 +14,8 @@ export type LeadKind =
   | "newsletter"
   | "descarga"
   | "garantia"
-  | "sugerencia";
+  | "sugerencia"
+  | "desarrollo";
 
 export type ContactoLead = {
   kind: "contacto";
@@ -94,12 +95,31 @@ export type SugerenciaLead = {
   tab?: string;
 };
 
+/**
+ * Lead del form "Desarrollo a medida" (`/desarrollo-a-medida`). Persistimos
+ * todo menos el binario adjunto — ése solo va al mail (Resend). Acá
+ * guardamos el filename para tener referencia.
+ */
+export type DesarrolloLead = {
+  kind: "desarrollo";
+  ts: number;
+  nombre: string;
+  empresa: string;
+  email: string;
+  telefono: string;
+  industria: string;
+  cantidad: string;
+  descripcion: string;
+  archivoNombre?: string;
+};
+
 export type Lead =
   | ContactoLead
   | NewsletterLead
   | DescargaLead
   | GarantiaLead
-  | SugerenciaLead;
+  | SugerenciaLead
+  | DesarrolloLead;
 
 const KEY_PREFIX = "leads:";
 

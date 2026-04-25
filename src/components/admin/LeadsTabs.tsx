@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type {
   ContactoLead,
   DescargaLead,
+  DesarrolloLead,
   GarantiaLead,
   Lead,
   LeadKind,
@@ -19,6 +20,7 @@ type Props = {
     descarga: Lead[];
     garantia: Lead[];
     sugerencia: Lead[];
+    desarrollo: Lead[];
   };
   counts: {
     contacto: number;
@@ -26,6 +28,7 @@ type Props = {
     descarga: number;
     garantia: number;
     sugerencia: number;
+    desarrollo: number;
   };
 };
 
@@ -35,6 +38,7 @@ const TABS: { id: LeadKind; label: string }[] = [
   { id: "garantia", label: "Garantía" },
   { id: "contacto", label: "Contacto" },
   { id: "newsletter", label: "Newsletter" },
+  { id: "desarrollo", label: "Desarrollo" },
 ];
 
 export function LeadsTabs({ initialTab, leads, counts }: Props) {
@@ -115,6 +119,9 @@ export function LeadsTabs({ initialTab, leads, counts }: Props) {
           )}
           {tab === "sugerencia" && (
             <SugerenciaTable items={filtered as SugerenciaLead[]} />
+          )}
+          {tab === "desarrollo" && (
+            <DesarrolloTable items={filtered as DesarrolloLead[]} />
           )}
         </div>
       )}
@@ -217,6 +224,47 @@ function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
             </tr>
           );
         })}
+      </tbody>
+    </table>
+  );
+}
+
+function DesarrolloTable({ items }: { items: DesarrolloLead[] }) {
+  return (
+    <table className="min-w-full text-sm">
+      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+        <tr>
+          <Th>Fecha</Th>
+          <Th>Empresa</Th>
+          <Th>Nombre</Th>
+          <Th>Email</Th>
+          <Th>Teléfono</Th>
+          <Th>Industria</Th>
+          <Th>Cantidad</Th>
+          <Th>Descripción</Th>
+          <Th>Adjunto</Th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {items.map((it, i) => (
+          <tr key={i} className="hover:bg-gray-50">
+            <Td>{formatDate(it.ts)}</Td>
+            <Td>{it.empresa}</Td>
+            <Td>{it.nombre}</Td>
+            <Td>
+              <a className="text-primary hover:underline" href={`mailto:${it.email}`}>
+                {it.email}
+              </a>
+            </Td>
+            <Td>{it.telefono}</Td>
+            <Td>{it.industria}</Td>
+            <Td>{it.cantidad}</Td>
+            <Td>
+              <span className="line-clamp-2 max-w-[280px] block">{it.descripcion}</span>
+            </Td>
+            <Td>{it.archivoNombre || "—"}</Td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AssetImage } from "@/components/AssetImage";
 import {
   BreadcrumbJsonLd,
   ItemListJsonLd,
@@ -190,10 +189,11 @@ export default async function PresentacionPage() {
                 </div>
                 <div className="aspect-square bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
                   {detalle?.image ? (
-                    <AssetImage
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
                       src={detalle.image}
                       alt={p.label}
-                      bare
+                      loading="lazy"
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
