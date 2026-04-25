@@ -9,7 +9,12 @@ import { getRedis } from "@/lib/kv";
  * siguen funcionando (mandan email) aunque no persistan.
  */
 
-export type LeadKind = "contacto" | "newsletter" | "descarga" | "garantia";
+export type LeadKind =
+  | "contacto"
+  | "newsletter"
+  | "descarga"
+  | "garantia"
+  | "sugerencia";
 
 export type ContactoLead = {
   kind: "contacto";
@@ -54,7 +59,37 @@ export type GarantiaLead = {
   subscribe: boolean;
 };
 
-export type Lead = ContactoLead | NewsletterLead | DescargaLead | GarantiaLead;
+/**
+ * Sugerencia de producto faltante. Se dispara desde el catálogo público
+ * cuando el usuario no encuentra lo que busca y aprieta el banner
+ * "Sugerir un producto". Sirve como input para definir qué fabricar
+ * próximo. Visible en `/admin/leads` → tab Sugerencias.
+ */
+export type SugerenciaLead = {
+  kind: "sugerencia";
+  ts: number;
+  /** Lo que la persona buscaba (textarea libre, requerido). */
+  producto: string;
+  /** Marca/modelo/año del vehículo (opcional). */
+  marcaVehiculo?: string;
+  modeloVehiculo?: string;
+  anioVehiculo?: string;
+  /** Quién es: mecanico / taller / particular / distribuidor (opcional). */
+  perfil?: "mecanico" | "taller" | "particular" | "distribuidor";
+  /** Email o WhatsApp de contacto (opcional, si quiere ser avisado). */
+  contacto?: string;
+  /** Snapshot del estado del catálogo cuando reportó. Auto-capturado.
+   *  Útil para entender qué buscó (palabra/patente/código) y qué tab usaba. */
+  busqueda?: string;
+  tab?: string;
+};
+
+export type Lead =
+  | ContactoLead
+  | NewsletterLead
+  | DescargaLead
+  | GarantiaLead
+  | SugerenciaLead;
 
 const KEY_PREFIX = "leads:";
 

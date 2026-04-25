@@ -8,6 +8,7 @@ import {
   type DescargaLead,
   type GarantiaLead,
   type NewsletterLead,
+  type SugerenciaLead,
 } from "@/lib/leads";
 
 export const metadata: Metadata = {
@@ -26,19 +27,23 @@ export default async function LeadsPage() {
     contacto,
     newsletter,
     garantia,
+    sugerencia,
     cntD,
     cntC,
     cntN,
     cntG,
+    cntS,
   ] = await Promise.all([
     listLeads<DescargaLead>("descarga"),
     listLeads<ContactoLead>("contacto"),
     listLeads<NewsletterLead>("newsletter"),
     listLeads<GarantiaLead>("garantia"),
+    listLeads<SugerenciaLead>("sugerencia"),
     countLeads("descarga"),
     countLeads("contacto"),
     countLeads("newsletter"),
     countLeads("garantia"),
+    countLeads("sugerencia"),
   ]);
 
   return (
@@ -64,13 +69,14 @@ export default async function LeadsPage() {
 
       <div className="mt-8">
         <LeadsTabs
-          initialTab="descarga"
-          leads={{ descarga, contacto, newsletter, garantia }}
+          initialTab="sugerencia"
+          leads={{ descarga, contacto, newsletter, garantia, sugerencia }}
           counts={{
             descarga: cntD,
             contacto: cntC,
             newsletter: cntN,
             garantia: cntG,
+            sugerencia: cntS,
           }}
         />
       </div>

@@ -8,6 +8,7 @@ import type {
   Lead,
   LeadKind,
   NewsletterLead,
+  SugerenciaLead,
 } from "@/lib/leads";
 
 type Props = {
@@ -17,16 +18,19 @@ type Props = {
     newsletter: Lead[];
     descarga: Lead[];
     garantia: Lead[];
+    sugerencia: Lead[];
   };
   counts: {
     contacto: number;
     newsletter: number;
     descarga: number;
     garantia: number;
+    sugerencia: number;
   };
 };
 
 const TABS: { id: LeadKind; label: string }[] = [
+  { id: "sugerencia", label: "Sugerencias" },
   { id: "descarga", label: "Descargas" },
   { id: "garantia", label: "Garantía" },
   { id: "contacto", label: "Contacto" },
@@ -109,9 +113,59 @@ export function LeadsTabs({ initialTab, leads, counts }: Props) {
           {tab === "newsletter" && (
             <NewsletterTable items={filtered as NewsletterLead[]} />
           )}
+          {tab === "sugerencia" && (
+            <SugerenciaTable items={filtered as SugerenciaLead[]} />
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
+  return (
+    <table className="min-w-full text-sm">
+      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+        <tr>
+          <Th>Fecha</Th>
+          <Th>Producto</Th>
+          <Th>Vehículo</Th>
+          <Th>Perfil</Th>
+          <Th>Contacto</Th>
+          <Th>Búsqueda</Th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {items.map((l) => {
+          const vehiculo = [l.marcaVehiculo, l.modeloVehiculo, l.anioVehiculo]
+            .filter(Boolean)
+            .join(" ");
+          return (
+            <tr key={`${l.ts}`} className="align-top hover:bg-gray-50">
+              <Td>{formatDate(l.ts)}</Td>
+              <Td>
+                <div className="max-w-md whitespace-pre-wrap">{l.producto}</div>
+              </Td>
+              <Td>{vehiculo || "—"}</Td>
+              <Td>{l.perfil ?? "—"}</Td>
+              <Td>{l.contacto ?? "—"}</Td>
+              <Td>
+                {l.busqueda ? (
+                  <span className="font-mono text-xs">{l.busqueda}</span>
+                ) : (
+                  "—"
+                )}
+                {l.tab ? (
+                  <span className="ml-1 text-[10px] uppercase tracking-wide text-gray-400">
+                    ({l.tab})
+                  </span>
+                ) : null}
+              </Td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 

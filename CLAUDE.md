@@ -825,9 +825,12 @@ Grupos:
   Ver `src/lib/descargas-store.ts`.
 - `/admin/novedades` — Ver sección "Novedades" más abajo.
 - `/admin/leads` — Lista de leads capturados por los forms públicos
-  (contacto, newsletter, descargas, garantía). 4 tabs con contadores,
-  buscador in-memory, export CSV por tab. Persistencia en Redis
-  (`src/lib/leads.ts`).
+  (contacto, newsletter, descargas, garantía, sugerencias). 5 tabs con
+  contadores, buscador in-memory, export CSV por tab. Persistencia en
+  Redis (`src/lib/leads.ts`). Las **sugerencias** vienen del banner
+  "¿No encontraste el producto?" del catálogo + del link sutil
+  persistente abajo del input — fuente directa para definir qué
+  fabricar próximo. Tab por default al entrar a `/admin/leads`.
 - `/admin/cobertura` — Matriz vehículo × tipo de producto (18 columnas
   agrupadas en Dirección/Suspensión/Transmisión). Detecta huecos del
   catálogo. Filter + sort + sticky headers. Export CSV **respeta el

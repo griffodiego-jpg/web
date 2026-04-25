@@ -8,12 +8,19 @@ import {
   type Lead,
   type LeadKind,
   type NewsletterLead,
+  type SugerenciaLead,
 } from "@/lib/leads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_KINDS: LeadKind[] = ["descarga", "contacto", "newsletter", "garantia"];
+const VALID_KINDS: LeadKind[] = [
+  "descarga",
+  "contacto",
+  "newsletter",
+  "garantia",
+  "sugerencia",
+];
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -55,7 +62,19 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
               "País",
               "Newsletter",
             ]
-          : ["Fecha", "Email"];
+          : kind === "sugerencia"
+            ? [
+                "Fecha",
+                "Producto",
+                "Marca",
+                "Modelo",
+                "Año",
+                "Perfil",
+                "Contacto",
+                "Búsqueda",
+                "Tab",
+              ]
+            : ["Fecha", "Email"];
 
   const rows = leads.map((l) => {
     const fecha = new Date(l.ts).toLocaleString("es-AR");
@@ -83,6 +102,20 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
         g.provincia,
         g.pais,
         g.subscribe ? "Sí" : "No",
+      ];
+    }
+    if (kind === "sugerencia") {
+      const s = l as SugerenciaLead;
+      return [
+        fecha,
+        s.producto,
+        s.marcaVehiculo ?? "",
+        s.modeloVehiculo ?? "",
+        s.anioVehiculo ?? "",
+        s.perfil ?? "",
+        s.contacto ?? "",
+        s.busqueda ?? "",
+        s.tab ?? "",
       ];
     }
     const n = l as NewsletterLead;

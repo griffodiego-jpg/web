@@ -40,6 +40,7 @@ import { ImageLightbox } from "./ImageLightbox";
 import { MeasureVersionsModal } from "./MeasureVersionsModal";
 import { ProductCard } from "./ProductCard";
 import { StatusBadge, type CatalogStatus } from "./StatusBadge";
+import { SugerenciaModal } from "./SugerenciaModal";
 
 type TabKey = "palabra" | "patente" | "vehiculo" | "codigo" | "medidas";
 
@@ -181,6 +182,7 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [trebolesOpen, setTrebolesOpen] = useState(false);
   const [filters, setFilters] = useState<CatalogFilters>(initial.filters);
+  const [sugerenciaOpen, setSugerenciaOpen] = useState(false);
 
   // Ref al sticky bar: se usa un ResizeObserver para exponer su altura
   // efectiva (+ top del header del sitio) como CSS variable. El thead de
@@ -376,6 +378,23 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
   const showSidebar = tab !== "medidas";
   const activeFilters = countActiveFilters(filters);
 
+  // Snapshot del estado del buscador para mandar como contexto cuando el
+  // usuario reporta un producto faltante (sugerencia). El admin ve qué
+  // tipeó, en qué tab estaba.
+  const busquedaSnapshot = (() => {
+    if (tab === "palabra") return keyword.trim();
+    if (tab === "patente") return plate.trim().toUpperCase();
+    if (tab === "codigo") return code.trim();
+    if (tab === "vehiculo") {
+      return [brand, model, year].filter(Boolean).join(" ");
+    }
+    return "";
+  })();
+  const noHubo =
+    tab !== "medidas" &&
+    tabState.kind === "results" &&
+    filteredResults.length === 0;
+
   // Si el usuario tipea algo con forma de patente en Palabra, ofrecemos un
   // atajo al tab Patente. No es auto-switch — la decisión queda en el usuario.
   const detectedPlate = tab === "palabra" ? detectPlate(keyword) : null;
@@ -498,6 +517,19 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
                 </div>
               ) : null}
             </div>
+
+            {/* Link persistente — captura sugerencias incluso de usuarios
+                que no llegaron al estado "0 resultados". Sutil, no estorba. */}
+            <p className="mt-2 text-center text-[11px] text-gray-400">
+              ¿Te falta un producto en el catálogo?{" "}
+              <button
+                type="button"
+                onClick={() => setSugerenciaOpen(true)}
+                className="font-bold text-accent transition hover:text-primary-dark"
+              >
+                Avisanos →
+              </button>
+            </p>
           </div>
         </div>
       </div>
@@ -543,6 +575,9 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
             {tabState.kind === "error" ? (
               <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{tabState.message}</p>
             ) : null}
+            {noHubo ? (
+              <NoResultsHint onSugerir={() => setSugerenciaOpen(true)} />
+            ) : null}
             {tabState.kind === "results" ? (
               <ResultsGrid
                 results={filteredResults}
@@ -555,6 +590,16 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
           </div>
         </div>
       )}
+
+      <SugerenciaModal
+        open={sugerenciaOpen}
+        onClose={() => setSugerenciaOpen(false)}
+        busqueda={busquedaSnapshot || undefined}
+        tab={tab}
+        prefillBrand={brand}
+        prefillModel={model}
+        prefillYear={year}
+      />
     </>
   );
 }
@@ -737,6 +782,38 @@ function MeasuresSelector({
 /* ========================================================================== */
 /*  RESULT VIEWS                                                               */
 /* ========================================================================== */
+
+/**
+ * Banner que aparece cuando una búsqueda devuelve 0 resultados, en
+ * cualquier tab que no sea Medidas. Invita al usuario a reportar el
+ * producto faltante — fuente directa de info para definir qué
+ * fabricar próximo (admin lo ve en /admin/leads → tab Sugerencias).
+ */
+function NoResultsHint({ onSugerir }: { onSugerir: () => void }) {
+  return (
+    <div className="mb-4 flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/5 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <span aria-hidden className="text-2xl leading-none">🛠️</span>
+        <div>
+          <p className="text-sm font-black text-[#0a2b3d]">
+            ¿No encontraste el producto que buscabas?
+          </p>
+          <p className="mt-1 text-xs text-gray-600">
+            Sumalo al pedido para que el equipo de Griffo lo evalúe para
+            futuras producciones.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onSugerir}
+        className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-dark"
+      >
+        Sugerir un producto →
+      </button>
+    </div>
+  );
+}
 
 function DetectedPlateHint({
   plate,
