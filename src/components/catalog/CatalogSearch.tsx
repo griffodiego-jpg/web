@@ -394,29 +394,33 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
         className={`sticky ${STICKY_TOP} z-20 border-b border-gray-100 bg-white/95 backdrop-blur`}
       >
         <div className="relative px-4 py-2.5 lg:px-6">
-          {/* StatusBadge + botón Filtros (mobile) flotando a la derecha,
-              fuera del flujo del bloque centrado para no romper la simetría
-              de tabs + input. */}
+          {/* Desktop: StatusBadge a la derecha, absolute, sin pisar el
+              bloque centrado de tabs + input. */}
           <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 items-center gap-2 lg:flex">
             {status ? <StatusBadge status={status} /> : null}
           </div>
-          <div className="absolute right-4 top-2 flex items-center gap-2 lg:hidden">
-            {status ? <StatusBadge status={status} /> : null}
-            {showSidebar ? (
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary"
-              >
-                <FilterIcon /> Filtros
-                {activeFilters > 0 ? (
-                  <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
-                    {activeFilters}
-                  </span>
-                ) : null}
-              </button>
-            ) : null}
-          </div>
+          {/* Mobile: StatusBadge + Filtros como fila arriba de los tabs.
+              Antes estaban en absolute right-4 y se pisaban con los
+              labels de los tabs cuando el ancho era justo. */}
+          {(status || showSidebar) && (
+            <div className="mb-2 flex items-center justify-between gap-2 lg:hidden">
+              <div>{status ? <StatusBadge status={status} /> : null}</div>
+              {showSidebar ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-[#0a2b3d] transition hover:border-primary"
+                >
+                  <FilterIcon /> Filtros
+                  {activeFilters > 0 ? (
+                    <span className="rounded-full bg-primary px-1.5 text-[10px] font-black text-white">
+                      {activeFilters}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
+            </div>
+          )}
 
           {/* Bloque centrado: tabs arriba + input abajo. max-w acota el ancho
               para que el buscador no se vea perdido en pantallas anchas. */}

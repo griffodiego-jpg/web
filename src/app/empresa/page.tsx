@@ -37,8 +37,11 @@ export default function EmpresaPage() {
       <ManufacturerJsonLd />
       {/* Hero: 2 columnas en desktop (texto a la izquierda, foto panorámica
           a la derecha). En mobile: foto como fondo con texto superpuesto.
-          La foto se muestra a su tamaño natural — sin recorte forzado. */}
-      <section className="relative lg:bg-primary bg-primary/70 grid lg:grid-cols-2 grid-cols-1 items-stretch">
+          La foto se muestra a su tamaño natural — sin recorte forzado.
+          `min-h-[320px] lg:min-h-0` evita que el texto absoluto se
+          desborde de la sección cuando la imagen es chica y termine
+          pisando la nav sticky de abajo. */}
+      <section className="relative lg:bg-primary bg-primary/70 grid lg:grid-cols-2 grid-cols-1 items-stretch overflow-hidden min-h-[320px] lg:min-h-0">
         <div className="absolute inset-0 lg:relative grid place-items-center px-5 z-10 py-10">
           <p className="text-xl lg:text-2xl text-white font-bold lg:max-w-md text-center lg:text-left drop-shadow-md">
             Conocé nuestra trayectoria, nuestros valores y el compromiso que
