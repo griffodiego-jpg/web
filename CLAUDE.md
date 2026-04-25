@@ -831,6 +831,12 @@ Grupos:
   "¿No encontraste el producto?" del catálogo + del link sutil
   persistente abajo del input — fuente directa para definir qué
   fabricar próximo. Tab por default al entrar a `/admin/leads`.
+  Cada sugerencia trae: producto (free text), vehículo (marca/modelo/
+  año), línea, lado, medidas, código OEM, foto (jpg/png/webp ≤ 4 MB,
+  subida a Vercel Blob bajo `sugerencias/`), perfil, contacto, y
+  snapshot de la búsqueda + tab activo del catálogo cuando reportó.
+  El form vive en `components/catalog/SugerenciaModal.tsx` y manda
+  multipart a `/api/sugerencias`.
 - `/admin/cobertura` — Matriz vehículo × tipo de producto (18 columnas
   agrupadas en Dirección/Suspensión/Transmisión). Detecta huecos del
   catálogo. Filter + sort + sticky headers. Export CSV **respeta el

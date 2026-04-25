@@ -74,6 +74,16 @@ export type SugerenciaLead = {
   marcaVehiculo?: string;
   modeloVehiculo?: string;
   anioVehiculo?: string;
+  /** Línea del producto: suspensión / dirección / transmisión / otro. */
+  linea?: "suspension" | "direccion" | "transmision" | "otro";
+  /** Lado: izquierdo / derecho / ambos / no aplica. */
+  lado?: "izquierdo" | "derecho" | "ambos" | "no-aplica";
+  /** Medidas o dimensiones que conoce (free text). */
+  medidas?: string;
+  /** Código OEM del fabricante original (free text). */
+  oem?: string;
+  /** URL de la foto subida a Vercel Blob (opcional). */
+  fotoUrl?: string;
   /** Quién es: mecanico / taller / particular / distribuidor (opcional). */
   perfil?: "mecanico" | "taller" | "particular" | "distribuidor";
   /** Email o WhatsApp de contacto (opcional, si quiere ser avisado). */

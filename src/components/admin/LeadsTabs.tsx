@@ -123,13 +123,29 @@ export function LeadsTabs({ initialTab, leads, counts }: Props) {
 }
 
 function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
+  const LINEA_LABELS: Record<string, string> = {
+    suspension: "Suspensión",
+    direccion: "Dirección",
+    transmision: "Transmisión",
+    otro: "Otro",
+  };
+  const LADO_LABELS: Record<string, string> = {
+    izquierdo: "Izquierdo",
+    derecho: "Derecho",
+    ambos: "Ambos",
+    "no-aplica": "N/A",
+  };
   return (
     <table className="min-w-full text-sm">
       <thead className="bg-gray-50 text-xs uppercase text-gray-500">
         <tr>
           <Th>Fecha</Th>
+          <Th>Foto</Th>
           <Th>Producto</Th>
           <Th>Vehículo</Th>
+          <Th>Línea / Lado</Th>
+          <Th>Medidas</Th>
+          <Th>OEM</Th>
           <Th>Perfil</Th>
           <Th>Contacto</Th>
           <Th>Búsqueda</Th>
@@ -140,15 +156,52 @@ function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
           const vehiculo = [l.marcaVehiculo, l.modeloVehiculo, l.anioVehiculo]
             .filter(Boolean)
             .join(" ");
+          const lineaLado = [
+            l.linea ? LINEA_LABELS[l.linea] : null,
+            l.lado ? LADO_LABELS[l.lado] : null,
+          ]
+            .filter(Boolean)
+            .join(" / ");
           return (
             <tr key={`${l.ts}`} className="align-top hover:bg-gray-50">
               <Td>{formatDate(l.ts)}</Td>
               <Td>
+                {l.fotoUrl ? (
+                  <a
+                    href={l.fotoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                    title="Ver foto"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={l.fotoUrl}
+                      alt="Foto"
+                      className="h-14 w-14 rounded border border-gray-200 object-cover transition hover:opacity-80"
+                    />
+                  </a>
+                ) : (
+                  <span className="text-gray-300">—</span>
+                )}
+              </Td>
+              <Td>
                 <div className="max-w-md whitespace-pre-wrap">{l.producto}</div>
               </Td>
               <Td>{vehiculo || "—"}</Td>
+              <Td>{lineaLado || "—"}</Td>
+              <Td>{l.medidas ?? "—"}</Td>
+              <Td>
+                {l.oem ? <span className="font-mono text-xs">{l.oem}</span> : "—"}
+              </Td>
               <Td>{l.perfil ?? "—"}</Td>
-              <Td>{l.contacto ?? "—"}</Td>
+              <Td>
+                {l.contacto ? (
+                  <span className="break-all">{l.contacto}</span>
+                ) : (
+                  "—"
+                )}
+              </Td>
               <Td>
                 {l.busqueda ? (
                   <span className="font-mono text-xs">{l.busqueda}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   open: boolean;
@@ -24,6 +24,23 @@ const PROFILES = [
   { id: "distribuidor", label: "Distribuidor" },
 ] as const;
 
+const LINEAS = [
+  { id: "suspension", label: "Suspensión" },
+  { id: "direccion", label: "Dirección" },
+  { id: "transmision", label: "Transmisión" },
+  { id: "otro", label: "Otro" },
+] as const;
+
+const LADOS = [
+  { id: "izquierdo", label: "Izquierdo" },
+  { id: "derecho", label: "Derecho" },
+  { id: "ambos", label: "Ambos" },
+  { id: "no-aplica", label: "No aplica" },
+] as const;
+
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 export function SugerenciaModal({
   open,
   onClose,
@@ -37,13 +54,20 @@ export function SugerenciaModal({
   const [marca, setMarca] = useState(prefillBrand);
   const [modelo, setModelo] = useState(prefillModel);
   const [anio, setAnio] = useState(prefillYear);
+  const [linea, setLinea] = useState<string>("");
+  const [lado, setLado] = useState<string>("");
+  const [medidas, setMedidas] = useState("");
+  const [oem, setOem] = useState("");
   const [perfil, setPerfil] = useState<string>("");
   const [contacto, setContacto] = useState("");
+  const [foto, setFoto] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotoErr, setFotoErr] = useState<string | null>(null);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // Re-precargar marca/modelo/año si el modal se abre con valores nuevos
-  // (ej. el usuario cambió de vehículo y volvió a abrir el modal).
+  // Re-precargar marca/modelo/año si el modal se abre con valores nuevos.
   useEffect(() => {
     if (open) {
       setMarca(prefillBrand);
@@ -51,6 +75,13 @@ export function SugerenciaModal({
       setAnio(prefillYear);
     }
   }, [open, prefillBrand, prefillModel, prefillYear]);
+
+  // Cleanup del object URL del preview al cambiar/cerrar.
+  useEffect(() => {
+    return () => {
+      if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+    };
+  }, [fotoPreview]);
 
   // Esc para cerrar.
   useEffect(() => {
@@ -66,17 +97,57 @@ export function SugerenciaModal({
 
   const reset = () => {
     setProducto("");
+    setLinea("");
+    setLado("");
+    setMedidas("");
+    setOem("");
     setPerfil("");
     setContacto("");
+    setFoto(null);
+    if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+    setFotoPreview(null);
+    setFotoErr(null);
     setStatus("idle");
     setErrMsg(null);
+    if (fotoInputRef.current) fotoInputRef.current.value = "";
   };
 
   const handleClose = () => {
     if (status === "loading") return;
     onClose();
-    // Reset con delay para no ver el form vaciándose mientras el modal cierra.
     setTimeout(reset, 200);
+  };
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFotoErr(null);
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      setFoto(null);
+      if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+      setFotoPreview(null);
+      return;
+    }
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      setFotoErr("La foto debe ser JPG, PNG o WebP.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setFotoErr("La foto pesa más de 4 MB. Probá con una más liviana.");
+      e.target.value = "";
+      return;
+    }
+    if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+    setFoto(file);
+    setFotoPreview(URL.createObjectURL(file));
+  };
+
+  const removeFoto = () => {
+    setFoto(null);
+    if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+    setFotoPreview(null);
+    setFotoErr(null);
+    if (fotoInputRef.current) fotoInputRef.current.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,20 +155,26 @@ export function SugerenciaModal({
     if (status === "loading") return;
     setStatus("loading");
     setErrMsg(null);
+
+    const fd = new FormData();
+    fd.append("producto", producto.trim());
+    if (marca.trim()) fd.append("marcaVehiculo", marca.trim());
+    if (modelo.trim()) fd.append("modeloVehiculo", modelo.trim());
+    if (anio.trim()) fd.append("anioVehiculo", anio.trim());
+    if (linea) fd.append("linea", linea);
+    if (lado) fd.append("lado", lado);
+    if (medidas.trim()) fd.append("medidas", medidas.trim());
+    if (oem.trim()) fd.append("oem", oem.trim());
+    if (perfil) fd.append("perfil", perfil);
+    if (contacto.trim()) fd.append("contacto", contacto.trim());
+    if (busqueda) fd.append("busqueda", busqueda);
+    if (tab) fd.append("tab", tab);
+    if (foto) fd.append("foto", foto);
+
     try {
       const res = await fetch("/api/sugerencias", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          producto: producto.trim(),
-          marcaVehiculo: marca.trim() || undefined,
-          modeloVehiculo: modelo.trim() || undefined,
-          anioVehiculo: anio.trim() || undefined,
-          perfil: perfil || undefined,
-          contacto: contacto.trim() || undefined,
-          busqueda,
-          tab,
-        }),
+        body: fd,
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -114,12 +191,11 @@ export function SugerenciaModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="sugerencia-title"
     >
-      {/* Backdrop */}
       <button
         type="button"
         aria-label="Cerrar"
@@ -127,9 +203,8 @@ export function SugerenciaModal({
         className="absolute inset-0 bg-black/50"
       />
 
-      {/* Card */}
-      <div className="relative w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
-        <header className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
+      <div className="relative w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-xl bg-white shadow-2xl">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-gray-100 bg-white px-6 py-4">
           <div>
             <h2
               id="sugerencia-title"
@@ -154,7 +229,7 @@ export function SugerenciaModal({
         </header>
 
         {status === "ok" ? (
-          <div className="px-6 py-8 text-center">
+          <div className="px-6 py-10 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl">
               ✓
             </div>
@@ -175,9 +250,9 @@ export function SugerenciaModal({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
             <Field
-              label="Producto que buscás"
+              label="¿Qué producto buscás?"
               required
-              hint="Ej: Fuelle de cremallera para Toyota Hilux 2018"
+              hint="Ej: 'Fuelle de cremallera para Toyota Hilux 2018'"
             >
               <textarea
                 required
@@ -215,32 +290,94 @@ export function SugerenciaModal({
               </div>
             </Field>
 
+            <Field label="Línea (opcional)">
+              <ChipGroup
+                options={LINEAS}
+                value={linea}
+                onChange={setLinea}
+              />
+            </Field>
+
+            <Field label="Lado (opcional)">
+              <ChipGroup options={LADOS} value={lado} onChange={setLado} />
+            </Field>
+
+            <Field
+              label="Medidas (opcional)"
+              hint="Ej: 'Diámetro mayor 92mm, largo 210mm'"
+            >
+              <input
+                type="text"
+                value={medidas}
+                onChange={(e) => setMedidas(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </Field>
+
+            <Field
+              label="Código OEM original (opcional)"
+              hint="El número de pieza del fabricante del auto, si lo tenés."
+            >
+              <input
+                type="text"
+                value={oem}
+                onChange={(e) => setOem(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </Field>
+
+            <Field
+              label="Foto (opcional)"
+              hint="Sumá una foto del repuesto si la tenés. Max 4 MB, JPG/PNG/WebP."
+            >
+              {fotoPreview ? (
+                <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={fotoPreview}
+                    alt="Vista previa"
+                    className="h-20 w-20 rounded-md object-cover"
+                  />
+                  <div className="flex-1 text-xs text-gray-600">
+                    <p className="font-bold text-[#0a2b3d]">{foto?.name}</p>
+                    <p>{foto ? `${(foto.size / 1024 / 1024).toFixed(2)} MB` : ""}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFoto}
+                    className="text-xs font-bold text-red-600 hover:text-red-800"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 text-sm font-bold text-gray-500 transition hover:border-primary hover:text-primary">
+                  📎 Subir foto
+                  <input
+                    ref={fotoInputRef}
+                    type="file"
+                    accept={ALLOWED_PHOTO_TYPES.join(",")}
+                    onChange={handleFotoChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+              {fotoErr ? (
+                <p className="mt-1 text-xs text-red-600">{fotoErr}</p>
+              ) : null}
+            </Field>
+
             <Field label="¿Quién sos? (opcional)">
-              <div className="flex flex-wrap gap-2">
-                {PROFILES.map((p) => {
-                  const active = perfil === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setPerfil(active ? "" : p.id)}
-                      className={[
-                        "rounded-lg border-2 px-3 py-1.5 text-xs font-bold transition",
-                        active
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-gray-200 bg-white text-gray-500 hover:border-primary",
-                      ].join(" ")}
-                    >
-                      {p.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <ChipGroup
+                options={PROFILES}
+                value={perfil}
+                onChange={setPerfil}
+              />
             </Field>
 
             <Field
               label="Tu contacto (opcional)"
-              hint="Email o WhatsApp si querés que te avisemos cuando lo tengamos"
+              hint="Email o WhatsApp si querés que te avisemos cuando lo tengamos."
             >
               <input
                 type="text"
@@ -277,7 +414,11 @@ export function SugerenciaModal({
                 disabled={status === "loading"}
                 className="rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition hover:bg-primary-dark disabled:opacity-60"
               >
-                {status === "loading" ? "Enviando..." : "Enviar sugerencia"}
+                {status === "loading"
+                  ? foto
+                    ? "Subiendo foto..."
+                    : "Enviando..."
+                  : "Enviar sugerencia"}
               </button>
             </div>
           </form>
@@ -307,5 +448,38 @@ function Field({
       {children}
       {hint ? <span className="mt-1 block text-[11px] text-gray-400">{hint}</span> : null}
     </label>
+  );
+}
+
+function ChipGroup({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { id: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const active = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(active ? "" : o.id)}
+            className={[
+              "rounded-lg border-2 px-3 py-1.5 text-xs font-bold transition",
+              active
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-gray-200 bg-white text-gray-500 hover:border-primary",
+            ].join(" ")}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
