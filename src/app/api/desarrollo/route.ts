@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml, escapeHtmlMultiline } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
@@ -12,6 +13,17 @@ import {
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
+
+    if (isBot(formData)) {
+      return NextResponse.json({ ok: true });
+    }
+    const rl = await checkRateLimit("desarrollo", getClientIp(request));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Demasiados envíos. Probá en ${Math.ceil(rl.resetSec / 60)} min.` },
+        { status: 429 }
+      );
+    }
 
     const nombre = formData.get("nombre") as string;
     const empresa = formData.get("empresa") as string;

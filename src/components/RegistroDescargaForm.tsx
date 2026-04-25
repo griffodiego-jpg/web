@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HoneypotField } from "@/components/HoneypotField";
 
 type Status = "idle" | "loading" | "ok" | "error";
 
@@ -36,15 +37,16 @@ export function RegistroDescargaForm({
     compraA: "",
   });
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setErrorMsg(null);
+    const website = (new FormData(e.currentTarget).get("website") as string) ?? "";
     try {
       const res = await fetch("/api/descargas/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, recursoId, recursoTitulo }),
+        body: JSON.stringify({ ...data, recursoId, recursoTitulo, website }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -102,6 +104,7 @@ export function RegistroDescargaForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
+      <HoneypotField />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field
           id={`${recursoId}-nombre`}

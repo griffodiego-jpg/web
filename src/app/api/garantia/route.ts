@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
@@ -8,6 +9,17 @@ import { checkFieldLength, isValidEmail } from "@/lib/validate";
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
+
+    if (isBot(body)) {
+      return NextResponse.json({ ok: true });
+    }
+    const rl = await checkRateLimit("garantia", getClientIp(request));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Demasiados envíos. Probá en ${Math.ceil(rl.resetSec / 60)} min.` },
+        { status: 429 }
+      );
+    }
 
     const required = [
       "serial", "buying_date", "buying_place", "name", "company",

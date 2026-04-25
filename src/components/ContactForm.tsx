@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HoneypotField } from "@/components/HoneypotField";
 
 type Status = "idle" | "loading" | "ok" | "error";
 
@@ -14,15 +15,19 @@ export function ContactForm() {
     mensaje: "",
   });
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setErrorMsg(null);
+    // Honeypot: leemos del DOM sin trackearlo en state, así un bot que
+    // llene el campo invisible queda registrado en el payload pero el
+    // user no lo ve nunca.
+    const website = (new FormData(e.currentTarget).get("website") as string) ?? "";
     try {
       const res = await fetch("/api/contacto", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, website }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -38,6 +43,7 @@ export function ContactForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <HoneypotField />
       <div>
         <label htmlFor="nombre" className="block text-sm font-semibold mb-1">
           Nombre *

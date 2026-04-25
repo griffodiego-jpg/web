@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { escapeHtml, escapeHtmlMultiline } from "@/lib/escape";
 import { logAdminError } from "@/lib/admin-log";
 import { saveLead } from "@/lib/leads";
@@ -16,7 +17,23 @@ export async function POST(request: Request) {
       email?: string;
       telefono?: string;
       mensaje?: string;
+      website?: string;
     };
+
+    // Antispam — honeypot. Devolvemos 200 OK silenciosamente para no
+    // dar feedback al bot de que detectamos el campo. NO guardamos lead.
+    if (isBot(body)) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // Antispam — rate limit (3 envíos cada 10 min por IP).
+    const rl = await checkRateLimit("contacto", getClientIp(request));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Demasiados envíos. Probá en ${Math.ceil(rl.resetSec / 60)} min.` },
+        { status: 429 }
+      );
+    }
 
     if (!body.nombre || !body.email || !body.mensaje) {
       return NextResponse.json(

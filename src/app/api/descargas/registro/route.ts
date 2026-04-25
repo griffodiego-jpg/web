@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
@@ -19,7 +20,19 @@ export async function POST(request: Request) {
       compraA?: string;
       recursoId?: string;
       recursoTitulo?: string;
+      website?: string;
     };
+
+    if (isBot(body)) {
+      return NextResponse.json({ ok: true });
+    }
+    const rl = await checkRateLimit("descarga", getClientIp(request));
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Demasiados envíos. Probá en ${Math.ceil(rl.resetSec / 60)} min.` },
+        { status: 429 }
+      );
+    }
 
     if (
       !body.nombre ||

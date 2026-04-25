@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HoneypotField } from "@/components/HoneypotField";
 
 export function Newsletter() {
   const [email, setEmail] = useState("");
@@ -9,15 +10,16 @@ export function Newsletter() {
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setErrorMsg(null);
+    const website = (new FormData(e.currentTarget).get("website") as string) ?? "";
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, website }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -47,6 +49,7 @@ export function Newsletter() {
           onSubmit={onSubmit}
           className="flex items-center gap-2.5 flex-wrap w-full"
         >
+          <HoneypotField />
           <label htmlFor="newsletter-email" className="sr-only">
             Email
           </label>

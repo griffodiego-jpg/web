@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HoneypotField } from "@/components/HoneypotField";
 
 type Status = "idle" | "loading" | "ok" | "error";
 
@@ -43,15 +44,16 @@ export function GarantiaForm() {
     setData((d) => ({ ...d, [key]: value }));
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setErrorMsg(null);
+    const website = (new FormData(e.currentTarget).get("website") as string) ?? "";
     try {
       const res = await fetch("/api/garantia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, website }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -71,6 +73,7 @@ export function GarantiaForm() {
       onSubmit={onSubmit}
       className="py-10 px-5 bg-primary/10 rounded grid place-items-start lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-5"
     >
+      <HoneypotField />
       <Field
         id="serial"
         placeholder="Número de serie *"

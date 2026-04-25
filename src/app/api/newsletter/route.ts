@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
@@ -7,7 +8,26 @@ import { isValidEmail } from "@/lib/validate";
 
 export async function POST(request: Request) {
   try {
-    const { email } = (await request.json()) as { email?: string };
+    const body = (await request.json()) as {
+      email?: string;
+      website?: string;
+    };
+    const { email } = body;
+
+    if (isBot(body)) {
+      return NextResponse.json({ ok: true });
+    }
+    const rl = await checkRateLimit("newsletter", getClientIp(request), {
+      max: 5,
+      windowSec: 600,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Demasiados envíos. Probá en ${Math.ceil(rl.resetSec / 60)} min.` },
+        { status: 429 }
+      );
+    }
+
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
         { error: "Email inválido" },

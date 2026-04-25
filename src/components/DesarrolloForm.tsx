@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { HoneypotField } from "@/components/HoneypotField";
 
 type Status = "idle" | "loading" | "ok" | "error";
 
@@ -53,6 +54,7 @@ export function DesarrolloForm() {
       className="bg-white rounded-lg shadow-lg p-6 lg:p-8 space-y-5"
       encType="multipart/form-data"
     >
+      <HoneypotField />
       <h3 className="text-xl font-black text-[#0a2b3d]">
         Contanos qué pieza necesitás
       </h3>
