@@ -31,7 +31,6 @@ const ALLOWED_PHOTO_TYPES = new Set([
 
 const VALID_PROFILES = ["mecanico", "taller", "particular", "distribuidor"];
 const VALID_LINEAS = ["suspension", "direccion", "transmision", "otro"];
-const VALID_LADOS = ["izquierdo", "derecho", "ambos", "no-aplica"];
 
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -120,10 +119,9 @@ export async function POST(request: Request) {
       fields.linea && VALID_LINEAS.includes(fields.linea)
         ? (fields.linea as SugerenciaLead["linea"])
         : undefined,
-    lado:
-      fields.lado && VALID_LADOS.includes(fields.lado)
-        ? (fields.lado as SugerenciaLead["lado"])
-        : undefined,
+    // Lado es texto libre — puede ser "izquierdo", "lado caja", "delantero",
+    // "lado rueda derecho", lo que el usuario escriba. Sólo limitamos largo.
+    lado: fields.lado?.trim().slice(0, 60) || undefined,
     medidas: fields.medidas?.trim() || undefined,
     oem: fields.oem?.trim() || undefined,
     fotoUrl,
@@ -131,7 +129,8 @@ export async function POST(request: Request) {
       fields.perfil && VALID_PROFILES.includes(fields.perfil)
         ? (fields.perfil as SugerenciaLead["perfil"])
         : undefined,
-    contacto: fields.contacto?.trim() || undefined,
+    email: fields.email?.trim() || undefined,
+    celular: fields.celular?.trim() || undefined,
     busqueda: fields.busqueda?.trim() || undefined,
     tab: fields.tab?.trim() || undefined,
   };

@@ -31,13 +31,6 @@ const LINEAS = [
   { id: "otro", label: "Otro" },
 ] as const;
 
-const LADOS = [
-  { id: "izquierdo", label: "Izquierdo" },
-  { id: "derecho", label: "Derecho" },
-  { id: "ambos", label: "Ambos" },
-  { id: "no-aplica", label: "No aplica" },
-] as const;
-
 const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -55,11 +48,12 @@ export function SugerenciaModal({
   const [modelo, setModelo] = useState(prefillModel);
   const [anio, setAnio] = useState(prefillYear);
   const [linea, setLinea] = useState<string>("");
-  const [lado, setLado] = useState<string>("");
+  const [lado, setLado] = useState("");
   const [medidas, setMedidas] = useState("");
   const [oem, setOem] = useState("");
   const [perfil, setPerfil] = useState<string>("");
-  const [contacto, setContacto] = useState("");
+  const [email, setEmail] = useState("");
+  const [celular, setCelular] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [fotoErr, setFotoErr] = useState<string | null>(null);
@@ -102,7 +96,8 @@ export function SugerenciaModal({
     setMedidas("");
     setOem("");
     setPerfil("");
-    setContacto("");
+    setEmail("");
+    setCelular("");
     setFoto(null);
     if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     setFotoPreview(null);
@@ -162,11 +157,12 @@ export function SugerenciaModal({
     if (modelo.trim()) fd.append("modeloVehiculo", modelo.trim());
     if (anio.trim()) fd.append("anioVehiculo", anio.trim());
     if (linea) fd.append("linea", linea);
-    if (lado) fd.append("lado", lado);
+    if (lado.trim()) fd.append("lado", lado.trim());
     if (medidas.trim()) fd.append("medidas", medidas.trim());
     if (oem.trim()) fd.append("oem", oem.trim());
     if (perfil) fd.append("perfil", perfil);
-    if (contacto.trim()) fd.append("contacto", contacto.trim());
+    if (email.trim()) fd.append("email", email.trim());
+    if (celular.trim()) fd.append("celular", celular.trim());
     if (busqueda) fd.append("busqueda", busqueda);
     if (tab) fd.append("tab", tab);
     if (foto) fd.append("foto", foto);
@@ -298,8 +294,17 @@ export function SugerenciaModal({
               />
             </Field>
 
-            <Field label="Lado (opcional)">
-              <ChipGroup options={LADOS} value={lado} onChange={setLado} />
+            <Field
+              label="Lado (opcional)"
+              hint="Ej: 'izquierdo', 'derecho', 'lado caja', 'lado rueda', 'delantero'…"
+            >
+              <input
+                type="text"
+                value={lado}
+                onChange={(e) => setLado(e.target.value)}
+                maxLength={60}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </Field>
 
             <Field
@@ -377,15 +382,24 @@ export function SugerenciaModal({
 
             <Field
               label="Tu contacto (opcional)"
-              hint="Email o WhatsApp si querés que te avisemos cuando lo tengamos."
+              hint="Si querés que te avisemos cuando lo tengamos. Podés dejar uno o los dos."
             >
-              <input
-                type="text"
-                value={contacto}
-                onChange={(e) => setContacto(e.target.value)}
-                placeholder="ejemplo@mail.com"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email — ejemplo@mail.com"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+                <input
+                  type="tel"
+                  value={celular}
+                  onChange={(e) => setCelular(e.target.value)}
+                  placeholder="Celular / WhatsApp — 11 5555-5555"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
             </Field>
 
             {busqueda ? (

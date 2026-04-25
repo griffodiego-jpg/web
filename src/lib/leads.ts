@@ -77,8 +77,9 @@ export type SugerenciaLead = {
   anioVehiculo?: string;
   /** Línea del producto: suspensión / dirección / transmisión / otro. */
   linea?: "suspension" | "direccion" | "transmision" | "otro";
-  /** Lado: izquierdo / derecho / ambos / no aplica. */
-  lado?: "izquierdo" | "derecho" | "ambos" | "no-aplica";
+  /** Lado: free text (puede ser izquierdo/derecho, lado caja, lado rueda,
+   *  delantero/trasero, o cualquier descripción que use el usuario). */
+  lado?: string;
   /** Medidas o dimensiones que conoce (free text). */
   medidas?: string;
   /** Código OEM del fabricante original (free text). */
@@ -87,7 +88,12 @@ export type SugerenciaLead = {
   fotoUrl?: string;
   /** Quién es: mecanico / taller / particular / distribuidor (opcional). */
   perfil?: "mecanico" | "taller" | "particular" | "distribuidor";
-  /** Email o WhatsApp de contacto (opcional, si quiere ser avisado). */
+  /** Email de contacto (opcional). */
+  email?: string;
+  /** Celular o WhatsApp (opcional). */
+  celular?: string;
+  /** @deprecated antes era un solo campo de contacto. Se mantiene para leer
+   *  registros viejos creados con v1/v2; en v3 se usan email + celular. */
   contacto?: string;
   /** Snapshot del estado del catálogo cuando reportó. Auto-capturado.
    *  Útil para entender qué buscó (palabra/patente/código) y qué tab usaba. */

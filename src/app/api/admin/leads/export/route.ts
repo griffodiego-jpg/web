@@ -75,7 +75,8 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
                 "OEM",
                 "Foto (URL)",
                 "Perfil",
-                "Contacto",
+                "Email",
+                "Celular",
                 "Búsqueda",
                 "Tab",
               ]
@@ -111,6 +112,12 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
     }
     if (kind === "sugerencia") {
       const s = l as SugerenciaLead;
+      // Compat con leads v1/v2: el campo único `contacto` se guarda en
+      // email o celular según si tiene "@".
+      const legacy = s.contacto?.trim();
+      const email = s.email ?? (legacy?.includes("@") ? legacy : "") ?? "";
+      const celular =
+        s.celular ?? (legacy && !legacy.includes("@") ? legacy : "") ?? "";
       return [
         fecha,
         s.producto,
@@ -123,7 +130,8 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
         s.oem ?? "",
         s.fotoUrl ?? "",
         s.perfil ?? "",
-        s.contacto ?? "",
+        email,
+        celular,
         s.busqueda ?? "",
         s.tab ?? "",
       ];

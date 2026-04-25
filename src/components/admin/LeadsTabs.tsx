@@ -136,12 +136,6 @@ function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
     transmision: "Transmisión",
     otro: "Otro",
   };
-  const LADO_LABELS: Record<string, string> = {
-    izquierdo: "Izquierdo",
-    derecho: "Derecho",
-    ambos: "Ambos",
-    "no-aplica": "N/A",
-  };
   return (
     <table className="min-w-full text-sm">
       <thead className="bg-gray-50 text-xs uppercase text-gray-500">
@@ -150,11 +144,13 @@ function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
           <Th>Foto</Th>
           <Th>Producto</Th>
           <Th>Vehículo</Th>
-          <Th>Línea / Lado</Th>
+          <Th>Línea</Th>
+          <Th>Lado</Th>
           <Th>Medidas</Th>
           <Th>OEM</Th>
           <Th>Perfil</Th>
-          <Th>Contacto</Th>
+          <Th>Email</Th>
+          <Th>Celular</Th>
           <Th>Búsqueda</Th>
         </tr>
       </thead>
@@ -163,12 +159,21 @@ function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
           const vehiculo = [l.marcaVehiculo, l.modeloVehiculo, l.anioVehiculo]
             .filter(Boolean)
             .join(" ");
-          const lineaLado = [
-            l.linea ? LINEA_LABELS[l.linea] : null,
-            l.lado ? LADO_LABELS[l.lado] : null,
-          ]
-            .filter(Boolean)
-            .join(" / ");
+          const linea = l.linea ? LINEA_LABELS[l.linea] ?? l.linea : "—";
+          // Compat con leads v1/v2: si vienen con `contacto` (un solo campo)
+          // y no hay email/celular nuevos, mostramos contacto en la columna
+          // que parezca correcta — heurística simple por presencia de "@".
+          const legacyContacto = l.contacto?.trim();
+          const email =
+            l.email?.trim() ||
+            (legacyContacto?.includes("@") ? legacyContacto : "") ||
+            "";
+          const celular =
+            l.celular?.trim() ||
+            (legacyContacto && !legacyContacto.includes("@")
+              ? legacyContacto
+              : "") ||
+            "";
           return (
             <tr key={`${l.ts}`} className="align-top hover:bg-gray-50">
               <Td>{formatDate(l.ts)}</Td>
@@ -196,15 +201,28 @@ function SugerenciaTable({ items }: { items: SugerenciaLead[] }) {
                 <div className="max-w-md whitespace-pre-wrap">{l.producto}</div>
               </Td>
               <Td>{vehiculo || "—"}</Td>
-              <Td>{lineaLado || "—"}</Td>
+              <Td>{linea}</Td>
+              <Td>{l.lado ?? "—"}</Td>
               <Td>{l.medidas ?? "—"}</Td>
               <Td>
                 {l.oem ? <span className="font-mono text-xs">{l.oem}</span> : "—"}
               </Td>
               <Td>{l.perfil ?? "—"}</Td>
               <Td>
-                {l.contacto ? (
-                  <span className="break-all">{l.contacto}</span>
+                {email ? (
+                  <a
+                    href={`mailto:${email}`}
+                    className="break-all text-primary hover:underline"
+                  >
+                    {email}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </Td>
+              <Td>
+                {celular ? (
+                  <span className="break-all">{celular}</span>
                 ) : (
                   "—"
                 )}
