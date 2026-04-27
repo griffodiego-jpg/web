@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { computeSaldo, formatARS } from "@/data/mock-b2b";
+import { formatARS } from "@/data/mock-b2b";
 import { getAccountStatusForClient } from "@/lib/b2b/account-status";
+import { computeNormalizedSaldo } from "@/lib/b2b/movement-classifier";
 import { hasUnseenPriceList } from "@/lib/price-lists";
 import { getCurrentClient } from "@/lib/b2b/current-client";
 
@@ -18,7 +19,10 @@ function formatDate(iso: string): string {
 export default async function ResumenPage() {
   const client = await getCurrentClient();
   const { items, source } = await getAccountStatusForClient(client.client_id);
-  const saldo = computeSaldo(items);
+  // Mismo cálculo normalizado que /cuenta/cuenta-corriente — para que el
+  // saldo del resumen coincida con el del detalle (RC y CG vienen con
+  // haber negativo y necesitan el flip para no inflar la deuda).
+  const { saldo } = computeNormalizedSaldo(items);
   const hayDeuda = saldo > 0;
   const disponible = source !== "unavailable";
 
