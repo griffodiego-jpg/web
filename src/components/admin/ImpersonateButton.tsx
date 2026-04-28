@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearCartStorage } from "@/lib/cart";
 
 /**
  * Botón "Loguear como" del admin. Flujo:
@@ -42,6 +43,10 @@ export function ImpersonateButton({
       const data = (await res.json()) as {
         client: { client_id: string; name: string; email: string };
       };
+      // Limpiamos el carrito por si quedó algo de la sesión anterior
+      // (admin que estaba viendo a otro cliente, o un cliente real que
+      // cerró sesión sin desloguearse).
+      clearCartStorage();
       window.localStorage.setItem(
         "griffo:b2b:session",
         JSON.stringify({

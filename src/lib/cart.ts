@@ -26,6 +26,23 @@ interface CartState {
 const STORAGE_KEY = "griffo:cart";
 const EMPTY: CartState = { items: [], updatedAt: "" };
 
+/**
+ * Borra el carrito desde fuera de un componente React. Útil al
+ * loguear/desloguear (cambio de cliente) — no podemos usar el hook
+ * useCart en esos contextos. Dispara el evento `cart-change` para
+ * que cualquier componente que esté escuchando se sincronice.
+ */
+export function clearCartStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const empty: CartState = { items: [], updatedAt: new Date().toISOString() };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(empty));
+    window.dispatchEvent(new CustomEvent("cart-change", { detail: empty }));
+  } catch {
+    /* tolerar */
+  }
+}
+
 function read(): CartState {
   if (typeof window === "undefined") return EMPTY;
   try {

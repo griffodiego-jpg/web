@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearCartStorage } from "@/lib/cart";
 
 /**
  * Banner rojo que se muestra en el portal cuando el admin está
@@ -16,6 +17,7 @@ export function ImpersonationBanner({ clientName }: { clientName: string }) {
     setLoading(true);
     try {
       await fetch("/api/admin/clientes/impersonate", { method: "DELETE" });
+      clearCartStorage();
       window.localStorage.removeItem("griffo:b2b:session");
       window.dispatchEvent(new Event("b2b-session-change"));
       router.push("/admin/clientes");

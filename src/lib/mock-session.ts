@@ -1,11 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { clearCartStorage } from "@/lib/cart";
 
 /**
  * Sesión "mock" de cliente B2B mientras Firebase Auth no está conectado.
  * Cuando haya auth real, reemplazamos este hook por el de Firebase — la
  * API (session, login, logout) queda igual para los consumidores.
+ *
+ * El carrito se limpia automáticamente en login/logout para evitar que
+ * un cliente vea el carrito de otro al cambiar de sesión.
  */
 
 export interface MockSession {
@@ -57,6 +61,12 @@ export function useMockSession() {
 
   const login = useCallback(
     (data: { email: string; clientId?: string; clientName?: string }) => {
+      // Si el cliente cambia de email respecto a la sesión anterior,
+      // limpiamos el carrito (evita que vea el de otro usuario).
+      const prev = read();
+      if (!prev || prev.email !== data.email) {
+        clearCartStorage();
+      }
       const next: MockSession = {
         email: data.email,
         clientId: data.clientId,
@@ -71,6 +81,7 @@ export function useMockSession() {
   );
 
   const logout = useCallback(() => {
+    clearCartStorage();
     window.localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(EVENT_NAME));
     setSession(null);
