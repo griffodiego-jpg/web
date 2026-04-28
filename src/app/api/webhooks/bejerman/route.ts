@@ -96,7 +96,9 @@ export async function POST(req: Request) {
 
   const event = (body.event ?? "").trim();
   const order = body.order ?? {};
-  const erpOrderId = (order.ErpOrderId ?? order.erpOrderId ?? "").trim();
+  const erpOrderId = normalizeErpOrderId(
+    order.ErpOrderId ?? order.erpOrderId ?? "",
+  );
 
   if (!event) {
     return NextResponse.json({ error: "Falta event" }, { status: 400 });
@@ -157,11 +159,26 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, ignored: true });
 }
 
+/**
+ * Normaliza un id del ERP para comparar: trim, NFC, colapsa whitespace
+ * interno. Si Bejerman manda " PED-0023819 " o un nbsp, igual matchea
+ * con el `pedido.erpOrderNumber` que guardamos local (también trimmed).
+ */
+function normalizeErpOrderId(raw: string): string {
+  return raw.normalize("NFC").replace(/\s+/g, " ").trim();
+}
+
 async function findPedidoByErpOrderId(erpOrderId: string) {
   // TODO: índice dedicado erpOrderNumber → id para evitar el full-scan
   // cuando haya muchos pedidos. Por ahora iteramos la lista reciente —
   // suficiente para volúmenes razonables.
   const { listPedidosAll } = await import("@/lib/pedidos");
   const all = await listPedidosAll(1000);
-  return all.find((p) => p.erpOrderNumber === erpOrderId) ?? null;
+  return (
+    all.find(
+      (p) =>
+        p.erpOrderNumber &&
+        normalizeErpOrderId(p.erpOrderNumber) === erpOrderId,
+    ) ?? null
+  );
 }

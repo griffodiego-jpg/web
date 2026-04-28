@@ -54,6 +54,7 @@ export async function POST(req: Request) {
       client_id: client.client_id,
       name: client.name,
       email: client.email,
+      warehouses: client.warehouses ?? [],
     },
   });
 }

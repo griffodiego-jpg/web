@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { clearCartStorage } from "@/lib/cart";
+import type { BejermanWarehouse } from "@/types/bejerman";
 
 /**
  * Sesión "mock" de cliente B2B mientras Firebase Auth no está conectado.
@@ -16,6 +17,9 @@ export interface MockSession {
   email: string;
   clientId?: string;
   clientName?: string;
+  /** Sucursales del cliente — vienen del login para que /carrito pueda
+   *  ofrecer el selector sin hardcodear nada del mock. */
+  warehouses?: BejermanWarehouse[];
   /** True si la sesión la inició el admin vía /admin/clientes. */
   impersonated?: boolean;
   loggedAt: string;
@@ -60,17 +64,24 @@ export function useMockSession() {
   }, []);
 
   const login = useCallback(
-    (data: { email: string; clientId?: string; clientName?: string }) => {
+    (data: {
+      email: string;
+      clientId?: string;
+      clientName?: string;
+      warehouses?: BejermanWarehouse[];
+    }) => {
       // Si el cliente cambia de email respecto a la sesión anterior,
       // limpiamos el carrito (evita que vea el de otro usuario).
       const prev = read();
-      if (!prev || prev.email !== data.email) {
+      const normalizedEmail = data.email.trim().toLowerCase();
+      if (!prev || prev.email.trim().toLowerCase() !== normalizedEmail) {
         clearCartStorage();
       }
       const next: MockSession = {
         email: data.email,
         clientId: data.clientId,
         clientName: data.clientName,
+        warehouses: data.warehouses,
         loggedAt: new Date().toISOString(),
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

@@ -5,6 +5,7 @@ import {
   sendPedidoCreadoAGriffo,
   sendPedidoCreadoAlCliente,
 } from "@/lib/emails/pedidos";
+import { getImpersonatedCode } from "@/lib/b2b/impersonation";
 
 /**
  * `POST /api/b2b/pedidos` — crea un pedido desde el carrito del cliente.
@@ -105,6 +106,21 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Falta seleccionar una sucursal" },
       { status: 400 },
+    );
+  }
+
+  // Si el admin está impersonando un cliente, el pedido tiene que
+  // crearse a nombre de ESE cliente — no del que mande el body. Si no
+  // matchean, rechazamos. (Sin esta validación, un admin podría crear
+  // pedidos a nombre de cualquiera enviando un clientId arbitrario).
+  const impersonatedCode = await getImpersonatedCode();
+  if (impersonatedCode && impersonatedCode !== clientId) {
+    return NextResponse.json(
+      {
+        error:
+          "Estás impersonando a otro cliente. Cerrá la impersonación o reingresá al carrito.",
+      },
+      { status: 403 },
     );
   }
 

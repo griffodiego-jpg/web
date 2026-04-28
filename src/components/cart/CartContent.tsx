@@ -7,9 +7,15 @@ import { useCart } from "@/lib/cart";
 import { useMockSession } from "@/lib/mock-session";
 import { useB2BPreferences } from "@/lib/b2b-preferences";
 import { formatARS, formatARSNeto, getMockCompraPrice } from "@/lib/mock-prices";
-import { mockCurrentClient } from "@/data/mock-b2b";
+import type { BejermanClient } from "@/types/bejerman";
 
-export function CartContent() {
+interface Props {
+  /** Cliente resuelto server-side cuando el admin está impersonando. Si
+   *  no hay impersonación, viene null y se usa la sesión mock. */
+  impersonatedClient: BejermanClient | null;
+}
+
+export function CartContent({ impersonatedClient }: Props) {
   const router = useRouter();
   const { items, ready, setQuantity, removeItem, clear, count } = useCart();
   const { isLoggedIn, session } = useMockSession();
@@ -17,9 +23,27 @@ export function CartContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* Cliente + sucursales del cliente. En modo demo vienen del mock.
-     Cuando Firebase Auth esté vivo → mapeo email → /ERP/Clients. */
-  const warehouses = mockCurrentClient.warehouses ?? [];
+  /* Cliente + sucursales del cliente. Prioridad:
+       1. Si admin impersona → cliente del ERP (impersonatedClient).
+       2. Si hay sesión B2B → datos guardados en login (incluye warehouses).
+       3. Sin sesión → null. El usuario puede ver el carrito pero no
+          confirmar (sale CTA "Ingresá para confirmar"). */
+  const effectiveClient = impersonatedClient
+    ? {
+        clientId: impersonatedClient.client_id,
+        clientName: impersonatedClient.name,
+        clientEmail: impersonatedClient.email,
+        warehouses: impersonatedClient.warehouses ?? [],
+      }
+    : session && session.clientId
+      ? {
+          clientId: session.clientId,
+          clientName: session.clientName ?? "",
+          clientEmail: session.email,
+          warehouses: session.warehouses ?? [],
+        }
+      : null;
+  const warehouses = effectiveClient?.warehouses ?? [];
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>(
     warehouses[0]?.warehouse_id ?? "",
   );
@@ -69,6 +93,10 @@ export function CartContent() {
   }
 
   async function handleConfirmarPedido() {
+    if (!effectiveClient) {
+      setError("Necesitás ingresar al portal para confirmar el pedido.");
+      return;
+    }
     if (!selectedWarehouseId) {
       setError("Elegí una sucursal antes de confirmar.");
       return;
@@ -97,9 +125,9 @@ export function CartContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientId: session?.clientId || mockCurrentClient.client_id,
-          clientName: session?.clientName || mockCurrentClient.name,
-          clientEmail: session?.email || mockCurrentClient.email,
+          clientId: effectiveClient.clientId,
+          clientName: effectiveClient.clientName,
+          clientEmail: effectiveClient.clientEmail,
           warehouseId: selectedWarehouseId,
           warehouseDescription: selectedWarehouse?.description ?? "",
           items: itemsPayload,
@@ -274,8 +302,8 @@ export function CartContent() {
         </div>
       </div>
 
-      {/* Selector de sucursal — sólo B2B logueado */}
-      {isLoggedIn && warehouses.length > 0 && (
+      {/* Selector de sucursal — sólo cuando hay cliente identificado */}
+      {effectiveClient && warehouses.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
@@ -323,7 +351,7 @@ export function CartContent() {
           >
             Seguir comprando
           </Link>
-          {isLoggedIn ? (
+          {effectiveClient ? (
             <button
               type="button"
               onClick={handleConfirmarPedido}

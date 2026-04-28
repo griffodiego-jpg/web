@@ -30,6 +30,7 @@ export function LoginForm() {
         email: data.client.email,
         clientId: data.client.client_id,
         clientName: data.client.name,
+        warehouses: data.client.warehouses,
       });
       router.push("/cuenta");
     } catch (e) {

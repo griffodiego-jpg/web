@@ -19,12 +19,19 @@ export default async function PedidosPage() {
   ]);
 
   /* Los pedidos del ERP que ya existen en local (mismo erpOrderNumber)
-     no se duplican — son el mismo pedido visto desde dos lados. */
+     no se duplican — son el mismo pedido visto desde dos lados.
+     Normalizamos los ids (NFC, colapso de espacios) por si Bejerman
+     manda variantes con nbsp o espacios extra. */
+  const normalizeErp = (s: string) =>
+    s.normalize("NFC").replace(/\s+/g, " ").trim();
   const knownErpNumbers = new Set(
-    localPedidos.map((p) => p.erpOrderNumber).filter(Boolean) as string[],
+    localPedidos
+      .map((p) => p.erpOrderNumber)
+      .filter((x): x is string => Boolean(x))
+      .map(normalizeErp),
   );
   const onlyErp = erpOrders.filter(
-    (o) => !knownErpNumbers.has(o.erpOrderId),
+    (o) => !knownErpNumbers.has(normalizeErp(o.erpOrderId)),
   );
 
   const totalRows = localPedidos.length + onlyErp.length;
