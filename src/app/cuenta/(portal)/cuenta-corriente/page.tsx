@@ -11,6 +11,7 @@ import {
   isLikelyPago,
   normalizeAmounts,
 } from "@/lib/b2b/movement-classifier";
+import { ComprobantePdfButton } from "@/components/cuenta/ComprobantePdfButton";
 import type { BejermanAccountStatusItem } from "@/types/bejerman";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +22,11 @@ const COMP_LABEL: Record<string, string> = {
   ND: "Nota de débito",
   NC: "Nota de crédito",
   RE: "Recibo",
+  RC: "Recibo",
   RB: "Recibo",
+  REC: "Recibo",
   COB: "Cobranza",
+  CBR: "Cobranza",
   PA: "Pago",
 };
 
@@ -296,20 +300,9 @@ export default async function CuentaCorrientePage({
                           </td>
                           <td className="px-4 py-3 text-right">
                             {puedeDescargar ? (
-                              <a
-                                href={buildDownloadUrl(r, client.client_id)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Descargar PDF"
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-primary text-primary hover:bg-primary hover:text-white font-bold text-[10px] transition"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                  <polyline points="7 10 12 15 17 10" />
-                                  <line x1="12" y1="15" x2="12" y2="3" />
-                                </svg>
-                                PDF
-                              </a>
+                              <ComprobantePdfButton
+                                url={buildDownloadUrl(r, client.client_id)}
+                              />
                             ) : (
                               <span
                                 className="inline-block text-[10px] text-gray-400"
@@ -367,12 +360,21 @@ function buildDownloadUrl(
   r: BejermanAccountStatusItem,
   clientId: string,
 ): string {
+  // El ERP a veces devuelve valores con espacios (ej. compLetra: " "
+  // para los recibos). Hay que trimearlos antes de mandar a la URL,
+  // sino el API recibe " " y rompe.
+  const comp = (r.comp ?? "").trim();
+  const compLetra = (r.compLetra ?? "").trim();
+  const puntoVenta = (r.puntoVenta ?? "").trim();
+  const compNro = (r.compNro ?? "").trim();
   const q = new URLSearchParams({
-    Comp: r.comp,
-    PuntoVenta: r.puntoVenta,
-    CompNro: r.compNro,
+    Comp: comp,
+    PuntoVenta: puntoVenta,
+    CompNro: compNro,
     CodCliente: clientId,
   });
-  if (r.compLetra) q.set("CompLetra", r.compLetra);
+  // CompLetra siempre presente (la API la valida como [Required] aún
+  // si está vacío). El cliente HTTP de Bejerman ya defaultea a "".
+  if (compLetra) q.set("CompLetra", compLetra);
   return `/api/b2b/comprobante?${q.toString()}`;
 }

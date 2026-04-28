@@ -68,10 +68,7 @@ export async function POST(
       invoiceCompLetra,
       invoicePuntoVenta,
       invoiceCompNro,
-      invoiceEmissionDate:
-        typeof body.invoiceEmissionDate === "string" && body.invoiceEmissionDate.trim()
-          ? new Date(body.invoiceEmissionDate).toISOString()
-          : undefined,
+      invoiceEmissionDate: parseSafeDate(body.invoiceEmissionDate),
     });
     await sendPedidoEntregado(updated);
     return NextResponse.json({ ok: true, pedido: updated });
@@ -79,4 +76,16 @@ export async function POST(
     const message = e instanceof Error ? e.message : "Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+/**
+ * Parsea un date string opcional. Si la fecha no es válida (ej. el
+ * operador escribió mal), devuelve undefined en vez de explotar al
+ * llamar `.toISOString()` sobre Invalid Date.
+ */
+function parseSafeDate(raw: unknown): string | undefined {
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
 }

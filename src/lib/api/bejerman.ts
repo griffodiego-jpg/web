@@ -251,9 +251,17 @@ export async function getPendingOrdersForClient(
   clientCode: string,
 ): Promise<BejermanPendingOrder[]> {
   try {
-    return await request<BejermanPendingOrder[]>(
+    const raw = await request<BejermanPendingOrder[]>(
       `/ERP/clientes/${encodeURIComponent(clientCode)}/pedidos`,
     );
+    if (!Array.isArray(raw)) {
+      console.error(
+        `[bejerman] getPendingOrdersForClient(${clientCode}): respuesta no es array:`,
+        JSON.stringify(raw ?? null).slice(0, 200),
+      );
+      return [];
+    }
+    return raw;
   } catch (e) {
     // Logueamos siempre (no sólo en dev) porque ahora el endpoint
     // existe — cualquier fallo es un bug real que hay que mirar.
