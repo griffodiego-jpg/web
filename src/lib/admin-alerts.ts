@@ -78,6 +78,36 @@ export function findConfigAlerts(): Alert[] {
     });
   }
 
+  if (!process.env.BEJERMAN_EMAIL || !process.env.BEJERMAN_PASSWORD) {
+    alerts.push({
+      id: "bejerman-creds",
+      severity: "error",
+      title: "Credenciales de ERP Bejerman faltantes",
+      description:
+        "El portal B2B (cuenta corriente, facturas, clientes) usa data mock hasta que se carguen BEJERMAN_EMAIL y BEJERMAN_PASSWORD. Pedirle las creds al técnico de Griffo.",
+    });
+  }
+
+  if (!process.env.CRON_SECRET) {
+    alerts.push({
+      id: "cron-secret",
+      severity: "warn",
+      title: "CRON_SECRET no configurado",
+      description:
+        "Sin esta variable los crons (backup diario del catálogo, banco de imágenes semanal, digest de salud) no corren porque devuelven 503. Generar un string random y cargarlo en Vercel → Environment Variables.",
+    });
+  }
+
+  if (!process.env.NEXT_PUBLIC_GA_ID) {
+    alerts.push({
+      id: "ga-id",
+      severity: "info",
+      title: "Google Analytics no configurado",
+      description:
+        "NEXT_PUBLIC_GA_ID falta — no se loguean visitas. El sitio funciona igual, pero perdés métricas de tráfico.",
+    });
+  }
+
   // --- Configuración del sitio ---
   if (SITE_URL.includes("vercel.app")) {
     alerts.push({

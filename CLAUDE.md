@@ -1182,6 +1182,37 @@ exacto del servidor (no un genérico "Hubo un error") — ver
   password en el filesystem).
 - **WhatsApp**: mensaje pre-cargado en todas las páginas.
 
+## Monitoreo / observabilidad
+
+Tres capas para enterarse si algo se rompe:
+
+1. **`/admin` dashboard** (visual, on-demand) — semáforos de servicios
+   en vivo (`runHealthChecks` en `admin-health.ts`) + alertas de config
+   (`findConfigAlerts` en `admin-alerts.ts`) + log de errores
+   (`readAdminErrors`, últimos 100 en Redis). La cliente entra a la
+   pantalla y ve estado en 2 segundos.
+2. **Email automático de Vercel** — Vercel manda email cuando un
+   deploy falla, un cron devuelve 5xx, o hay problema de DNS/SSL.
+   Va al email con el que se abrió la cuenta de Vercel.
+3. **Email semanal de salud (digest)** — cron domingos 12 UTC (9 AR)
+   en `/api/cron/weekly-digest`. Resume estado de servicios + alertas
+   pendientes + leads de la semana + errores top + snapshots del
+   backup. Lib: `src/lib/health-digest.ts`. Si todo verde → asunto
+   "✅ todo OK"; si algo rojo → "⚠️ resumen con alertas".
+   Destinatario: hash Redis `b2b:config.healthDigestEmail` (override),
+   o env var `HEALTH_DIGEST_EMAIL`, o fallback a
+   `contacto@griffo.com.ar`.
+
+Alertas que chequea `findConfigAlerts` (todas las env vars críticas
+deberían figurar acá si no están seteadas):
+
+- ADMIN_PASSWORD, SPECPARTS_CLIENT_ID/SECRET, KV_REST_API_URL,
+  BLOB_READ_WRITE_TOKEN, RESEND_API_KEY, BEJERMAN_EMAIL/PASSWORD,
+  CRON_SECRET, NEXT_PUBLIC_GA_ID
+- También: SITE_URL apuntando a vercel.app, dominio sin verificar en
+  Resend, productos destacados sin link Mercado Libre, distribuidores
+  sin email.
+
 ## Pendientes y decisiones abiertas
 
 1. **🚨 Login / cuenta corriente / descarga de facturas**: la cliente
