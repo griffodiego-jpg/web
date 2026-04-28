@@ -1,14 +1,23 @@
 import Link from "next/link";
 
 import { ImpersonateButton } from "@/components/admin/ImpersonateButton";
+import { PriceListSelector } from "@/components/admin/PriceListSelector";
 import { loadAllClients } from "@/lib/b2b/client-loader";
+import { listAllPriceLists } from "@/lib/price-lists";
 import type { BejermanClient } from "@/types/bejerman";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Clientes B2B" };
 
 export default async function ClientesPage() {
-  const { clients, source, error } = await loadAllClients();
+  const [{ clients, source, error }, priceLists] = await Promise.all([
+    loadAllClients(),
+    listAllPriceLists(),
+  ]);
+  const knownCodes = priceLists.map((l) => l.code);
+
+  const assigned = clients.filter((c) => c.priceListCode).length;
+  const total = clients.length;
 
   return (
     <div>
@@ -17,24 +26,45 @@ export default async function ClientesPage() {
         <p className="text-sm text-gray-600 mt-1">
           Listado de clientes habilitados para el portal{" "}
           <code className="px-1 py-0.5 bg-gray-100 rounded text-xs">/cuenta</code>
-          . Tocá una fila para ver el detalle completo (datos, lista de precios,
-          contraseña) o &quot;Loguear como&quot; para entrar al portal como ese
-          cliente y verificar la experiencia.
+          . Asigná la lista de precios desde la columna &quot;Lista&quot;
+          (auto-guarda). Las opciones del menú salen de las listas que ya
+          subiste en{" "}
+          <Link
+            href="/admin/listas-precios"
+            className="text-primary font-semibold hover:underline"
+          >
+            Listas de precios
+          </Link>
+          .
         </p>
       </header>
 
       {source === "mock" ? <MockBanner error={error} /> : null}
 
+      {total > 0 && (
+        <div className="mb-4 text-xs text-gray-600">
+          <span className="font-semibold text-[#0a2b3d]">{assigned}</span> de{" "}
+          <span className="font-semibold text-[#0a2b3d]">{total}</span> clientes
+          tienen lista asignada.
+        </div>
+      )}
+
       {clients.length === 0 ? (
         <EmptyBox />
       ) : (
-        <ClientsTable clients={clients} />
+        <ClientsTable clients={clients} knownCodes={knownCodes} />
       )}
     </div>
   );
 }
 
-function ClientsTable({ clients }: { clients: BejermanClient[] }) {
+function ClientsTable({
+  clients,
+  knownCodes,
+}: {
+  clients: BejermanClient[];
+  knownCodes: string[];
+}) {
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -75,8 +105,12 @@ function ClientsTable({ clients }: { clients: BejermanClient[] }) {
                 <td className="px-5 py-3 text-gray-700">
                   {c.email || <span className="text-gray-400">—</span>}
                 </td>
-                <td className="px-5 py-3 font-mono text-xs text-gray-700">
-                  {c.priceListCode || <span className="text-gray-400">—</span>}
+                <td className="px-5 py-3">
+                  <PriceListSelector
+                    clientCode={c.client_id}
+                    initialPriceListCode={c.priceListCode}
+                    knownCodes={knownCodes}
+                  />
                 </td>
                 <td className="px-5 py-3 text-gray-600">
                   {c.warehouses?.length > 0 ? (

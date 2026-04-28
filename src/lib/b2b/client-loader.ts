@@ -13,22 +13,52 @@ import "server-only";
 
 import { getClients } from "@/lib/api/bejerman";
 import { mockClients } from "@/data/mock-b2b";
+import { getPriceListOverrides } from "@/lib/b2b/price-list-overrides";
 import type { BejermanClient, BejermanWarehouse } from "@/types/bejerman";
+
+/**
+ * Aplica el override manual de `priceListCode` que setea el admin desde
+ * `/admin/clientes`. Si hay override, prevalece sobre lo que devuelva
+ * el ERP — así si Griffo quiere cambiar la lista de un cliente sin
+ * tocar Bejerman, lo puede hacer desde acá.
+ */
+function applyPriceListOverrides(
+  clients: BejermanClient[],
+  overrides: Record<string, string>,
+): BejermanClient[] {
+  if (Object.keys(overrides).length === 0) return clients;
+  return clients.map((c) => {
+    const override = overrides[c.client_id];
+    if (override) return { ...c, priceListCode: override };
+    return c;
+  });
+}
 
 export async function loadAllClients(): Promise<{
   clients: BejermanClient[];
   source: "erp" | "mock";
   error?: string;
 }> {
+  const overrides = await getPriceListOverrides().catch(() => ({}));
   try {
     const clients = await getClients();
     if (!clients || clients.length === 0) {
-      return { clients: mockClients, source: "mock" };
+      return {
+        clients: applyPriceListOverrides(mockClients, overrides),
+        source: "mock",
+      };
     }
-    return { clients: mergeClientsByCode(clients), source: "erp" };
+    return {
+      clients: applyPriceListOverrides(mergeClientsByCode(clients), overrides),
+      source: "erp",
+    };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    return { clients: mockClients, source: "mock", error };
+    return {
+      clients: applyPriceListOverrides(mockClients, overrides),
+      source: "mock",
+      error,
+    };
   }
 }
 

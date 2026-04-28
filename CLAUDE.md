@@ -891,7 +891,16 @@ Grupos:
 - `/admin/listas-precios` — Sube/rota las listas de precios (PDF/XLSX)
   que descargan los clientes B2B. Al publicar una nueva, manda
   (opcionalmente) un mail a los clientes. Componente
-  `components/admin/PriceListsAdmin.tsx`.
+  `components/admin/PriceListsAdmin.tsx`. **La asignación
+  cliente→código** (qué lista ve cada uno) se hace desde
+  `/admin/clientes` con un selector inline auto-guardado, porque el
+  ERP actual no expone `priceListCode` en `/ERP/Clients`. El override
+  se guarda en hash Redis `b2b:client-pricelist` y prevalece sobre lo
+  que devuelva el ERP cuando lo empiece a exponer. Lib
+  `src/lib/b2b/price-list-overrides.ts`. El selector
+  (`components/admin/PriceListSelector.tsx`) sale tanto en la lista
+  como en el detalle del cliente y autocompleta con los códigos ya
+  cargados en `/admin/listas-precios`.
 
 ### API admin (`/api/admin/*`)
 

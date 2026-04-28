@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 
 import { ClientPasswordForm } from "@/components/admin/ClientPasswordForm";
 import { ImpersonateButton } from "@/components/admin/ImpersonateButton";
+import { PriceListSelector } from "@/components/admin/PriceListSelector";
 import { loadClientByCode } from "@/lib/b2b/client-loader";
 import {
   getDefaultPassword,
   hasCustomPassword,
 } from "@/lib/b2b/credentials";
+import { listAllPriceLists } from "@/lib/price-lists";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,7 +33,11 @@ export default async function ClienteDetallePage({
   if (!client) notFound();
 
   const defaultPassword = getDefaultPassword(client);
-  const hasCustom = await hasCustomPassword(code).catch(() => false);
+  const [hasCustom, priceLists] = await Promise.all([
+    hasCustomPassword(code).catch(() => false),
+    listAllPriceLists(),
+  ]);
+  const knownCodes = priceLists.map((l) => l.code);
 
   return (
     <div className="flex flex-col gap-6">
@@ -89,17 +95,29 @@ export default async function ClienteDetallePage({
             <Field label="Email" value={client.email} />
             <Field label="Teléfono" value={client.phone} />
             <Field label="Dirección" value={client.address} />
-            <Field
-              label="Código de lista de precios"
-              value={client.priceListCode}
-              mono
-              hint={
-                !client.priceListCode
-                  ? "No lo expone el ERP actual"
-                  : undefined
-              }
-            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 min-w-[10rem]">
+                Lista de precios
+              </dt>
+              <dd>
+                <PriceListSelector
+                  clientCode={client.client_id}
+                  initialPriceListCode={client.priceListCode}
+                  knownCodes={knownCodes}
+                />
+              </dd>
+            </div>
           </dl>
+          <p className="text-[11px] text-gray-500 mt-2">
+            Las opciones salen de las listas subidas en{" "}
+            <Link
+              href="/admin/listas-precios"
+              className="text-primary font-semibold hover:underline"
+            >
+              Listas de precios
+            </Link>
+            . El cliente ve sólo el archivo que coincide con este código.
+          </p>
 
           <div className="mt-5 pt-5 border-t border-gray-100">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
