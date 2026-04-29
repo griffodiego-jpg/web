@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { loadAllClients } from "@/lib/b2b/client-loader";
 import { verifyClientPassword } from "@/lib/b2b/credentials";
+import { createB2bSession } from "@/lib/b2b/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,11 +10,12 @@ export const dynamic = "force-dynamic";
 /**
  * Login del portal B2B. Busca el cliente por email (case-insensitive),
  * valida la contraseña contra el override Redis o el default (GRIFFO +
- * CUIT). Si matchea, devuelve los datos mínimos del cliente para que
- * el frontend seedee la sesión.
- *
- * Cuando Firebase Auth esté conectado, este endpoint se retira: el
- * login es contra Firebase y el cliente viene del claim.
+ * CUIT). Si matchea:
+ *   1. Crea sesión real server-side (cookie httpOnly + Redis vía
+ *      createB2bSession).
+ *   2. Devuelve los datos del cliente para que el frontend seedee
+ *      localStorage como UI hint (la fuente de verdad sigue siendo
+ *      el cookie del paso 1).
  */
 export async function POST(req: Request) {
   let body: { email?: string; password?: string };
@@ -45,6 +47,21 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Email o contraseña inválidos" },
       { status: 401 },
+    );
+  }
+
+  try {
+    await createB2bSession({
+      clientId: client.client_id,
+      email: client.email,
+    });
+  } catch (e) {
+    // Si Redis no está disponible no podemos crear la sesión segura.
+    // Devolvemos error en vez de loguear sin auth real.
+    console.error("[b2b/login] error creando sesión:", e);
+    return NextResponse.json(
+      { error: "Servicio de sesiones no disponible. Intentá en un momento." },
+      { status: 503 },
     );
   }
 
