@@ -859,6 +859,11 @@ Grupos:
   historial. **Además funciona como fallback**: `listCatalog()` cae
   al último snapshot si SpecParts no responde (ver nivel 4 del cache
   chain en `src/lib/api/specparts.ts`). Lib: `src/lib/catalog-backup.ts`.
+  Sección **"Probar crons"** abajo del historial: dispara los 3 cron
+  jobs server-to-server con el CRON_SECRET real
+  (`/api/admin/cron-test`) y muestra status code + body de cada uno.
+  Útil para verificar que el secret está bien seteado en el deploy
+  sin tener que esperar al horario del cron ni andar con curl.
 - `/admin/cache` — Pre-warming del CDN de imágenes.
 - `/admin/banco-imagenes` — Genera y mantiene un ZIP con **todas las
   fotos del catálogo** (organizadas por código de producto) para

@@ -36,6 +36,20 @@ export function CatalogBackupAdmin({ initialSnapshots }: Props) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // "Probar crons" — dispara los 3 cron jobs con el secret real, vía
+  // un endpoint admin que hace la llamada server-side.
+  type CronResult = {
+    name: string;
+    path: string;
+    status: number;
+    ok: boolean;
+    body: unknown;
+    durationMs: number;
+  };
+  const [cronTesting, setCronTesting] = useState(false);
+  const [cronErr, setCronErr] = useState<string | null>(null);
+  const [cronResults, setCronResults] = useState<CronResult[] | null>(null);
+
   const latest = initialSnapshots[0] ?? null;
   const olderSnapshots = initialSnapshots.slice(1);
 
@@ -61,6 +75,25 @@ export function CatalogBackupAdmin({ initialSnapshots }: Props) {
       setErr(e instanceof Error ? e.message : "Error desconocido");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCronTest() {
+    if (cronTesting) return;
+    setCronTesting(true);
+    setCronErr(null);
+    setCronResults(null);
+    try {
+      const res = await fetch("/api/admin/cron-test", { method: "POST" });
+      const data = (await res.json().catch(() => null)) as
+        | { results?: CronResult[]; error?: string }
+        | null;
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
+      setCronResults(data?.results ?? []);
+    } catch (e) {
+      setCronErr(e instanceof Error ? e.message : "Error desconocido");
+    } finally {
+      setCronTesting(false);
     }
   }
 
@@ -171,6 +204,73 @@ export function CatalogBackupAdmin({ initialSnapshots }: Props) {
           </ul>
         </section>
       ) : null}
+
+      {/* --- Probar crons --- */}
+      <section className="rounded-xl border border-gray-200 bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">
+              Probar crons
+            </h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Dispara los 3 jobs automáticos (backup catálogo, banco de
+              imágenes, email semanal de salud) con el CRON_SECRET real para
+              verificar que el deploy actual los ejecuta correctamente.
+              Equivalente a esperar al horario del cron — pero ahora.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCronTest}
+            disabled={cronTesting}
+            className="shrink-0 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-[#0a2b3d] transition hover:border-primary disabled:opacity-60"
+          >
+            {cronTesting ? "Probando..." : "Probar ahora"}
+          </button>
+        </div>
+
+        {cronErr ? (
+          <p className="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700">
+            {cronErr}
+          </p>
+        ) : null}
+
+        {cronResults ? (
+          <ul className="mt-4 space-y-2 text-sm">
+            {cronResults.map((r) => (
+              <li
+                key={r.path}
+                className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={[
+                        "inline-block h-2.5 w-2.5 rounded-full",
+                        r.ok
+                          ? "bg-emerald-500"
+                          : r.status === 503 || r.status === 401
+                            ? "bg-amber-500"
+                            : "bg-red-500",
+                      ].join(" ")}
+                      aria-hidden
+                    />
+                    <span className="font-bold text-[#0a2b3d]">{r.name}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    HTTP {r.status} · {r.durationMs} ms
+                  </div>
+                </div>
+                <pre className="mt-1.5 overflow-x-auto text-[11px] text-gray-600">
+                  {typeof r.body === "string"
+                    ? r.body.slice(0, 400)
+                    : JSON.stringify(r.body, null, 2).slice(0, 600)}
+                </pre>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
     </div>
   );
 }
