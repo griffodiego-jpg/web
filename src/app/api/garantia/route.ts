@@ -3,7 +3,7 @@ import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
-import { getResend } from "@/lib/resend";
+import { sendEmail } from "@/lib/resend";
 import { checkFieldLength, isValidEmail } from "@/lib/validate";
 
 export async function POST(request: Request) {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     });
 
     try {
-      await getResend().emails.send({
+      await sendEmail({
         from: "Griffo Web <onboarding@resend.dev>",
         // contacto@ es la única dirección verificada del tenant de Resend
         // mientras no se verifique el dominio griffo.com.ar. Antes iba a

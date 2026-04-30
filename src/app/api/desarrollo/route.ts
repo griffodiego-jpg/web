@@ -3,7 +3,7 @@ import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml, escapeHtmlMultiline } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
-import { getResend } from "@/lib/resend";
+import { sendEmail } from "@/lib/resend";
 import {
   checkFieldLength,
   isValidEmail,
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       archivoNombre: archivo?.name,
     });
 
-    await getResend().emails.send({
+    await sendEmail({
       from: "Griffo Web <onboarding@resend.dev>",
       to: "contacto@griffo.com.ar",
       replyTo: email,

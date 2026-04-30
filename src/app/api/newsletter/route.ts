@@ -3,7 +3,7 @@ import { checkRateLimit, getClientIp, isBot } from "@/lib/antispam";
 import { logAdminError } from "@/lib/admin-log";
 import { escapeHtml } from "@/lib/escape";
 import { saveLead } from "@/lib/leads";
-import { getResend } from "@/lib/resend";
+import { sendEmail } from "@/lib/resend";
 import { isValidEmail } from "@/lib/validate";
 
 export async function POST(request: Request) {
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     await saveLead({ kind: "newsletter", ts: Date.now(), email });
 
     try {
-      await getResend().emails.send({
+      await sendEmail({
         from: "Griffo Web <onboarding@resend.dev>",
         to: "contacto@griffo.com.ar",
         subject: `Nueva suscripción al newsletter: ${email}`,

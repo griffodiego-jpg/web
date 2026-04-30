@@ -27,7 +27,7 @@ import { readAdminErrors, type AdminErrorEntry } from "@/lib/admin-log";
 import { readSnapshots, type CatalogSnapshot } from "@/lib/catalog-backup";
 import { getRedis } from "@/lib/kv";
 import { listLeads, type Lead, type LeadKind } from "@/lib/leads";
-import { getResend } from "@/lib/resend";
+import { sendEmail } from "@/lib/resend";
 import { SITE_URL } from "@/lib/site-url";
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -173,8 +173,7 @@ export async function sendWeeklyDigest(): Promise<{
     : `✅ Griffo web — resumen semanal (todo OK)`;
 
   try {
-    const resend = getResend();
-    await resend.emails.send({
+    await sendEmail({
       from: "onboarding@resend.dev",
       to: [recipient],
       subject,

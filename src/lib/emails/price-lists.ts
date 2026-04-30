@@ -1,5 +1,5 @@
 import { escapeHtml } from "@/lib/escape";
-import { getResend } from "@/lib/resend";
+import { sendEmail } from "@/lib/resend";
 import { SITE_URL } from "@/lib/site-url";
 import type { PriceList } from "@/types/price-list";
 import type { BejermanClient } from "@/types/bejerman";
@@ -31,11 +31,10 @@ export async function sendNewPriceListEmails(
   );
   let sent = 0;
   let failed = 0;
-  const resend = getResend();
 
   for (const client of targets) {
     try {
-      await resend.emails.send({
+      await sendEmail({
         from: SENDER,
         to: client.email,
         subject: `Nueva lista de precios disponible — ${list.name}`,

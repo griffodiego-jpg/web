@@ -14,3 +14,23 @@ export function getResend(): Resend {
   }
   return _resend;
 }
+
+/**
+ * Wrapper que llama a Resend y convierte los errores devueltos como
+ * objeto en excepciones. El SDK NO throwea — devuelve {data, error}
+ * por convención. Sin esto los caller que sólo miran try/catch nunca
+ * se enteran de que el envío falló.
+ */
+type SendPayload = Parameters<Resend["emails"]["send"]>[0];
+
+export async function sendEmail(payload: SendPayload) {
+  const result = await getResend().emails.send(payload);
+  if (result.error) {
+    const err = new Error(
+      `Resend: ${result.error.name ?? "error"} — ${result.error.message ?? "sin mensaje"}`,
+    );
+    (err as Error & { resendError?: unknown }).resendError = result.error;
+    throw err;
+  }
+  return result.data;
+}

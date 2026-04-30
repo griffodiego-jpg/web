@@ -1,4 +1,4 @@
-import { getResend } from "@/lib/resend";
+import { sendEmail } from "@/lib/resend";
 import { SITE_URL } from "@/lib/site-url";
 import { getPedidosNotificationEmail } from "@/lib/b2b-config";
 import type { Pedido } from "@/types/pedido";
@@ -76,7 +76,7 @@ function pedidoTablaHtml(pedido: Pedido): string {
 
 export async function sendPedidoCreadoAlCliente(pedido: Pedido): Promise<void> {
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: SENDER,
       to: pedido.clientEmail,
       subject: `Recibimos tu pedido ${pedido.id}`,
@@ -102,7 +102,7 @@ export async function sendPedidoCreadoAGriffo(pedido: Pedido): Promise<void> {
     const sucursalLinea = pedido.warehouseDescription
       ? `<p>Sucursal de entrega: <strong>${pedido.warehouseDescription}</strong></p>`
       : "";
-    await getResend().emails.send({
+    await sendEmail({
       from: SENDER,
       to,
       subject: `🆕 Nuevo pedido ${pedido.id} · ${pedido.clientName}`,
@@ -126,7 +126,7 @@ export async function sendPedidoEnPreparacion(pedido: Pedido): Promise<void> {
     const fecha = pedido.estimatedDispatchDate
       ? `Fecha estimada de despacho: <strong>${formatDate(pedido.estimatedDispatchDate)}</strong>.`
       : "Te avisamos cuando tengamos la fecha de despacho.";
-    await getResend().emails.send({
+    await sendEmail({
       from: SENDER,
       to: pedido.clientEmail,
       subject: `Tu pedido ${pedido.id} está en preparación`,
@@ -148,7 +148,7 @@ export async function sendPedidoEntregado(pedido: Pedido): Promise<void> {
     const facturaLinea = pedido.invoice
       ? `Se emitió la factura <strong>${pedido.invoice.label}</strong>. La podés descargar desde el portal.`
       : "";
-    await getResend().emails.send({
+    await sendEmail({
       from: SENDER,
       to: pedido.clientEmail,
       subject: `Tu pedido ${pedido.id} fue entregado`,
