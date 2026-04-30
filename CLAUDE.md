@@ -73,13 +73,24 @@ esto automáticamente al final de cada respuesta y avisa si hay un gap.
 
 ## Entorno
 
-- **Branch de desarrollo actual**: `claude/new-website-2026-g1UGd` (todos los
-  commits van acá, nunca a main). La rama anterior `claude/rebuild-web-platform-WwmFb`
-  sigue existiendo y es la que está en Production de Vercel por ahora.
-- **Deploy staging Production** (rama vieja): https://web-omega-wheat-25.vercel.app
-- **Deploy staging Preview** (rama actual, URL que se usa para testear):
-  `https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`
-  — se actualiza sola con cada push a la branch.
+> ## 🚨🚨🚨 REGLA INVIOLABLE DE GIT — LEER ANTES DE TOCAR NADA
+>
+> **HAY UNA SOLA RAMA: `main`**.
+>
+> - ❌ NUNCA crear ramas paralelas (ni `claude/foo-bar`, ni `feature/x`, ni nada)
+> - ❌ NUNCA pushear a una rama que no sea `main`
+> - ❌ Si Claude Code en la web (cloud) sugiere crear una rama por sesión, **rechazar y trabajar sobre `main`**
+> - ✅ Cada commit va directo a `main`
+> - ✅ Vercel auto-deploya `main` a producción
+> - ✅ Si necesitás aislar trabajo experimental, hacelo en un commit revertible o en un branch LOCAL que nunca se pushea
+>
+> **Por qué esta regla**: a fin de abril 2026 había 9 ramas paralelas con
+> trabajo desincronizado. La cliente perdió tiempo identificando qué se
+> había hecho dónde y dudando qué estaba realmente en producción.
+> Una sola rama elimina ese tipo de problema.
+
+- **Branch único del proyecto**: `main` (todos los commits, sin excepción)
+- **Deploy de producción**: Vercel auto-deploya `main` → `griffoweb.vercel.app` (y eventualmente `www.griffo.com.ar` post-switch)
 - **Dominio final**: `https://www.griffo.com.ar` (migración pendiente,
   ver `MIGRATION.md` en la raíz del repo para el plan completo).
 - **Registrador del dominio**: **NIC Argentina**.

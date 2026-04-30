@@ -15,13 +15,6 @@ const INDUSTRIAS = [
   "Otra",
 ];
 
-const CANTIDADES = [
-  "Baja producción (hasta 500 unidades)",
-  "Media producción (500 a 5.000)",
-  "Alta producción (más de 5.000)",
-  "No sé todavía",
-];
-
 export function DesarrolloForm() {
   const [status, setStatus] = useState<Status>("idle");
   const [fileName, setFileName] = useState<string>("");
@@ -107,23 +100,15 @@ export function DesarrolloForm() {
 
         <div>
           <label htmlFor="cantidad" className="sr-only">
-            Cantidad estimada
+            Cantidad anual
           </label>
-          <select
+          <input
             id="cantidad"
             name="cantidad"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer"
-            defaultValue=""
-          >
-            <option value="" disabled>
-              Cantidad estimada
-            </option>
-            {CANTIDADES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            type="text"
+            placeholder="Cantidad anual"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
       </div>
 
