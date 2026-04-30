@@ -14,11 +14,12 @@
 ## 0. Resumen por punto de cómo funciona el sitio
 
 1. **Stack**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + pnpm.
-   Deploy automático en Vercel cada push a la rama de desarrollo.
-2. **Rama de desarrollo actual**: `claude/new-website-2026-g1UGd` — **única**
-   rama de trabajo, todas las sesiones de Claude pushean acá. Nunca se
-   pushea directo a `main`.
-3. **Staging Preview** (lo que se testea): `https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`
+   Deploy automático en Vercel cada push a `main`.
+2. **Rama de desarrollo**: `main` — **única** rama. Todas las sesiones
+   de Claude commitean y pushean directo acá. NO se crean ramas de
+   task ni de feature, ni siquiera si el harness sugiere una. Ver
+   REGLA #1 en `CLAUDE.md`.
+3. **Producción**: `https://griffoweb.vercel.app` (auto-deploy de `main`).
 4. **Producción futura**: `https://www.griffo.com.ar` (migración pendiente,
    ver `MIGRATION.md`). El dominio está en NIC Argentina, mail en Zoho.
 5. **Estructura del código**:

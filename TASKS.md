@@ -4,9 +4,9 @@ Documento vivo con el estado de todo el proyecto. Marcar con `[x]` lo
 que se va completando. Cuando una tarea tiene una etiqueta `(yo)` la
 hago yo sin intervención; `(cliente)` necesita algo de vos.
 
-Última actualización: 2026-04-23. Rama de desarrollo canónica:
-`claude/new-website-2026-g1UGd`. Preview:
-`https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`.
+Última actualización: 2026-04-30. Rama de desarrollo canónica:
+`main` (única — todos los commits van directo ahí, ver REGLA #1 en
+`CLAUDE.md`). Producción: `https://griffoweb.vercel.app`.
 Destino final: `https://www.griffo.com.ar`.
 
 ---
