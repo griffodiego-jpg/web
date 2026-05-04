@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
     descargasOverridesR,
   ] = await Promise.allSettled([
     runHealthChecks(),
-    Promise.resolve(findConfigAlerts()),
+    findConfigAlerts(),
     getCatalogSummary(),
     listNovedadesIncludingHidden(),
     readAdminErrors(20),

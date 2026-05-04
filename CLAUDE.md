@@ -888,19 +888,33 @@ Grupos:
   copiar nº Bejerman). `PedidosNotifEmailBox` arriba para configurar
   la dirección de mail que recibe notificaciones de pedidos nuevos.
 - `/admin/pedidos/[id]` — Detalle de un pedido con todo el desglose.
-- `/admin/listas-precios` — Sube/rota las listas de precios (PDF/XLSX)
-  que descargan los clientes B2B. Al publicar una nueva, manda
-  (opcionalmente) un mail a los clientes. Componente
-  `components/admin/PriceListsAdmin.tsx`. **La asignación
-  cliente→código** (qué lista ve cada uno) se hace desde
-  `/admin/clientes` con un selector inline auto-guardado, porque el
-  ERP actual no expone `priceListCode` en `/ERP/Clients`. El override
-  se guarda en hash Redis `b2b:client-pricelist` y prevalece sobre lo
-  que devuelva el ERP cuando lo empiece a exponer. Lib
-  `src/lib/b2b/price-list-overrides.ts`. El selector
-  (`components/admin/PriceListSelector.tsx`) sale tanto en la lista
-  como en el detalle del cliente y autocompleta con los códigos ya
-  cargados en `/admin/listas-precios`.
+- `/admin/listas-precios` — Sube/rota/**descarga** las listas de
+  precios (PDF/XLSX) que ven los clientes B2B. Cada fila tiene botón
+  "↓ Descargar" (pasa por `/api/admin/listas-precios/download?code=...`,
+  no expone el URL del Blob), "Notificar" (mail a los clientes con ese
+  código) y "Borrar". Banner amarillo arriba de la tabla cuando hay
+  códigos asignados a clientes pero **sin archivo subido todavía** —
+  los clientes con esos códigos entran al portal y no ven nada.
+  Componente `components/admin/PriceListsAdmin.tsx`.
+  **La asignación cliente→código** (qué lista ve cada uno) se hace
+  desde `/admin/clientes` con un selector inline auto-guardado, porque
+  el ERP actual no expone `priceListCode` en `/ERP/Clients`. El
+  override se guarda en hash Redis `b2b:client-pricelist` y prevalece
+  sobre lo que devuelva el ERP cuando lo empiece a exponer (ya está
+  cableado en `bejerman.ts` con varios alias razonables —
+  `lista_precios`, `priceList`, `codigo_lista`, etc.). Lib
+  `src/lib/b2b/price-list-overrides.ts`. Selector
+  `components/admin/PriceListSelector.tsx`.
+
+  **Seguridad de la descarga**: el cliente B2B baja la lista por
+  `GET /api/b2b/lista-precios` (streamea desde el Blob), nunca por el
+  URL público. Validado contra cookie httpOnly `griffo-b2b-session`
+  que setea el login (`src/lib/b2b/session-cookie.ts`). Sin cookie →
+  401. Si por alguna razón filtra el URL del Blob (que tiene sufijo
+  random), igual nadie sin login puede usarlo desde el sitio. La
+  cookie también la respeta `getCurrentClient()` (después de
+  impersonación), así el portal funciona end-to-end con sesión real
+  cuando se loguea un cliente del ERP.
 
 ### API admin (`/api/admin/*`)
 

@@ -92,6 +92,11 @@ export function useMockSession() {
   );
 
   const logout = useCallback(() => {
+    // Borramos primero el cookie server-side (fire-and-forget — si
+    // falla, el cliente ya está deslogueado en su browser igual). Sin
+    // este POST la cookie httpOnly persistiría y endpoints protegidos
+    // server-side seguirían considerando al usuario logueado.
+    fetch("/api/b2b/logout", { method: "POST" }).catch(() => {});
     clearCartStorage();
     window.localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(EVENT_NAME));

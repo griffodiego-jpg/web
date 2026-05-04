@@ -26,6 +26,11 @@ export default async function ListasPreciosPage() {
       .filter(Boolean),
   )].sort();
 
+  // Códigos asignados a clientes pero sin archivo subido — alerta
+  // amarilla arriba de la tabla.
+  const codesConArchivo = new Set(lists.map((l) => l.code));
+  const codesFaltantes = clientCodes.filter((c) => !codesConArchivo.has(c));
+
   return (
     <div>
       <header className="mb-6">
@@ -45,6 +50,33 @@ export default async function ListasPreciosPage() {
           la versión anterior y (opcional) notifica a los clientes por mail.
         </p>
       </header>
+
+      {codesFaltantes.length > 0 && (
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-bold">
+            Falta subir {codesFaltantes.length} lista
+            {codesFaltantes.length === 1 ? "" : "s"}
+          </p>
+          <p className="mt-1">
+            Hay clientes con estos códigos asignados pero sin archivo
+            cargado. Mientras tanto entran a su portal y no ven nada.
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {codesFaltantes.map((c) => (
+              <li
+                key={c}
+                className="font-mono text-xs bg-amber-100 px-2 py-0.5 rounded font-bold"
+              >
+                {c}
+                <span className="ml-1 font-normal text-amber-800">
+                  ({clientsByCode.get(c) ?? 0} cliente
+                  {(clientsByCode.get(c) ?? 0) === 1 ? "" : "s"})
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <PriceListsAdmin
         lists={lists}

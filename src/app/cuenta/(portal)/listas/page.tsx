@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  getPriceListForClient,
-  markPriceListSeen,
-} from "@/lib/price-lists";
+import { getPriceListForClient } from "@/lib/price-lists";
 import { getCurrentClient } from "@/lib/b2b/current-client";
 import type { PriceList } from "@/types/price-list";
 
@@ -27,11 +24,10 @@ export default async function ListasPage() {
   const client = await getCurrentClient();
   const list = await getPriceListForClient(client.priceListCode);
 
-  // Marca esta visita como "vista" — cuando vuelva al resumen, la
-  // alerta de "nueva lista" desaparece.
-  if (list) {
-    await markPriceListSeen(client.client_id);
-  }
+  // Nota: la marca "vista" se setea cuando el cliente realmente
+  // descarga el archivo (en `/api/b2b/lista-precios`). Si sólo entra
+  // a esta página y no descarga, sigue contando como "no vista" y la
+  // alerta del resumen sigue ahí.
 
   return (
     <div>
@@ -82,9 +78,7 @@ function ListaCard({ list }: { list: PriceList }) {
             </p>
           )}
           <a
-            href={list.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/api/b2b/lista-precios"
             className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg text-sm transition"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

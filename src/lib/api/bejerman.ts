@@ -142,16 +142,35 @@ async function requestBinary(
 /**
  * Lista todos los clientes registrados en el ERP con sus depósitos.
  *
- * El middleware devuelve el CUIT como `tax_id`. Acá lo mapeamos a `cuit`
- * que es el nombre que usa la web. Cualquier otro campo que el ERP
- * agregue en el futuro se propaga tal cual.
+ * El middleware devuelve el CUIT como `tax_id` — lo mapeamos a `cuit`
+ * (nombre que usa la web). El técnico va a sumar `priceListCode` con
+ * el código de lista asignada al cliente; soportamos varios alias
+ * razonables para que el día que aparezca el campo no haya que tocar
+ * código (acá ya está el cableado completo).
  */
 export async function getClients(): Promise<BejermanClient[]> {
-  type Raw = BejermanClient & { tax_id?: string };
+  type Raw = BejermanClient & {
+    tax_id?: string;
+    /* Posibles nombres con los que el ERP exponga la lista de precios. */
+    lista_precios?: string;
+    listaPrecios?: string;
+    id_lista?: string;
+    codigo_lista?: string;
+    price_list_code?: string;
+    priceList?: string;
+  };
   const raws = await request<Raw[]>("/ERP/Clients");
   return raws.map((r) => ({
     ...r,
     cuit: r.cuit ?? r.tax_id,
+    priceListCode:
+      r.priceListCode ??
+      r.priceList ??
+      r.price_list_code ??
+      r.listaPrecios ??
+      r.lista_precios ??
+      r.codigo_lista ??
+      r.id_lista,
   }));
 }
 

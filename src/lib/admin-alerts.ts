@@ -1,6 +1,8 @@
 import { distribuidores } from "@/data/distribuidores";
 import { productosDetalle } from "@/data/productos";
 import { SITE_URL } from "@/lib/site-url";
+import { loadAllClients } from "@/lib/b2b/client-loader";
+import { listAllPriceLists } from "@/lib/price-lists";
 
 /**
  * Alertas de configuración y contenido — problemas que requieren
@@ -24,7 +26,7 @@ export type Alert = {
   actionLabel?: string;
 };
 
-export function findConfigAlerts(): Alert[] {
+export async function findConfigAlerts(): Promise<Alert[]> {
   const alerts: Alert[] = [];
 
   // --- Env vars críticas ---
@@ -161,6 +163,43 @@ export function findConfigAlerts(): Alert[] {
       actionHref: "/admin/distribuidores",
       actionLabel: "Ver distribuidores",
     });
+  }
+
+  // --- Listas de precios: clientes asignados sin archivo cargado ---
+  // Si la cliente le asignó "LISTA3" a un cliente B2B pero todavía no
+  // subió el Excel correspondiente, ese cliente entra a /cuenta/listas
+  // y no ve nada. Lo flagueamos para que aparezca arriba del dashboard.
+  try {
+    const [{ clients }, lists] = await Promise.all([
+      loadAllClients(),
+      listAllPriceLists(),
+    ]);
+    const codesConArchivo = new Set(lists.map((l) => l.code));
+    const codesAsignados = new Set(
+      clients
+        .map((c) => (c.priceListCode ?? "").trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const faltantes = [...codesAsignados].filter(
+      (c) => !codesConArchivo.has(c),
+    );
+    if (faltantes.length > 0) {
+      const clientesAfectados = clients.filter((c) =>
+        faltantes.includes(
+          (c.priceListCode ?? "").trim().toUpperCase(),
+        ),
+      ).length;
+      alerts.push({
+        id: "listas-precios-faltantes",
+        severity: "warn",
+        title: `Falta subir ${faltantes.length} lista${faltantes.length === 1 ? "" : "s"} de precios`,
+        description: `Hay ${clientesAfectados} cliente${clientesAfectados === 1 ? "" : "s"} con código asignado pero sin archivo subido: ${faltantes.join(", ")}.`,
+        actionHref: "/admin/listas-precios",
+        actionLabel: "Subir listas faltantes",
+      });
+    }
+  } catch {
+    /* tolerar — si Redis o el ERP están abajo, ya hay otras alertas. */
   }
 
   return alerts;

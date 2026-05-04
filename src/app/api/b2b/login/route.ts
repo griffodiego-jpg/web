@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { loadAllClients } from "@/lib/b2b/client-loader";
 import { verifyClientPassword } from "@/lib/b2b/credentials";
+import { setB2BSession } from "@/lib/b2b/session-cookie";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +48,14 @@ export async function POST(req: Request) {
       { status: 401 },
     );
   }
+
+  // Cookie httpOnly: queda marcada la sesión server-side para que los
+  // endpoints protegidos (descarga de listas, etc.) puedan validar
+  // ownership sin depender del localStorage del browser.
+  await setB2BSession({
+    clientId: client.client_id,
+    email: client.email,
+  });
 
   return NextResponse.json({
     ok: true,

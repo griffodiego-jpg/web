@@ -74,7 +74,7 @@ export async function buildDigestSummary(): Promise<DigestSummary> {
   // y son lentos — Promise.allSettled para no caer todo si uno explota).
   const [health, alertsArr, errors, snapshots, leadsByKind] = await Promise.all([
     runHealthChecks().catch(() => []),
-    Promise.resolve(findConfigAlerts()),
+    findConfigAlerts().catch(() => [] as Alert[]),
     readAdminErrors(100).catch(() => []),
     readSnapshots().catch(() => []),
     Promise.all(

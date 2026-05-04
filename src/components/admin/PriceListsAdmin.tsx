@@ -226,7 +226,7 @@ function ListsTable({
           <tr>
             <th className="px-4 py-3 font-semibold">Código</th>
             <th className="px-4 py-3 font-semibold">Nombre</th>
-            <th className="px-4 py-3 font-semibold">Actualizada</th>
+            <th className="px-4 py-3 font-semibold">Subida</th>
             <th className="px-4 py-3 font-semibold">Archivo</th>
             <th className="px-4 py-3 font-semibold text-right">Clientes</th>
             <th className="px-4 py-3 font-semibold text-right">Acciones</th>
@@ -322,14 +322,7 @@ function ListRow({
         })}
       </td>
       <td className="px-4 py-3 text-xs">
-        <a
-          href={list.fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline break-all"
-        >
-          {list.filename}
-        </a>
+        <span className="text-gray-700 break-all">{list.filename}</span>
         {list.sizeBytes > 0 && (
           <span className="text-gray-500 ml-2">{formatBytes(list.sizeBytes)}</span>
         )}
@@ -338,6 +331,13 @@ function ListRow({
       <td className="px-4 py-3 text-right">
         <div className="flex flex-col items-end gap-1">
           <div className="flex gap-2">
+            <a
+              href={`/api/admin/listas-precios/download?code=${encodeURIComponent(list.code)}`}
+              className="px-2 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-700 hover:text-white border border-emerald-700 rounded inline-flex items-center gap-1"
+              title="Descargar el archivo actual"
+            >
+              ↓ Descargar
+            </a>
             <button
               type="button"
               onClick={notify}
@@ -345,7 +345,7 @@ function ListRow({
               className="px-2 py-1 text-xs font-bold text-primary hover:bg-primary hover:text-white border border-primary rounded disabled:opacity-40 disabled:cursor-not-allowed"
               title={clientesCount === 0 ? "Ningún cliente tiene este código" : `Mandar mail a ${clientesCount} cliente(s)`}
             >
-              {busy === "notify" ? "…" : `📧 Notificar`}
+              {busy === "notify" ? "…" : `Notificar`}
             </button>
             <button
               type="button"
