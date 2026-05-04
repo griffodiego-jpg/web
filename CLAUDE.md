@@ -74,26 +74,23 @@ esto automáticamente al final de cada respuesta y avisa si hay un gap.
 ## Entorno
 
 - **Branch de desarrollo actual**: `claude/new-website-2026-g1UGd` (todos los
-  commits van acá, nunca a main). La rama anterior `claude/rebuild-web-platform-WwmFb`
-  sigue existiendo y es la que está en Production de Vercel por ahora.
-- **Deploy staging Production** (rama vieja): https://web-omega-wheat-25.vercel.app
-- **Deploy staging Preview** (rama actual, URL que se usa para testear):
+  commits van acá, nunca a main).
+- **Dominio en producción**: **`https://www.griffo.com.ar`** ✅ (migración
+  hecha — el switch DNS pasó, el sitio nuevo está en vivo).
+- **Admin del sitio en vivo**: `https://www.griffo.com.ar/admin/login`.
+- **Preview de la rama** (donde se testean cambios antes de mergear):
   `https://web-git-claude-new-website-20-1a779f-griffodiego-8451s-projects.vercel.app`
   — se actualiza sola con cada push a la branch.
-- **Dominio final**: `https://www.griffo.com.ar` (migración pendiente,
-  ver `MIGRATION.md` en la raíz del repo para el plan completo).
 - **Registrador del dominio**: **NIC Argentina**.
-- **Email corporativo**: **Zoho Mail** (⚠️ al cambiar DNS para la
-  migración, NO TOCAR los registros MX ni los TXT de SPF/DKIM/DMARC
-  de Zoho — solo cambiar los A/CNAME para apuntar a Vercel).
-- **Google Search Console**: la cliente tiene acceso al del sitio
-  actual — usarlo para inventariar URLs antes del switch y armar el
-  mapa de redirects 301 en `next.config.ts`.
-- **`SITE_URL`** se controla con la env var `NEXT_PUBLIC_SITE_URL`
-  (default: staging). En el día del switch: definir la variable en Vercel
-  (Production scope) apuntando a `https://www.griffo.com.ar` y todo
-  (sitemap, robots, JSON-LD, canonicals, OpenGraph) se actualiza solo
-  sin cambios de código. Ver `src/lib/site-url.ts`.
+- **Email corporativo**: **Zoho Mail** (⚠️ no tocar los registros MX
+  ni los TXT de SPF/DKIM/DMARC de Zoho).
+- **Google Search Console**: hay propiedad para `griffo.com.ar` —
+  monitorear errores de indexación tras la migración (404 por URLs
+  viejas, problemas de canonicals, etc.).
+- **`SITE_URL`** se controla con la env var `NEXT_PUBLIC_SITE_URL` en
+  Vercel (Production scope). Hoy está en `https://www.griffo.com.ar`.
+  Sitemap, robots, JSON-LD, canonicals y OpenGraph la consumen.
+  Ver `src/lib/site-url.ts`.
 - **Stack**: Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + pnpm.
 - **Fuente**: **Montserrat** (Google Fonts, cargada vía `<link>` en
   `layout.tsx`, no `next/font/google` porque el sandbox bloquea Google Fonts
