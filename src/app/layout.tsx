@@ -70,6 +70,13 @@ export const metadata: Metadata = {
   // Search Console: la cliente tiene una Domain property de griffo.com.ar
   // verificada por DNS TXT record (NIC Argentina). No hace falta meta
   // tag — Domain property cubre www, subdominios y cualquier protocolo.
+  // Bing Webmaster Tools: meta tag de verificación (msvalidate.01) para
+  // destrabar SmartScreen tras la migración a Vercel.
+  verification: {
+    other: {
+      "msvalidate.01": "DB5A983F86F9A46C51FDBFC0078F7841",
+    },
+  },
 };
 
 /**

@@ -1203,6 +1203,11 @@ exacto del servidor (no un genérico "Hubo un error") — ver
   cliente evitando el límite de serverless functions.
 - **SpecParts API**: `SPECPARTS_CLIENT_ID/SECRET`. Cliente del catálogo.
 - **Google Analytics 4**: `G-FR8KN76LQ2` (mismo que el sitio viejo).
+- **Bing Webmaster Tools**: dominio `griffo.com.ar` verificado vía meta
+  tag `msvalidate.01` (declarada en `metadata.verification.other` en
+  `src/app/layout.tsx`). Sirve para acelerar la confianza de Microsoft
+  SmartScreen tras la migración (que marcaba el sitio como "contenido
+  potencialmente no deseado" por reputación nueva del dominio).
 - **Admin**: login con `ADMIN_PASSWORD` (la env var es la contraseña
   en claro — Redis guarda las sesiones, no hay salt ni hash del
   password en el filesystem).
