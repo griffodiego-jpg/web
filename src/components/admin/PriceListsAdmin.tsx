@@ -197,6 +197,9 @@ function UploadForm({ knownCodes }: { knownCodes: string[] }) {
 /* Tabla de listas existentes                                           */
 /* -------------------------------------------------------------------- */
 
+type SortKey = "code" | "uploadedAt" | "clientes";
+type SortDir = "asc" | "desc";
+
 function ListsTable({
   lists,
   clientsByCode,
@@ -204,6 +207,11 @@ function ListsTable({
   lists: PriceList[];
   clientsByCode: Record<string, number>;
 }) {
+  // Default: las más viejas arriba — así de un vistazo ves cuáles te
+  // están quedando pendientes de actualizar.
+  const [sortKey, setSortKey] = useState<SortKey>("uploadedAt");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   if (lists.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
@@ -214,6 +222,29 @@ function ListsTable({
       </div>
     );
   }
+
+  function toggleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      // Nueva columna: arrancamos con el orden más útil para cada una.
+      setSortDir(key === "code" ? "asc" : "desc");
+    }
+  }
+
+  const sorted = [...lists].sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === "code") {
+      cmp = a.code.localeCompare(b.code);
+    } else if (sortKey === "uploadedAt") {
+      cmp = Date.parse(a.uploadedAt) - Date.parse(b.uploadedAt);
+    } else {
+      cmp = (clientsByCode[a.code] ?? 0) - (clientsByCode[b.code] ?? 0);
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -224,16 +255,32 @@ function ListsTable({
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
           <tr>
-            <th className="px-4 py-3 font-semibold">Código</th>
+            <SortableHeader
+              label="Código"
+              active={sortKey === "code"}
+              dir={sortDir}
+              onClick={() => toggleSort("code")}
+            />
             <th className="px-4 py-3 font-semibold">Nombre</th>
-            <th className="px-4 py-3 font-semibold">Subida</th>
+            <SortableHeader
+              label="Subida"
+              active={sortKey === "uploadedAt"}
+              dir={sortDir}
+              onClick={() => toggleSort("uploadedAt")}
+            />
             <th className="px-4 py-3 font-semibold">Archivo</th>
-            <th className="px-4 py-3 font-semibold text-right">Clientes</th>
+            <SortableHeader
+              label="Clientes"
+              active={sortKey === "clientes"}
+              dir={sortDir}
+              onClick={() => toggleSort("clientes")}
+              align="right"
+            />
             <th className="px-4 py-3 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {lists.map((l) => (
+          {sorted.map((l) => (
             <ListRow
               key={l.id}
               list={l}
@@ -378,4 +425,41 @@ function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function SortableHeader({
+  label,
+  active,
+  dir,
+  onClick,
+  align = "left",
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+  align?: "left" | "right";
+}) {
+  const arrow = active ? (dir === "asc" ? "↑" : "↓") : "↕";
+  return (
+    <th
+      className={`px-4 py-3 font-semibold ${align === "right" ? "text-right" : ""}`}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 hover:text-[#0a2b3d] transition ${
+          active ? "text-[#0a2b3d]" : ""
+        }`}
+        title={`Ordenar por ${label.toLowerCase()}`}
+      >
+        <span>{label}</span>
+        <span
+          className={`text-[10px] ${active ? "text-primary" : "text-gray-400"}`}
+        >
+          {arrow}
+        </span>
+      </button>
+    </th>
+  );
 }
