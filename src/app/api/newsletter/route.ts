@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     try {
       await sendEmail({
-        from: "Griffo Web <onboarding@resend.dev>",
+        from: "Griffo <contacto@griffo.com.ar>",
         to: "contacto@griffo.com.ar",
         subject: `Nueva suscripción al newsletter: ${email}`,
         html: `

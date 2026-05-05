@@ -8,13 +8,11 @@ import type { Pedido } from "@/types/pedido";
  * a fallo: si Resend no está configurado o la API tira error, logueamos
  * y seguimos — el pedido ya quedó en Redis y el admin lo ve igual.
  *
- * Cuando se verifique `griffo.com.ar` en Resend, cambiar el sender.
- *
  * El destinatario del mail "nuevo pedido" sale de `b2b-config`
  * (editable desde /admin/pedidos). Default: ventas@griffo.com.ar.
  */
 
-const SENDER = "Griffo <onboarding@resend.dev>";
+const SENDER = "Griffo <contacto@griffo.com.ar>";
 
 function formatARS(value: number): string {
   return value.toLocaleString("es-AR", {

@@ -308,7 +308,7 @@ Siempre con "+ IVA" al final.
 
 | Síntoma | Mirá… |
 |---|---|
-| Los forms no mandan mail | Env var `RESEND_API_KEY` en Vercel. Ver también `src/lib/resend.ts` (destinatarios) y verificar que `griffo.com.ar` esté verificado en Resend (si no, el sender es `onboarding@resend.dev`) |
+| Los forms no mandan mail | Env var `RESEND_API_KEY` en Vercel + dominio `griffo.com.ar` verificado en Resend. Sender actual: `Griffo <contacto@griffo.com.ar>`. Ver también `src/lib/resend.ts`. Para debug: dashboard de Resend → tab "Emails" muestra cada envío con status (delivered, bounced, etc.) |
 | El build de Vercel falla por fuentes | No usar `next/font/google` — cargar Montserrat con `<link>` en `layout.tsx`. El sandbox/build bloquea Google Fonts |
 | Imágenes rotas (404) | `AssetImage` cae a placeholder automático. Revisar path en `src/lib/assets.ts` vs archivo real en `public/` |
 | Mixed content / imagen no carga del sitio viejo | No hotlinkear — bajar asset y subir a `public/`. El sitio viejo es HTTP, el nuevo HTTPS |
@@ -459,8 +459,6 @@ Resumen:
   Cargar las env vars `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_CREDENTIALS`.
 - Cargar `BEJERMAN_EMAIL` + `BEJERMAN_PASSWORD` en Vercel cuando las
   reciba del técnico.
-- Verificar `griffo.com.ar` en Resend para enviar desde
-  `@griffo.com.ar` (sino todos los mails salen de `onboarding@resend.dev`).
 
 ### 🟢 Swap del día que todo llegue
 
@@ -478,12 +476,7 @@ Cuando haya creds + Firebase:
 
 ## 6. Otros TODOs
 
-1. **Conectar dominio en Resend**
-   Hoy el sender es `onboarding@resend.dev` (sandbox). Al verificar
-   `griffo.com.ar`, cada form puede mandar desde `@griffo.com.ar`.
-   Requiere agregar DNS TXT de verificación en NIC Argentina.
-
-2. **Optimizar imágenes pesadas**
+1. **Optimizar imágenes pesadas**
    Script sharp ya bajó ~11 MB. Nuevas subidas pasarlas por el mismo
    script.
 

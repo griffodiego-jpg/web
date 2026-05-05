@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/site-url";
 import type { PriceList } from "@/types/price-list";
 import type { BejermanClient } from "@/types/bejerman";
 
-const SENDER = "Griffo <onboarding@resend.dev>";
+const SENDER = "Griffo <contacto@griffo.com.ar>";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", {

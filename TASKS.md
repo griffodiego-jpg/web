@@ -208,10 +208,8 @@ Todo lo siguiente se construyó entre el merge de la rama nueva y el
 ## 🔵 Pendientes — necesitan tu intervención
 
 ### Conexión de servicios externos
-- [x] **Resend** — conectado. Sender `onboarding@resend.dev` (sandbox).
-  - [ ] **Verificar dominio `griffo.com.ar` en Resend** → pasar sender
-        a `contacto@griffo.com.ar` y habilitar destinatarios por form
-        (garantía → `garantia@`, etc).
+- [x] **Resend** — conectado. Sender `Griffo <contacto@griffo.com.ar>`
+      (dominio `griffo.com.ar` verificado en Resend desde 2026-05).
 - [ ] **reCAPTCHA v3** en los forms: el sitio viejo ya tenía la key
       `6Lcms9MrAAAAAKHK-bI1K_u2Coqp9oEAve3vrpRR`. Podemos reutilizarla
       o generar una nueva desde tu cuenta de Google.

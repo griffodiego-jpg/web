@@ -1116,12 +1116,12 @@ mal configurada, sender no verificado, etc.) el lead igual quedó en
 Redis, el endpoint devuelve `ok: true` y el usuario ve verde. El
 admin ve el lead en `/admin/leads` aunque no haya recibido el email.
 
-**Nota sobre sender**: el sender actual es `onboarding@resend.dev`
-(sandbox). Resend en sandbox solo acepta enviar a la dirección dueña
-de la cuenta, por eso todos los forms mandan a `contacto@griffo.com.ar`.
-Cuando la cliente verifique el dominio `griffo.com.ar` en Resend,
-cambiar el sender a `contacto@griffo.com.ar` y cada form puede volver
-a tener su destinatario natural (ej. garantía → `garantia@`).
+**Sender**: `Griffo <contacto@griffo.com.ar>` (dominio `griffo.com.ar`
+verificado en Resend desde 2026-05). Todos los forms mandan a
+`contacto@griffo.com.ar`. Si en algún momento se quieren destinatarios
+por área (garantía → `garantia@`, ventas → `ventas@`, etc.), basta
+con cambiar el `to:` en cada route handler — el sender ya está
+verificado para `*@griffo.com.ar`.
 
 **Errores de validación** (ej. email sin punto) devuelven 400 con
 `{ error: "Email inválido" }`. Los forms del front muestran el mensaje
@@ -1190,9 +1190,9 @@ exacto del servidor (no un genérico "Hubo un error") — ver
 
 ## Servicios conectados
 
-- **Resend** (email): `RESEND_API_KEY`. Sender `onboarding@resend.dev`
-  (verificar dominio en Resend para mandar desde `@griffo.com.ar`).
-  Los handlers toleran fallos (leads se siguen guardando en Redis).
+- **Resend** (email): `RESEND_API_KEY`. Sender `Griffo <contacto@griffo.com.ar>`
+  (dominio `griffo.com.ar` verificado en Resend). Los handlers toleran
+  fallos (leads se siguen guardando en Redis).
 - **Upstash Redis** (KV): conectado via `KV_REST_API_URL/TOKEN` o
   `UPSTASH_REDIS_REST_URL/TOKEN` (ambos soportados — ver
   `src/lib/kv.ts`). Usado para: sesiones admin, rate-limit del login,
@@ -1264,9 +1264,6 @@ deberían figurar acá si no están seteadas):
 5. **Data del Excel de distribuidores**: 7 filas con `Provincia para
    filtro = "Distribuidores"` se reasignaron heurísticamente a
    Tucumán. Verificar con la cliente.
-6. **Verificar dominio en Resend**: hoy manda desde
-   `onboarding@resend.dev`. Cuando se verifique `griffo.com.ar`,
-   cambiar el sender.
 
 ## Git / commits
 

@@ -119,20 +119,6 @@ export function findConfigAlerts(): Alert[] {
     });
   }
 
-  // --- Resend domain verification ---
-  // Esta la dejamos siempre que haya API key — la cliente tiene que
-  // verificar el dominio. No podemos chequear programáticamente sin
-  // llamar a la API de Resend, así que es un recordatorio persistente.
-  if (process.env.RESEND_API_KEY) {
-    alerts.push({
-      id: "resend-domain",
-      severity: "warn",
-      title: "Verificar dominio en Resend",
-      description:
-        "Hoy los mails salen desde onboarding@resend.dev. Una vez verificado griffo.com.ar en Resend, cambiar el sender a contacto@griffo.com.ar en los route handlers.",
-    });
-  }
-
   // --- Contenido ---
   const destacadosSinCta = Object.entries(productosDetalle).filter(
     ([, d]) => !d.cta?.url,

@@ -62,10 +62,7 @@ export async function POST(request: Request) {
 
     try {
       await sendEmail({
-        from: "Griffo Web <onboarding@resend.dev>",
-        // contacto@ es la única dirección verificada del tenant de Resend
-        // mientras no se verifique el dominio griffo.com.ar. Antes iba a
-        // garantia@ y fallaba silenciosamente.
+        from: "Griffo <contacto@griffo.com.ar>",
         to: "contacto@griffo.com.ar",
         replyTo: email,
         subject: `Registro de garantía — ${body.name} (S/N: ${body.serial})`,

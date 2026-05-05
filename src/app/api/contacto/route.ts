@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
     try {
       await sendEmail({
-        from: "Griffo Web <onboarding@resend.dev>",
+        from: "Griffo <contacto@griffo.com.ar>",
         to: "contacto@griffo.com.ar",
         replyTo: body.email,
         subject: `Consulta web de ${body.nombre}`,

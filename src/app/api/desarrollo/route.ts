@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     });
 
     await sendEmail({
-      from: "Griffo Web <onboarding@resend.dev>",
+      from: "Griffo <contacto@griffo.com.ar>",
       to: "contacto@griffo.com.ar",
       replyTo: email,
       subject: `Consulta desarrollo a medida — ${empresa}`,

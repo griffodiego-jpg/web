@@ -177,10 +177,10 @@ async function checkResend(): Promise<CheckResult> {
     };
   }
   return {
-    status: "warn",
-    message: "Funcionando (dominio sin verificar)",
+    status: "ok",
+    message: "Configurado",
     detail:
-      "Hoy los mails salen desde onboarding@resend.dev. Verificar griffo.com.ar en Resend para mandar desde contacto@griffo.com.ar.",
+      "Mails salen desde contacto@griffo.com.ar (dominio griffo.com.ar verificado en Resend).",
   };
 }
 
