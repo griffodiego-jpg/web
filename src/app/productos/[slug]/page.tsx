@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AssetImage } from "@/components/AssetImage";
 import { Lightbox } from "@/components/Lightbox";
 import { ComingSoon } from "@/components/PageHero";
+import { ReportarErrorButton } from "@/components/catalog/ReportarErrorButton";
 import {
   BreadcrumbJsonLd,
   ProductJsonLd,
@@ -273,6 +274,18 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
       {detalle.presentacion && (
         <PresentacionBox presentacion={detalle.presentacion} />
       )}
+
+      {/* Footer del detalle: reporte de error */}
+      <section className="container mx-auto max-w-6xl px-5 lg:px-10 mt-10 mb-2">
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
+          <span className="text-xs text-gray-400">¿Algo no coincide?</span>
+          <ReportarErrorButton
+            productoCode={detalle.codigo}
+            productoSlug={detalle.codigo}
+            variant="button"
+          />
+        </div>
+      </section>
     </>
   );
 }

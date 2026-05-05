@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ProductGallery } from "@/components/catalog/ProductGallery";
 import { PriceOrML } from "@/components/catalog/PriceOrML";
+import { ReportarErrorButton } from "@/components/catalog/ReportarErrorButton";
 import { BreadcrumbJsonLd, ProductJsonLd } from "@/components/StructuredData";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getProductBySlug, listCatalog } from "@/lib/api/specparts";
@@ -227,6 +228,18 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
           </div>
         </section>
       ) : null}
+
+      {/* Footer del detalle: reporte de error. Se ofrece al final, después
+          de que el usuario vio toda la info, para captar discrepancias
+          que detecten al revisar (foto/medidas/vehículos mal). */}
+      <div className="mt-12 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
+        <span className="text-xs text-gray-400">¿Algo no coincide?</span>
+        <ReportarErrorButton
+          productoCode={product.code}
+          productoSlug={product.slug}
+          variant="button"
+        />
+      </div>
     </section>
   );
 }

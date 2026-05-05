@@ -9,6 +9,7 @@ import {
   type DesarrolloLead,
   type GarantiaLead,
   type NewsletterLead,
+  type ReporteErrorLead,
   type SugerenciaLead,
 } from "@/lib/leads";
 
@@ -30,12 +31,14 @@ export default async function LeadsPage() {
     garantia,
     sugerencia,
     desarrollo,
+    reporteError,
     cntD,
     cntC,
     cntN,
     cntG,
     cntS,
     cntDes,
+    cntRE,
   ] = await Promise.all([
     listLeads<DescargaLead>("descarga"),
     listLeads<ContactoLead>("contacto"),
@@ -43,12 +46,14 @@ export default async function LeadsPage() {
     listLeads<GarantiaLead>("garantia"),
     listLeads<SugerenciaLead>("sugerencia"),
     listLeads<DesarrolloLead>("desarrollo"),
+    listLeads<ReporteErrorLead>("reporte_error"),
     countLeads("descarga"),
     countLeads("contacto"),
     countLeads("newsletter"),
     countLeads("garantia"),
     countLeads("sugerencia"),
     countLeads("desarrollo"),
+    countLeads("reporte_error"),
   ]);
 
   return (
@@ -82,6 +87,7 @@ export default async function LeadsPage() {
             garantia,
             sugerencia,
             desarrollo,
+            reporte_error: reporteError,
           }}
           counts={{
             descarga: cntD,
@@ -90,6 +96,7 @@ export default async function LeadsPage() {
             garantia: cntG,
             sugerencia: cntS,
             desarrollo: cntDes,
+            reporte_error: cntRE,
           }}
         />
       </div>

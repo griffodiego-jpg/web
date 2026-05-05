@@ -9,6 +9,7 @@ import type {
   Lead,
   LeadKind,
   NewsletterLead,
+  ReporteErrorLead,
   SugerenciaLead,
 } from "@/lib/leads";
 
@@ -21,6 +22,7 @@ type Props = {
     garantia: Lead[];
     sugerencia: Lead[];
     desarrollo: Lead[];
+    reporte_error: Lead[];
   };
   counts: {
     contacto: number;
@@ -29,11 +31,13 @@ type Props = {
     garantia: number;
     sugerencia: number;
     desarrollo: number;
+    reporte_error: number;
   };
 };
 
 const TABS: { id: LeadKind; label: string }[] = [
   { id: "sugerencia", label: "Sugerencias" },
+  { id: "reporte_error", label: "Reportes de error" },
   { id: "descarga", label: "Descargas" },
   { id: "garantia", label: "Garantía" },
   { id: "contacto", label: "Contacto" },
@@ -123,9 +127,90 @@ export function LeadsTabs({ initialTab, leads, counts }: Props) {
           {tab === "desarrollo" && (
             <DesarrolloTable items={filtered as DesarrolloLead[]} />
           )}
+          {tab === "reporte_error" && (
+            <ReporteErrorTable items={filtered as ReporteErrorLead[]} />
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+const TIPO_ERROR_LABEL: Record<ReporteErrorLead["tipoError"], string> = {
+  foto: "Foto",
+  vehiculos: "Vehículos",
+  medidas: "Medidas",
+  descripcion: "Descripción",
+  otro: "Otro",
+};
+
+function ReporteErrorTable({ items }: { items: ReporteErrorLead[] }) {
+  return (
+    <table className="min-w-full text-sm">
+      <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+        <tr>
+          <th className="px-4 py-3">Fecha</th>
+          <th className="px-4 py-3">Producto</th>
+          <th className="px-4 py-3">Tipo</th>
+          <th className="px-4 py-3">Detalle</th>
+          <th className="px-4 py-3">Contacto</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {items.map((it, i) => (
+          <tr key={i} className="align-top">
+            <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
+              {new Date(it.ts).toLocaleString("es-AR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </td>
+            <td className="px-4 py-3">
+              <div className="font-mono font-bold text-[#0a2b3d]">
+                {it.productoCode}
+              </div>
+              {it.productoUrl ? (
+                <a
+                  href={it.productoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary underline hover:text-primary/80"
+                >
+                  Abrir página ↗
+                </a>
+              ) : null}
+            </td>
+            <td className="whitespace-nowrap px-4 py-3">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
+                {TIPO_ERROR_LABEL[it.tipoError]}
+              </span>
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-700">
+              <div className="max-w-md whitespace-pre-wrap">{it.detalle}</div>
+            </td>
+            <td className="whitespace-nowrap px-4 py-3 text-xs">
+              {it.email ? (
+                <div>
+                  <a
+                    href={`mailto:${it.email}`}
+                    className="text-primary hover:underline"
+                  >
+                    {it.email}
+                  </a>
+                </div>
+              ) : null}
+              {it.celular ? <div className="text-gray-700">{it.celular}</div> : null}
+              {!it.email && !it.celular ? (
+                <span className="text-gray-400">Anónimo</span>
+              ) : null}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

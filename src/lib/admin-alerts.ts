@@ -98,15 +98,10 @@ export function findConfigAlerts(): Alert[] {
     });
   }
 
-  if (!process.env.NEXT_PUBLIC_GA_ID) {
-    alerts.push({
-      id: "ga-id",
-      severity: "info",
-      title: "Google Analytics no configurado",
-      description:
-        "NEXT_PUBLIC_GA_ID falta — no se loguean visitas. El sitio funciona igual, pero perdés métricas de tráfico.",
-    });
-  }
+  // Google Analytics: el ID está hardcoded en src/app/layout.tsx
+  // (G-FR8KN76LQ2). No hay alerta — siempre está activo. Si en algún
+  // momento se quiere parametrizar por env var, mover el ID a NEXT_PUBLIC_GA_ID
+  // y volver a poner una alerta acá.
 
   // --- Configuración del sitio ---
   if (SITE_URL.includes("vercel.app")) {

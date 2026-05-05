@@ -37,6 +37,7 @@ const FALLBACK_EMAIL = "contacto@griffo.com.ar";
 
 const LEAD_KINDS: LeadKind[] = [
   "sugerencia",
+  "reporte_error",
   "contacto",
   "newsletter",
   "descarga",
@@ -46,6 +47,7 @@ const LEAD_KINDS: LeadKind[] = [
 
 const KIND_LABELS: Record<LeadKind, string> = {
   sugerencia: "Sugerencias de productos",
+  reporte_error: "Reportes de error",
   contacto: "Mensajes de contacto",
   newsletter: "Suscripciones al newsletter",
   descarga: "Pedidos de descarga (gated)",

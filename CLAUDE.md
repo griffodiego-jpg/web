@@ -134,7 +134,10 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 3. **Logo + tagline** forman una unidad. El SVG real (`public/header-icon.svg`)
    va al lado del texto "IMPULSAMOS / SOLUCIONES" con border-l separador.
    `components/Logo.tsx` intenta `/header-icon.svg` y cae a un SVG reconstruido
-   si falla.
+   si falla. **Tagline visible recién en `2xl:` (1536 px+)**: en xl
+   (1280-1535) la nav de 9 items + ACCESO CLIENTES + carrito ya no deja
+   margen y "Empresa" (primer item) se pisaba con el slogan. En pantallas
+   más chicas se muestra solo el logo, sin tagline.
 4. **Textos negros corporativos**: `#0a2b3d` (navy muy oscuro) en vez de `#000`
    puro para los headings.
 5. **Breadcrumbs** solo donde importa (ej. `/productos/[slug]`) — eyebrow
@@ -1098,9 +1101,9 @@ Por fila:
 ## Leads y forms
 
 `src/lib/leads.ts` — guarda cada submit en una lista Redis (LPUSH).
-Tipos: `contacto`, `newsletter`, `descarga`, `garantia`. `saveLead()`
-envuelve todo en try/catch para no afectar la respuesta del form
-aunque Redis falle.
+Tipos: `contacto`, `newsletter`, `descarga`, `garantia`, `sugerencia`,
+`desarrollo`, `reporte_error`. `saveLead()` envuelve todo en try/catch
+para no afectar la respuesta del form aunque Redis falle.
 
 Cada form tiene su endpoint en `/api/*/route.ts`:
 - `/api/contacto` → email con Resend + lead Redis.
@@ -1109,6 +1112,14 @@ Cada form tiene su endpoint en `/api/*/route.ts`:
   fecha de compra, lugar, domicilio, ubicación completa).
 - `/api/desarrollo` → email Resend.
 - `/api/descargas/registro` → captura registro antes de dar link.
+- `/api/sugerencias` → banner del catálogo "¿No encontraste el producto?"
+  (multipart con foto opcional).
+- `/api/reportes` → botón "¿Ves un error? Reportá" en la ficha del
+  producto (`/catalogo/[slug]` y `/productos/[slug]`). Lead con
+  `productoCode`, `productoUrl`, `tipoError` (foto / vehiculos /
+  medidas / descripcion / otro), `detalle`, contacto opcional.
+  Sin email transaccional — se revisa en `/admin/leads → Reportes`.
+  Modal: `components/catalog/ReportarErrorModal.tsx` (+ `Button` wrapper).
 
 **Tolerancia a fallos**: todos los endpoints de forms envuelven la
 llamada a Resend en try/catch separado. Si el email falla (API key

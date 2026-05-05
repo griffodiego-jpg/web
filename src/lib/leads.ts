@@ -15,7 +15,8 @@ export type LeadKind =
   | "descarga"
   | "garantia"
   | "sugerencia"
-  | "desarrollo";
+  | "desarrollo"
+  | "reporte_error";
 
 export type ContactoLead = {
   kind: "contacto";
@@ -119,13 +120,40 @@ export type DesarrolloLead = {
   archivoNombre?: string;
 };
 
+/**
+ * Lead del botón "¿Ves un error? Reportar" en la ficha del producto
+ * (`/catalogo/[slug]` y `/productos/[slug]`). Permite que cualquier
+ * visitante avise de errores en datos del catálogo (foto equivocada,
+ * vehículo mal listado, medidas incorrectas, etc.). Visible en
+ * `/admin/leads` → tab Reportes.
+ */
+export type ReporteErrorLead = {
+  kind: "reporte_error";
+  ts: number;
+  /** Código del producto reportado (ej. "950-32"). */
+  productoCode: string;
+  /** Slug donde estaba el usuario cuando reportó. */
+  productoSlug?: string;
+  /** URL completa de la página donde se reportó (para que el admin
+   *  pueda abrirla con un click y ver lo que ve el usuario). */
+  productoUrl?: string;
+  /** Categoría del error: foto / vehiculos / medidas / descripcion / otro. */
+  tipoError: "foto" | "vehiculos" | "medidas" | "descripcion" | "otro";
+  /** Detalle libre de qué está mal. */
+  detalle: string;
+  /** Contacto del que reporta (opcional, ambos). */
+  email?: string;
+  celular?: string;
+};
+
 export type Lead =
   | ContactoLead
   | NewsletterLead
   | DescargaLead
   | GarantiaLead
   | SugerenciaLead
-  | DesarrolloLead;
+  | DesarrolloLead
+  | ReporteErrorLead;
 
 const KEY_PREFIX = "leads:";
 

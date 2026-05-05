@@ -66,10 +66,10 @@ export function Header() {
       >
         <Logo className="h-10 w-auto shrink-0" />
         {/* Tagline institucional — se muestra junto al logo como una unidad.
-            Visible recién en xl+ (1280px) porque entre lg y xl la nav de
-            9 items no deja espacio y el primer item ("Empresa") queda
-            encimado al tagline en laptops comunes (1366/1440). */}
-        <span className="hidden xl:flex flex-col border-l-2 border-primary/40 pl-3 leading-[1.05]">
+            Visible recién en 2xl+ (1536px). En xl (1280-1535) la nav de 9
+            items + "ACCESO CLIENTES" + carrito ya no deja margen y "Empresa"
+            (primer item) se pisaba con el slogan. En 2xl hay aire suficiente. */}
+        <span className="hidden 2xl:flex flex-col border-l-2 border-primary/40 pl-3 leading-[1.05]">
           <span className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">
             Impulsamos
           </span>

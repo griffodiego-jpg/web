@@ -8,6 +8,7 @@ import {
   type Lead,
   type LeadKind,
   type NewsletterLead,
+  type ReporteErrorLead,
   type SugerenciaLead,
 } from "@/lib/leads";
 
@@ -20,6 +21,7 @@ const VALID_KINDS: LeadKind[] = [
   "newsletter",
   "garantia",
   "sugerencia",
+  "reporte_error",
 ];
 
 export async function GET(request: Request) {
@@ -80,7 +82,17 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
                 "Búsqueda",
                 "Tab",
               ]
-            : ["Fecha", "Email"];
+            : kind === "reporte_error"
+              ? [
+                  "Fecha",
+                  "Producto (código)",
+                  "URL",
+                  "Tipo de error",
+                  "Detalle",
+                  "Email",
+                  "Celular",
+                ]
+              : ["Fecha", "Email"];
 
   const rows = leads.map((l) => {
     const fecha = new Date(l.ts).toLocaleString("es-AR");
@@ -134,6 +146,18 @@ function toCsv(kind: LeadKind, leads: Lead[]): string {
         celular,
         s.busqueda ?? "",
         s.tab ?? "",
+      ];
+    }
+    if (kind === "reporte_error") {
+      const r = l as ReporteErrorLead;
+      return [
+        fecha,
+        r.productoCode,
+        r.productoUrl ?? "",
+        r.tipoError,
+        r.detalle,
+        r.email ?? "",
+        r.celular ?? "",
       ];
     }
     const n = l as NewsletterLead;

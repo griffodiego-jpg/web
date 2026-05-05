@@ -99,6 +99,7 @@
 | Form de desarrollo a medida | `src/components/DesarrolloForm.tsx` + `src/app/api/desarrollo/route.ts` |
 | Newsletter | `src/components/Newsletter.tsx` + `src/app/api/newsletter/route.ts` |
 | Registro antes de descargar catálogo | `src/components/RegistroDescargaForm.tsx` + `src/app/api/descargas/registro/route.ts` |
+| Botón "¿Ves un error? Reportá" en la ficha | `src/components/catalog/ReportarErrorButton.tsx` + `src/components/catalog/ReportarErrorModal.tsx` + `src/app/api/reportes/route.ts` |
 | Login del admin | `src/app/admin/login/page.tsx` + `src/app/api/admin/login/route.ts` + `src/lib/admin-auth.ts` |
 | Verificación de sesión admin (defensa en profundidad) | `src/lib/admin-auth.ts` (`hasValidAdminSession`) — usado por `src/app/admin/(protected)/layout.tsx` además del proxy edge |
 | Páginas admin protegidas | `src/app/admin/(protected)/*` — el route group obliga a pasar por el layout que valida sesión |
