@@ -112,7 +112,7 @@ export default async function ProductoDetallePage({
       <BreadcrumbWithTitle label={producto.label} title={detalle?.title ?? producto.label} />
 
       {detalle ? (
-        <ProductoFullDetalle detalle={detalle} />
+        <ProductoFullDetalle detalle={detalle} slug={slug} />
       ) : (
         <ComingSoon title={`Detalle de ${producto.label}`} />
       )}
@@ -157,7 +157,13 @@ function BreadcrumbWithTitle({
   );
 }
 
-function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
+function ProductoFullDetalle({
+  detalle,
+  slug,
+}: {
+  detalle: ProductoDetalle;
+  slug: string;
+}) {
   return (
     <>
       <article className="container mx-auto max-w-6xl px-5 pt-4 pb-8">
@@ -280,8 +286,8 @@ function ProductoFullDetalle({ detalle }: { detalle: ProductoDetalle }) {
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
           <span className="text-xs text-gray-400">¿Algo no coincide?</span>
           <ReportarErrorButton
-            productoCode={detalle.codigo}
-            productoSlug={detalle.codigo}
+            productoCode={detalle.codigo ?? slug}
+            productoSlug={slug}
             variant="button"
           />
         </div>
