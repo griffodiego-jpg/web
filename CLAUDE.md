@@ -307,10 +307,14 @@ portal:
 - `/cuenta/(portal)/layout.tsx` — encabezado con nombre del cliente +
   badge "🚧 Modo demo" + `CerrarSesionButton` + `PortalNav`.
 - `/cuenta/(portal)/page.tsx` → URL `/cuenta` — **Resumen**
-  (renombrado desde "Dashboard" el 2026-04-17). 3 KPI cards
-  (saldo, facturas 12 meses, pedidos activos) + accesos rápidos +
-  últimos 3 pedidos. Sin saludo "Hola, X" — fuera a pedido de la
-  cliente.
+  (renombrado desde "Dashboard" el 2026-04-17). Layout actual: card
+  grande de saldo (con banner opcional de nueva lista de precios) +
+  **carrusel de últimos lanzamientos** (3 cards por página, flechas
+  para avanzar de a 3, hasta 12 lanzamientos). Cada card del carrusel
+  tiene imagen + código + título + chip de línea + `AddToCartButton`
+  inline para que el distribuidor pueda agregar al pedido sin salir.
+  Component: `components/cuenta/LanzamientosCarousel.tsx`. Sin saludo
+  "Hola, X" — fuera a pedido de la cliente.
 - `/cuenta/(portal)/pedidos/page.tsx` — tabla con ERP ID, ref web,
   fecha, estado, ítems, total. Estados pintados por `PedidoStatusPill`.
 - `/cuenta/(portal)/pedidos/[id]/page.tsx` — detalle del pedido con

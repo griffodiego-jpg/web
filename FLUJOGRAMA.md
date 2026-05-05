@@ -132,7 +132,8 @@
 |---|---|
 | Estructura de las 7 tabs del portal | `src/components/cuenta/PortalNav.tsx` |
 | Layout del portal (encabezado, "Modo demo", logout) | `src/app/cuenta/(portal)/layout.tsx` |
-| Pantalla "Resumen" (dashboard con KPIs) | `src/app/cuenta/(portal)/page.tsx` |
+| Pantalla "Resumen" (saldo + carrusel de lanzamientos) | `src/app/cuenta/(portal)/page.tsx` |
+| Carrusel de lanzamientos en el resumen B2B (3 cards + flechas) | `src/components/cuenta/LanzamientosCarousel.tsx` |
 | Pantalla "Armar pedido" (3 tabs) | `src/app/cuenta/(portal)/armar-pedido/page.tsx` + `src/components/cuenta/ArmarPedidoClient.tsx` |
 | Grilla tipo Excel (tab "Por código") | `src/components/cuenta/armar-pedido/TabGrillaCodigo.tsx` |
 | Subida de Excel (tab "Subir Excel") | `src/components/cuenta/armar-pedido/TabSubirExcel.tsx` |
