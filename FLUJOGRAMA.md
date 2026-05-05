@@ -178,6 +178,21 @@
 | Endpoint público del banco de imágenes (link estable) | `src/app/api/descargas/banco-imagenes/route.ts` |
 | Cron semanal de banco de imágenes | `src/app/api/cron/banco-imagenes/route.ts` + `vercel.json` |
 
+### Analytics del catálogo
+
+| Quiero cambiar… | Archivo |
+|---|---|
+| Helpers de eventos GA4 (search, view_search_results, select_item, view_item) | `src/lib/analytics.ts` |
+| Disparo de eventos GA4 desde el catálogo (debounce 700 ms) | `src/components/catalog/CatalogSearch.tsx` (useEffect con tracking) |
+| Disparo de `select_item` al clickear card | `src/components/catalog/ProductCard.tsx` |
+| Lib del log de búsquedas con CERO resultados (Redis) | `src/lib/search-log.ts` |
+| Endpoint público del log (write-only) | `src/app/api/catalog/search-log/route.ts` |
+| Endpoint admin para resolver/borrar | `src/app/api/admin/busquedas/route.ts` |
+| Página admin con ranking + GA4 link | `src/app/admin/(protected)/busquedas/page.tsx` |
+| Tabla del admin (acciones por fila) | `src/components/admin/BusquedasTable.tsx` |
+| Toggle "ver resueltas" | `src/components/admin/BusquedasView.tsx` |
+| Card del dashboard `/admin` | `src/app/admin/(protected)/page.tsx` (sección WIDGETS) |
+
 ---
 
 ## 2. Flujo de un request

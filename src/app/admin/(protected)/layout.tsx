@@ -55,8 +55,11 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Formularios",
-    items: [{ href: "/admin/leads", label: "Leads capturados", icon: "inbox" }],
+    label: "Análisis del público",
+    items: [
+      { href: "/admin/busquedas", label: "Búsquedas del catálogo", icon: "search" },
+      { href: "/admin/leads", label: "Leads capturados", icon: "inbox" },
+    ],
   },
   {
     label: "Portal B2B",

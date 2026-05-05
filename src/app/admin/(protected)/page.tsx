@@ -14,6 +14,7 @@ import {
   type Novedad,
 } from "@/lib/novedades";
 import { readOverrides } from "@/lib/descargas-store";
+import { getZeroResultStats } from "@/lib/search-log";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,6 +42,7 @@ export default async function AdminDashboard() {
     lDescargaR,
     lGarantiaR,
     descargasOverridesR,
+    busquedasR,
   ] = await Promise.allSettled([
     runHealthChecks(),
     Promise.resolve(findConfigAlerts()),
@@ -56,6 +58,7 @@ export default async function AdminDashboard() {
     listLeads<Lead>("descarga"),
     listLeads<Lead>("garantia"),
     readOverrides(),
+    getZeroResultStats(50, false),
   ]);
 
   const health = settled<HealthCheck[]>(healthR, []);
@@ -72,6 +75,10 @@ export default async function AdminDashboard() {
   const lDescarga = settled<Lead[]>(lDescargaR, []);
   const lGarantia = settled<Lead[]>(lGarantiaR, []);
   const descargasOverrides = settled(descargasOverridesR, {} as Record<string, string>);
+  const busquedasZero = settled(busquedasR, []);
+  const busquedasZeroCount = busquedasZero.length;
+  const busquedasZeroTotal = busquedasZero.reduce((sum, b) => sum + b.count, 0);
+  const topBusqueda = busquedasZero[0];
 
   const ultimos7dTs = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const last7 = {
@@ -135,8 +142,8 @@ export default async function AdminDashboard() {
         </div>
       </section>
 
-      {/* WIDGETS — LEADS + NOVEDADES + DESCARGAS */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {/* WIDGETS — LEADS + NOVEDADES + DESCARGAS + BUSQUEDAS */}
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <Card>
           <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
             Formularios (últimos 7 días)
@@ -209,6 +216,36 @@ export default async function AdminDashboard() {
             className="mt-4 inline-flex items-center gap-1 text-xs text-primary font-bold hover:gap-2 transition-all"
           >
             Administrar descargas <ArrowIcon />
+          </Link>
+        </Card>
+
+        <Card>
+          <h3 className="font-bold text-sm text-[#0a2b3d] uppercase tracking-wide mb-3">
+            Búsquedas del catálogo
+          </h3>
+          <p className="text-2xl font-black text-[#0a2b3d]">
+            {busquedasZeroCount}
+            <span className="text-sm font-normal text-gray-400">
+              {" "}
+              sin resultados
+            </span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {busquedasZeroTotal > 0
+              ? `${busquedasZeroTotal} búsquedas en total que no encontraron nada.`
+              : "Todavía no hay búsquedas registradas. Aparecen apenas la gente busque."}
+          </p>
+          {topBusqueda ? (
+            <p className="text-xs text-amber-700 mt-2 italic">
+              Top: <span className="font-mono">&quot;{topBusqueda.originalQuery}&quot;</span>{" "}
+              ({topBusqueda.count}×)
+            </p>
+          ) : null}
+          <Link
+            href="/admin/busquedas"
+            className="mt-4 inline-flex items-center gap-1 text-xs text-primary font-bold hover:gap-2 transition-all"
+          >
+            Ver búsquedas + GA4 <ArrowIcon />
           </Link>
         </Card>
       </section>

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import type { CatalogProduct, SpecPartsVehicle } from "@/types/specparts";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getDisplayApplication } from "@/lib/catalog/display";
+import { trackSelectItem } from "@/lib/analytics";
 
 import { VehiclesModal } from "./VehiclesModal";
 import { PriceOrML } from "./PriceOrML";
@@ -36,7 +37,17 @@ export function ProductCard({ product, mlLink }: ProductCardProps) {
     ? `/productos/${featuredSlug}`
     : `/catalogo/${product.slug}`;
 
+  const fireSelectEvent = () => {
+    trackSelectItem({
+      id: product.code,
+      name: product.product,
+      category: product.category,
+      listName: "Catalogo",
+    });
+  };
+
   const handleCardClick = () => {
+    fireSelectEvent();
     router.push(detailHref);
   };
 
@@ -44,6 +55,7 @@ export function ProductCard({ product, mlLink }: ProductCardProps) {
   const handleKey = (e: React.KeyboardEvent<HTMLElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      fireSelectEvent();
       router.push(detailHref);
     }
   };

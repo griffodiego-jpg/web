@@ -34,6 +34,7 @@ import {
   type CatalogFilters,
   type FilterGroup,
 } from "@/lib/catalog/filters";
+import { trackSearch, trackSearchResults } from "@/lib/analytics";
 
 import { FiltersSidebar } from "./FiltersSidebar";
 import { ImageLightbox } from "./ImageLightbox";
@@ -394,6 +395,33 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
     tab !== "medidas" &&
     tabState.kind === "results" &&
     filteredResults.length === 0;
+
+  // Tracking de búsquedas a GA4 + log de zero-results en Redis.
+  // Debounceado para no spamear eventos en cada keystroke. Las
+  // búsquedas con resultados van a GA4; las que devuelven 0 van
+  // también al panel de admin. Tab "medidas" no se trackea (no
+  // hay query de texto, es navegación).
+  useEffect(() => {
+    if (tab === "medidas") return;
+    if (tabState.kind !== "results") return;
+    const term = busquedaSnapshot;
+    if (!term || term.length < 2) return;
+    const count = filteredResults.length;
+    const timer = setTimeout(() => {
+      trackSearch({ term, tab });
+      trackSearchResults({ term, tab, count });
+      if (count === 0) {
+        void fetch("/api/catalog/search-log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: term, tab, resultsCount: 0 }),
+        }).catch(() => {
+          /* tolerante a fallos */
+        });
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [tab, tabState.kind, busquedaSnapshot, filteredResults.length]);
 
   // Si el usuario tipea algo con forma de patente en Palabra, ofrecemos un
   // atajo al tab Patente. No es auto-switch — la decisión queda en el usuario.

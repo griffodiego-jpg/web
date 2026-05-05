@@ -806,7 +806,7 @@ Grupos:
 - **Administración de catálogo**: Productos destacados, Cobertura,
   Imagen tréboles, **Banco de imágenes**, Cache de imágenes
 - **Portal B2B**: Clientes, Pedidos, Listas de precios
-- **Formularios**: Leads capturados
+- **Análisis del público**: Búsquedas del catálogo, Leads capturados
 - **Vista pública**: link externo a `/catalogo`
 - Footer: `<LogoutButton />` (`components/admin/LogoutButton.tsx`) que
   hace POST a `/api/admin/logout` y redirige a `/admin/login`.
@@ -1128,6 +1128,93 @@ verificado para `*@griffo.com.ar`.
 exacto del servidor (no un genérico "Hubo un error") — ver
 `ContactForm.tsx` y `RegistroDescargaForm.tsx`.
 
+## Analytics del catálogo (búsquedas)
+
+Dos canales complementarios. Sin login del usuario, así que todo es
+agregado y anónimo (sin PII).
+
+### 1. Google Analytics 4 — búsquedas con resultados
+
+`src/lib/analytics.ts` define helpers thin que llaman a `window.gtag`
+si el script ya cargó (no-op silencioso si no). El script de gtag se
+carga en `src/app/layout.tsx` con strategy `afterInteractive`.
+
+Eventos disparados:
+
+| Evento | Origen | Parámetros |
+|---|---|---|
+| `search` | `CatalogSearch.tsx` (debounce 700 ms) | `search_term`, `search_tab` |
+| `view_search_results` | idem | `search_term`, `search_tab`, `results_count` |
+| `select_item` | `ProductCard.tsx` (click en card) | `item_id` (= código), `item_name`, `item_category`, `item_list_name="Catalogo"` |
+
+Estos son los eventos estándar de **Recommended events for Retail**
+de GA4. Aparecen en GA4 → Reports → Engagement → Events. La primera
+vez que se dispara un evento custom GA4 tarda 24-48 hs en mostrarlo
+(después es casi-real-time).
+
+Property GA4: `G-FR8KN76LQ2`. Acceso: la cliente tiene la cuenta de
+Google con los permisos.
+
+### 2. Redis — búsquedas con CERO resultados
+
+`src/lib/search-log.ts`. Loguear todas las búsquedas en Redis sería
+ruidoso (y para eso ya tenemos GA4). Solo guardamos las que devuelven
+**0 resultados** porque son las que importan para decisiones de
+catálogo: "qué pidieron y no encontraron".
+
+Modelo:
+- ZSET `search-log:zero` (member = query normalizada, score = count).
+- HASH `search-log:zero:<query>` con `firstSeen`, `lastSeen`,
+  `originalQuery` (texto tal cual lo tipeó), `tabBreakdown` (JSON).
+- SET `search-log:resolved` con queries marcadas como cubiertas por
+  el admin (se ocultan del listado por defecto pero quedan archivadas).
+- Cap 1000 entries con LRU manual.
+
+Endpoint público (write-only): `POST /api/catalog/search-log` con
+`{query, tab, resultsCount}`. Solo escribe si `resultsCount === 0` y
+la query tiene al menos 2 chars normalizados. Disparado desde
+`CatalogSearch.tsx` con el mismo debounce de 700 ms que GA4.
+
+Endpoint admin: `POST /api/admin/busquedas` con
+`{action: "resolve" | "unresolve" | "delete", query}` (acciones
+desde la tabla del admin).
+
+Privacidad: no se guarda IP, userAgent, ni nada que identifique al
+usuario. Solo el texto buscado y el conteo agregado.
+
+### 3. Sugerencias (ya existían)
+
+El banner "¿No encontraste el producto?" del catálogo es el tercer
+canal — más rico (foto, vehículo, OEM, contacto del usuario) pero
+requiere acción del usuario. Los reportes salen en
+`/admin/leads` → tab Sugerencias.
+
+### Panel admin
+
+`/admin/busquedas` (en grupo "Análisis del público" del sidebar):
+
+- Card explicativa con el ranking de zero-results (esta página).
+- Card explicativa de cómo abrir GA4 paso a paso (con link directo
+  a la vista de eventos) — para que la cliente sepa dónde mirar las
+  búsquedas exitosas.
+- Tabla con búsqueda original (con caja preservada), count, tabs
+  donde se buscó, primera/última vez. Acciones: marcar resuelta,
+  desmarcar, borrar.
+- Toggle para mostrar también las resueltas (archivadas).
+
+Card en el dashboard `/admin` con:
+- Cantidad de queries únicas pendientes.
+- Total de búsquedas fallidas (suma de counts).
+- Top query con su count.
+- Link a `/admin/busquedas`.
+
+### Diferencia con la app vieja
+
+La app de mobile (`app.griffo.com.ar`) tenía login con Google → podía
+asociar búsquedas a un usuario individual. Acá, sin login (a propósito,
+para que cualquiera busque sin fricción), trackeamos demanda **agregada
+anónima**. Es suficiente para decisiones de catálogo y más privacy-friendly.
+
 ## Assets subidos al repo (situación actual)
 
 - `public/header-icon.svg` — logo real.
@@ -1255,13 +1342,11 @@ deberían figurar acá si no están seteadas):
    detecta huecos en vehículos que Griffo YA cubre. Preguntarle a
    SpecParts si expone `/vehicle/list` o conseguir base externa
    (ADEFA, ACARA).
-3. **Analytics de búsqueda**: loguear queries del catálogo que dan
-   cero resultados. Complemento natural de la matriz de cobertura.
-4. **Contenido histórico de Novedades**: el módulo está armado y
+3. **Contenido histórico de Novedades**: el módulo está armado y
    conectado a SpecParts, pero si la cliente quiere preservar noticias
    puntuales del sitio viejo (ej. "Nuevo pack de grasa Molykote") hay
    que importarlas manual — SpecParts solo tiene productos.
-5. **Data del Excel de distribuidores**: 7 filas con `Provincia para
+4. **Data del Excel de distribuidores**: 7 filas con `Provincia para
    filtro = "Distribuidores"` se reasignaron heurísticamente a
    Tucumán. Verificar con la cliente.
 

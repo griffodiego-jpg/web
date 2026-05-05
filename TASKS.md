@@ -61,6 +61,12 @@ Todo lo siguiente se construyó entre el merge de la rama nueva y el
 - [x] **Defensa en profundidad**: route group `(protected)` con
       verificación server-side de la sesión en cada render del
       layout. Cierra el gap de prefetches/CDN del proxy edge solo.
+- [x] **Analytics del catálogo**: eventos GA4 (search,
+      view_search_results, select_item) + log Redis de búsquedas con
+      cero resultados + `/admin/busquedas` con ranking + card en el
+      dashboard. La cliente ve qué busca la gente y qué piden y no
+      encuentran. Reemplaza el "historial por usuario" de la app
+      vieja con tracking agregado anónimo (sin login público).
 
 ### Novedades (`/novedades`)
 - [x] Auto-detección desde SpecParts + admin para publicar
