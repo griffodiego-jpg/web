@@ -24,6 +24,7 @@ export const siteConfig = {
   },
   socials: {
     facebook: "https://www.facebook.com/griffoarg",
+    instagram: "https://www.instagram.com/griffoargentina/",
     youtube: "https://www.youtube.com/channel/UCQZHmbT5rzKeypFTc0rWcVQ",
   },
 };

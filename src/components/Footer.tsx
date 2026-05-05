@@ -106,17 +106,32 @@ export function Footer() {
               </li>
             </ul>
 
-            <ul className="flex gap-5 flex-wrap justify-center items-center w-full lg:w-fit">
+            <ul className="flex gap-3 flex-wrap justify-center items-center w-full lg:w-fit">
               <li>
                 <a
                   href={siteConfig.socials.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Facebook"
-                  className="text-white hover:opacity-80"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1877F2] text-white transition hover:scale-110 hover:shadow-md"
                 >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M13 22v-8h3l1-4h-4V7.5c0-1.1.4-2 2.2-2H17V2.1C16.7 2 15.7 2 14.5 2 11.9 2 10 3.6 10 6.7V10H7v4h3v8h3Z" />
+                  </svg>
+                </a>
+              </li>
+              <li>
+                <a
+                  href={siteConfig.socials.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-tr from-[#feda75] via-[#fa7e1e] via-50% to-[#d62976] text-white transition hover:scale-110 hover:shadow-md"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                   </svg>
                 </a>
               </li>
@@ -126,9 +141,9 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="YouTube"
-                  className="text-white hover:opacity-80"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF0000] text-white transition hover:scale-110 hover:shadow-md"
                 >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.5 12 4.5 12 4.5s-7 0-8.9.6A3 3 0 0 0 1 7.2C.5 9.1.5 12 .5 12s0 2.9.5 4.8a3 3 0 0 0 2.1 2.1c1.9.6 8.9.6 8.9.6s7 0 8.9-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-4.8.5-4.8s0-2.9-.5-4.8ZM9.8 15.5v-7l6 3.5-6 3.5Z" />
                   </svg>
                 </a>
