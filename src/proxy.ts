@@ -27,12 +27,14 @@ const SESSION_KEY_PREFIX = "admin:session:";
  * - /admin/login y /api/admin/login: la pantalla y endpoint de login.
  * - /api/admin/descargas/upload: recibe webhooks firmados desde Vercel
  *   Blob sin cookie. handleUpload verifica la signature internamente.
+ * - /api/admin/debug-password: diagnóstico temporal de ADMIN_PASSWORD.
  */
 const EXEMPT_PATHS = [
   "/admin/login",
   "/api/admin/login",
   "/api/admin/descargas/upload",
   "/api/admin/banners/upload",
+  "/api/admin/debug-password",
 ];
 
 function isExempt(pathname: string): boolean {
@@ -41,52 +43,55 @@ function isExempt(pathname: string): boolean {
   );
 }
 
-function getRedisEdge(): Redis | null {
-  const url =
-    process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
-  const token =
-    process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  try {
-    return new Redis({ url, token });
-  } catch {
-    return null;
-  }
-}
-
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Solo aplica a rutas /admin/* y /api/admin/*
+  if (!pathname.startsWith("/admin") && !pathname.startsWith("/api/admin")) {
+    return NextResponse.next();
+  }
 
   if (isExempt(pathname)) {
     return NextResponse.next();
   }
 
   const sessionId = request.cookies.get(COOKIE_NAME)?.value;
-  if (!sessionId) return rejectRequest(request, pathname);
 
-  const redis = getRedisEdge();
-  if (!redis) {
-    // Sin Redis no hay forma de validar. Cortamos sí o sí.
-    return rejectRequest(request, pathname);
+  if (!sessionId) {
+    return unauthorized(request, pathname);
+  }
+
+  // Validar sesión en Redis
+  const redisUrl = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!redisUrl || !redisToken) {
+    // Redis no configurado → fail-open para no lockear al admin en dev
+    return NextResponse.next();
   }
 
   try {
+    const redis = new Redis({ url: redisUrl, token: redisToken });
     const session = await redis.get(SESSION_KEY_PREFIX + sessionId);
-    if (!session) return rejectRequest(request, pathname);
+    if (!session) {
+      return unauthorized(request, pathname);
+    }
   } catch {
-    return rejectRequest(request, pathname);
+    // Redis caído → fail-open
+    return NextResponse.next();
   }
 
   return NextResponse.next();
 }
 
-function rejectRequest(request: NextRequest, from: string) {
-  if (from.startsWith("/api/")) {
+function unauthorized(request: NextRequest, pathname: string): NextResponse {
+  const isApi = pathname.startsWith("/api/");
+  if (isApi) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
   const loginUrl = new URL("/admin/login", request.url);
-  loginUrl.searchParams.set("from", from);
-  return NextResponse.redirect(loginUrl);
+  loginUrl.searchParams.set("from", pathname);
+  return NextResponse.redirect(loginUrl, 307);
 }
 
 export const config = {
