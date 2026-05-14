@@ -25,14 +25,15 @@ export const SESSION_KEY_PREFIX = "admin:session:";
 
 /**
  * Compara el password ingresado con la env var en tiempo constante
- * para evitar side-channels de timing. Si las longitudes difieren,
- * hacemos igual una comparación dummy de la misma duración.
+ * para evitar side-channels de timing. Hace trim() en ambos lados
+ * para tolerar espacios/newlines que pueda agregar el copy-paste.
+ * Si las longitudes difieren, hacemos igual una comparación dummy.
  */
 export async function verifyPasswordSafe(password: string): Promise<boolean> {
-  const expected = process.env.ADMIN_PASSWORD;
+  const expected = process.env.ADMIN_PASSWORD?.trim();
   if (!expected) return false;
   const { timingSafeEqual } = await import("crypto");
-  const a = Buffer.from(password, "utf-8");
+  const a = Buffer.from(password.trim(), "utf-8");
   const b = Buffer.from(expected, "utf-8");
   if (a.length !== b.length) {
     // Dummy compare para no leakear la longitud del password esperado.
