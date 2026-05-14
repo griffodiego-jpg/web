@@ -43,7 +43,7 @@ function isExempt(pathname: string): boolean {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Solo aplica a rutas /admin/* y /api/admin/*
