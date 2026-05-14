@@ -32,14 +32,12 @@ function LoginForm() {
       });
 
       if (!res.ok) {
-        setError("Contraseña incorrecta");
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? "Contraseña incorrecta");
         setLoading(false);
         return;
       }
 
-      // Validamos que `from` sea un path relativo seguro — rechazamos
-      // URLs absolutas (https://evil.com) y protocol-relative (//evil.com)
-      // para evitar open redirect después del login.
       const fromRaw = searchParams.get("from");
       const safeFrom =
         fromRaw && fromRaw.startsWith("/") && !fromRaw.startsWith("//")
