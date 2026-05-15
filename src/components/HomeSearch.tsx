@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import type { VehicleTree } from "@/lib/catalog/utils";
 
 type Tab = "palabra" | "patente" | "vehiculo" | "codigo" | "medidas";
-type MedidasTipo = "direccion" | "transmision" | "tope";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "palabra", label: "Palabra" },
@@ -13,12 +12,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "vehiculo", label: "Vehículo" },
   { id: "codigo", label: "Código" },
   { id: "medidas", label: "Medidas" },
-];
-
-const MEDIDAS_TIPOS: { id: MedidasTipo; label: string }[] = [
-  { id: "direccion", label: "Dirección" },
-  { id: "transmision", label: "Transmisión" },
-  { id: "tope", label: "Tope" },
 ];
 
 export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
@@ -38,9 +31,6 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
 
   // Código
   const [codigo, setCodigo] = useState("");
-
-  // Medidas
-  const [medidasTipo, setMedidasTipo] = useState<MedidasTipo>("direccion");
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,8 +54,6 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
       if (anio) params.set("y", anio);
     } else if (tab === "codigo" && codigo.trim()) {
       params.set("c", codigo.trim());
-    } else if (tab === "medidas") {
-      if (medidasTipo !== "direccion") params.set("mt", medidasTipo);
     }
 
     router.push(`/catalogo?${params.toString()}`);
@@ -76,6 +64,10 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
   }
 
   function switchTab(t: Tab) {
+    if (t === "medidas") {
+      router.push("/catalogo?tab=medidas");
+      return;
+    }
     setTab(t);
     setTimeout(() => inputRef.current?.focus(), 50);
   }
@@ -182,33 +174,12 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
             />
           )}
 
-          {tab === "medidas" && (
-            <div className="flex gap-2 flex-wrap justify-center">
-              {MEDIDAS_TIPOS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    const params = new URLSearchParams();
-                    params.set("tab", "medidas");
-                    if (t.id !== "direccion") params.set("mt", t.id);
-                    router.push(`/catalogo?${params.toString()}`);
-                  }}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary transition"
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {tab !== "medidas" && (
-            <button
-              onClick={handleSearch}
-              className="shrink-0 bg-primary hover:bg-primary-dark text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
-            >
-              Buscar
-            </button>
-          )}
+          <button
+            onClick={handleSearch}
+            className="shrink-0 bg-primary hover:bg-primary-dark text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
+          >
+            Buscar
+          </button>
         </div>
       </div>
     </div>

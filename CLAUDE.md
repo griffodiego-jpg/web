@@ -150,6 +150,8 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 - `components/Logo.tsx` — real SVG con fallback.
 - `components/TrustStrip.tsx` — franja de 4 credenciales (Garantía, ISO 1968,
   50+). Usa inline SVG icons. Se muestra en la home entre el banner y las cards.
+  El subtítulo de garantía dice "En Fuelles, Topes de suspensión y herramientas"
+  (no "En todos nuestros productos").
 - `components/BuscadorPatenteBanner.tsx` — banner principal de la home, SVG
   puro (no imagen), responsive por CSS. Reconstrucción del banner del sitio
   original.
@@ -165,6 +167,14 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 - `components/ContactForm.tsx` — form de contacto (client).
 - `components/PageHero.tsx` — ya solo exporta `ComingSoon` (el hero original
   fue removido). Se usa en páginas stub.
+- `components/HomeSearch.tsx` — buscador liviano de la home (client). 5 tabs
+  (Palabra / Patente / Vehículo / Código / Medidas). No carga productos —
+  al buscar redirige al catálogo con los params correctos (`q`, `p`, `b`/`m`/`y`,
+  `c`, `tab=medidas`). El tab Medidas navega directo al hacer clic, sin paso
+  intermedio. Recibe `vehicleTree` del server (precargado en `page.tsx` junto
+  con los banners). Parámetros que envía al catálogo: `q` (palabra), `p`
+  (patente), `b`/`m`/`y` (vehículo: brand/model/year), `c` (código),
+  `tab=medidas` (medidas, sin sub-tipo — el usuario elige en el catálogo).
 
 ## Datos
 
@@ -179,9 +189,10 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
 
 ## Estado de las páginas
 
-- `/` home: **completa**. Carousel administrable (BannerCarousel)
-  con buscador de patente como slide built-in + TrustStrip + 3 cards
-  destacadas (Productos / **Catálogo online** / Lanzamientos). El
+- `/` home: **completa**. Estructura: **HomeSearch** (buscador liviano, 5 tabs,
+  redirige al catálogo) → BannerCarousel administrable (con buscador de patente
+  como slide built-in) → TrustStrip → 3 cards destacadas (Productos /
+  **Catálogo online** / Lanzamientos). El
   label "Catálogo online" diferencia el buscador digital del catálogo
   físico (foto del PDF impreso). En el nav del header sigue diciendo
   "Catálogo" solo (con "online" no entraba el nav en laptop común y
@@ -205,10 +216,11 @@ Definidas en `globals.css` como `--color-primary-value`, `--color-accent-value`,
   con `site-config.ts` y `productos.ts`. La URL `griffo.com.ar/presentacion`
   está impresa en packaging — los QRs viejos van a hitear esta página
   al migrar el dominio.
-- `/garantia`: **completa**. Hero con "2 años de garantía" + link al PDF
-  de bases y condiciones, sección de Montadora con CTA "Registrar máquina",
-  formulario de registro de máquina (`GarantiaForm` → `/api/garantia`)
-  con contacto al lado.
+- `/garantia`: **completa**. Hero de pantalla completa (`min-h-[80vh]`) con
+  título grande "2 años de garantía", subtítulo "En Fuelles, Topes de
+  suspensión y herramientas." y link "Ver bases y condiciones →" al PDF.
+  Al scrollear: sección de Montadora con CTA "Registrar máquina" +
+  formulario de registro (`GarantiaForm` → `/api/garantia`) con contacto al lado.
 - `/novedades`: **funcional**. Auto-detección desde SpecParts (productos
   con `updated_at` dentro de los últimos 12 meses) como candidatos. Por
   default nada se publica — el admin marca explícitamente cada código
