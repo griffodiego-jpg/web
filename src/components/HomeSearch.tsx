@@ -75,11 +75,6 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
   return (
     <div className="w-full bg-white border-b border-gray-200 shadow-sm">
       <div className="container mx-auto max-w-4xl px-4 py-6">
-        {/* Título */}
-        <p className="text-center text-sm font-semibold text-primary uppercase tracking-widest mb-4">
-          Buscá tu repuesto
-        </p>
-
         {/* Tabs */}
         <div className="flex justify-center gap-1 mb-4 flex-wrap">
           {TABS.map((t) => (
@@ -106,7 +101,7 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
               value={palabra}
               onChange={(e) => setPalabra(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ej: fuelle cremallera Ford Ranger"
+              placeholder="Buscá por marca, modelo, código, categoría…"
               className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               autoFocus
             />
@@ -119,7 +114,7 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
               value={patente}
               onChange={(e) => setPatente(e.target.value.toUpperCase())}
               onKeyDown={handleKeyDown}
-              placeholder="Ej: AB123CD o ABC123"
+              placeholder="Ej: AC923HI"
               maxLength={8}
               className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
@@ -169,7 +164,7 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ej: 184-32A"
+              placeholder="Ej: 076-35"
               className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           )}
