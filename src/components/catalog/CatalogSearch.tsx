@@ -227,7 +227,11 @@ export function CatalogSearch({ products, status, trebolesUrl, mlLinks = {} }: P
   // Ahorra ~100-300ms en móviles para usuarios que entran a un tab distinto
   // (Patente/Vehículo/Código/Medidas). El índice se cachea una vez
   // construido — los siguientes keystrokes lo reusan.
-  const [indexReady, setIndexReady] = useState(false);
+  // Si llegamos con keyword pre-cargado desde la URL (ej: home search),
+  // arrancamos con el índice ya listo para que los resultados aparezcan solos.
+  const [indexReady, setIndexReady] = useState(
+    () => initial.tab === "palabra" && initial.keyword.trim().length >= 2,
+  );
   const indexedProducts = useMemo(
     () => (indexReady ? indexProducts(products) : null),
     [products, indexReady],
