@@ -59,9 +59,9 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
     } else if (tab === "patente" && patente.trim()) {
       params.set("p", patente.trim().toUpperCase());
     } else if (tab === "vehiculo") {
-      if (marca) params.set("marca", marca);
-      if (modelo) params.set("modelo", modelo);
-      if (anio) params.set("anio", anio);
+      if (marca) params.set("b", marca);
+      if (modelo) params.set("m", modelo);
+      if (anio) params.set("y", anio);
     } else if (tab === "codigo" && codigo.trim()) {
       params.set("c", codigo.trim());
     } else if (tab === "medidas") {
