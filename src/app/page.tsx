@@ -2,7 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { BannerCarousel } from "@/components/BannerCarousel";
 import { TrustStrip } from "@/components/TrustStrip";
+import { HomeSearch } from "@/components/HomeSearch";
 import { listActiveBanners } from "@/lib/banners-store";
+import { listCatalog } from "@/lib/api/specparts";
+import { buildVehicleTree } from "@/lib/catalog/utils";
 
 // ISR — el carousel cambia cuando el admin edita banners. Las APIs de
 // save/delete/reorder hacen revalidatePath("/") para refresh inmediato.
@@ -40,10 +43,15 @@ const featureCards: FeatureCard[] = [
 export default async function HomePage() {
   // Los banners activos vienen del admin (Redis). Si está vacío, el
   // carousel cae al buscador de patente built-in por default.
-  const banners = await listActiveBanners();
+  const [banners, products] = await Promise.all([
+    listActiveBanners(),
+    listCatalog().catch(() => []),
+  ]);
+  const vehicleTree = buildVehicleTree(products);
 
   return (
     <>
+      <HomeSearch vehicleTree={vehicleTree} />
       <BannerCarousel banners={banners} />
 
       <TrustStrip />
