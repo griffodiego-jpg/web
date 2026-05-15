@@ -35,13 +35,13 @@ export default function DesarrolloAMedidaPage() {
               la necesidad de nuestros clientes y ofrecerle soluciones.
             </p>
           </div>
-          <div className="flex justify-center lg:justify-end bg-white rounded-xl overflow-hidden">
+          <div className="flex justify-center lg:justify-end rounded-xl overflow-hidden">
             <AssetImage
-              src="/images/desarrollo-a-medida/header.jpg"
+              src="/images/empresa/industriales.jpg"
               alt="Piezas de caucho desarrollo a medida"
               caption="Piezas header"
               bare
-              className="max-h-[300px] w-auto object-contain"
+              className="max-h-[300px] w-auto object-cover rounded-xl"
               fallbackAspect="aspect-[4/3]"
             />
           </div>
