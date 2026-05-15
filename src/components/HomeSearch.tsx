@@ -187,12 +187,13 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
               {MEDIDAS_TIPOS.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => setMedidasTipo(t.id)}
-                  className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition ${
-                    medidasTipo === t.id
-                      ? "bg-primary text-white border-primary"
-                      : "bg-white text-gray-700 border-gray-300 hover:border-primary"
-                  }`}
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    params.set("tab", "medidas");
+                    if (t.id !== "direccion") params.set("mt", t.id);
+                    router.push(`/catalogo?${params.toString()}`);
+                  }}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary transition"
                 >
                   {t.label}
                 </button>
@@ -200,12 +201,14 @@ export function HomeSearch({ vehicleTree }: { vehicleTree: VehicleTree }) {
             </div>
           )}
 
-          <button
-            onClick={handleSearch}
-            className="shrink-0 bg-primary hover:bg-primary-dark text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
-          >
-            Buscar
-          </button>
+          {tab !== "medidas" && (
+            <button
+              onClick={handleSearch}
+              className="shrink-0 bg-primary hover:bg-primary-dark text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition"
+            >
+              Buscar
+            </button>
+          )}
         </div>
       </div>
     </div>
