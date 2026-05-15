@@ -12,7 +12,7 @@ export function TrustStrip() {
         <Credential
           icon={<ShieldIcon className="w-10 h-10" />}
           title="2 años de garantía"
-          subtitle="En todos nuestros productos"
+          subtitle="En Fuelles, Topes de suspensión y herramientas"
         />
         <Credential
           icon={<BadgeIcon className="w-10 h-10" />}

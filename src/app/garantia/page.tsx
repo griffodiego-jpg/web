@@ -24,29 +24,32 @@ export const metadata: Metadata = {
 export default function GarantiaPage() {
   return (
     <>
-      {/* INTRO — 2 años de garantía */}
-      <section className="container mx-auto max-w-6xl px-5 py-10">
-        <div className="grid lg:grid-cols-2 grid-cols-1 gap-10 items-center">
-          <div className="space-y-3 font-bold">
-            <p className="text-lg text-[#0a2b3d]">
-              Todos los productos Griffo cuentan con 2 años de garantía.
+      {/* HERO — 2 años de garantía */}
+      <section className="min-h-[80vh] flex items-center bg-gradient-to-br from-white to-gray-50 border-b border-gray-100">
+        <div className="container mx-auto max-w-4xl px-5 py-20 flex flex-col lg:flex-row items-center gap-12">
+          <div className="flex justify-center lg:justify-start shrink-0">
+            <AssetImage
+              src="/images/garantia/img-griffo2y.png"
+              alt="2 años de garantía Griffo"
+              bare
+              className="w-[180px] lg:w-[240px] h-auto"
+            />
+          </div>
+          <div className="space-y-5 text-center lg:text-left">
+            <h1 className="text-5xl lg:text-6xl font-black text-primary leading-none">
+              2 años de garantía
+            </h1>
+            <p className="text-xl lg:text-2xl text-[#0a2b3d] font-medium leading-snug">
+              En Fuelles, Topes de suspensión y herramientas.
             </p>
             <a
               href="/pdfs/garantia.pdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline inline-block"
+              className="inline-flex items-center gap-2 text-primary font-semibold hover:underline text-base"
             >
-              Ver bases y condiciones
+              Ver bases y condiciones →
             </a>
-          </div>
-          <div className="flex justify-center lg:justify-start">
-            <AssetImage
-              src="/images/garantia/img-griffo2y.png"
-              alt="2 años de garantía Griffo"
-              bare
-              className="w-full max-w-[250px] h-auto"
-            />
           </div>
         </div>
       </section>
