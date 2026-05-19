@@ -8,8 +8,6 @@ import { ReportarErrorButton } from "@/components/catalog/ReportarErrorButton";
 import { BreadcrumbJsonLd, ProductJsonLd } from "@/components/StructuredData";
 import { getFeaturedSlug } from "@/data/featured-products";
 import { getProductBySlug, listCatalog } from "@/lib/api/specparts";
-import { getMercadoLibreUrl } from "@/lib/catalog/utils";
-import { getLinkForCodigo } from "@/lib/mercadolibre-links-store";
 import { getDisplayApplication } from "@/lib/catalog/display";
 import { SITE_URL } from "@/lib/site-url";
 import type { SpecPartsAttribute, SpecPartsVehicle } from "@/types/specparts";
@@ -65,12 +63,6 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
   }
 
   const primaryImage = product.pictures?.[0]?.image_url ?? "";
-  // El mapa subido desde /admin/links-mercadolibre tiene prioridad; si
-  // ese código no está, caemos al link que pueda haber devuelto la API
-  // de SpecParts (campo links[] del producto).
-  const meliUrl =
-    (await getLinkForCodigo(product.code).catch(() => null)) ??
-    getMercadoLibreUrl(product);
   const productUrl = `${SITE_URL}/catalogo/${slug}`;
 
   const vehiclesByBrand = groupVehiclesByBrand(product.vehicles ?? []);
@@ -163,7 +155,6 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
               slug={product.slug}
               productName={product.product}
               image={product.pictures?.[0]?.image_url}
-              mlLink={meliUrl}
               size="detail"
             />
           </div>
@@ -205,7 +196,7 @@ export default async function ProductoCatalogoPage({ params }: { params: Params 
           </h2>
           <div className="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
             {Object.entries(vehiclesByBrand)
-              .sort(([, a], [, b]) => b.length - a.length)
+              .sort(([a], [b]) => a.localeCompare(b))
               .map(([brand, vehicles]) => (
                 <div
                   key={brand}
@@ -273,6 +264,14 @@ function groupVehiclesByBrand(vehicles: SpecPartsVehicle[]): Record<string, Spec
     const brand = v.brand || "Otros";
     if (!out[brand]) out[brand] = [];
     out[brand].push(v);
+  }
+  for (const brand of Object.keys(out)) {
+    out[brand].sort((a, b) => {
+      const ma = (a.master_model || a.model || "").toUpperCase();
+      const mb = (b.master_model || b.model || "").toUpperCase();
+      if (ma !== mb) return ma.localeCompare(mb);
+      return (a.version || "").toUpperCase().localeCompare((b.version || "").toUpperCase());
+    });
   }
   return out;
 }

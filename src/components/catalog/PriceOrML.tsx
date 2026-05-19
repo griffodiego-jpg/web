@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { fetchMlLink } from "@/app/actions/ml-link";
 import { useMockSession } from "@/lib/mock-session";
 
 import { AddToCartButton } from "./AddToCartButton";
@@ -18,6 +21,12 @@ import { ProductPrice } from "./ProductPrice";
  *   - Se muestra el precio (compra o PVP según preferencias B2B).
  *   - Se muestra el botón de "Agregar al carrito" para armar el pedido.
  *   - Si existe link de ML, se ofrece como alternativa secundaria.
+ *
+ * mlLink opcional:
+ *   - string  → link conocido (pre-computado server-side, para cards del catálogo)
+ *   - null    → sin link (disabled)
+ *   - undefined (no se pasa) → fetchea dinámicamente vía server action, así
+ *     el detalle de producto nunca sirve un link stale de la caché ISR
  */
 export function PriceOrML({
   productCode,
@@ -37,11 +46,32 @@ export function PriceOrML({
 }) {
   const { isLoggedIn, ready } = useMockSession();
 
-  // Mientras el estado de sesión no terminó de hidratar, no renderizamos
-  // precios ni CTAs para evitar parpadeos (precio visible → oculto).
-  if (!ready) {
+  // Cuando mlLink no se pasa (undefined), lo fetchea dinámicamente con un
+  // server action — así el detalle de producto nunca sirve un link stale
+  // desde la caché ISR. Para las cards del catálogo siempre llega string|null
+  // (pre-computado server-side) y este efecto no corre.
+  const [resolvedLink, setResolvedLink] = useState<string | null | undefined>(mlLink);
+  const [linkReady, setLinkReady] = useState(mlLink !== undefined);
+
+  useEffect(() => {
+    if (mlLink !== undefined) {
+      setResolvedLink(mlLink);
+      setLinkReady(true);
+      return;
+    }
+    fetchMlLink(productCode)
+      .then((url) => setResolvedLink(url ?? null))
+      .catch(() => setResolvedLink(null))
+      .finally(() => setLinkReady(true));
+  }, [productCode, mlLink]);
+
+  // Mientras hidrata la sesión o se resuelve el link dinámico, no renderizamos
+  // para evitar parpadeos.
+  if (!ready || !linkReady) {
     return <div className="h-10" aria-hidden />;
   }
+
+  const link = resolvedLink ?? null;
 
   if (isLoggedIn) {
     if (size === "detail") {
@@ -55,9 +85,9 @@ export function PriceOrML({
               name={productName}
               image={image}
             />
-            {mlLink ? (
+            {link ? (
               <a
-                href={mlLink}
+                href={link}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
@@ -87,12 +117,10 @@ export function PriceOrML({
   }
 
   // No logueado: solo Mercado Libre.
-  const hasLink = !!mlLink;
-
   if (size === "detail") {
-    return hasLink ? (
+    return link ? (
       <a
-        href={mlLink!}
+        href={link}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
@@ -112,9 +140,9 @@ export function PriceOrML({
   }
 
   // size="card"
-  return hasLink ? (
+  return link ? (
     <a
-      href={mlLink!}
+      href={link}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
