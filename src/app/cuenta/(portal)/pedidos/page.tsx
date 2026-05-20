@@ -176,16 +176,6 @@ export default async function PedidosPage() {
         </div>
       )}
 
-      {erpOrders.length === 0 && (
-        <p className="text-xs text-gray-500 mt-3">
-          Los pedidos cargados directamente en Bejerman aparecerán acá
-          cuando el técnico habilite el endpoint{" "}
-          <code className="px-1 py-0.5 bg-gray-100 rounded">
-            GET /ERP/clientes/{"{"}codigo{"}"}/pedidos
-          </code>
-          .
-        </p>
-      )}
     </div>
   );
 }
