@@ -41,8 +41,8 @@ function matchesFilter(item: BejermanAccountStatusItem, filtro: Filtro): boolean
   return true;
 }
 
-/** Codes que sí tienen PDF descargable en GetComprobante. */
-const PDF_AVAILABLE_COMPS = new Set(["FC", "NC", "ND", "RC"]);
+/** Codes que sí tienen PDF descargable en GetComprobante. RC excluido: el ERP no genera PDF para recibos. */
+const PDF_AVAILABLE_COMPS = new Set(["FC", "NC", "ND"]);
 
 export default async function CuentaCorrientePage({
   searchParams,
