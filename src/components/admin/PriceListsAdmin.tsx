@@ -16,8 +16,177 @@ export function PriceListsAdmin({
 }) {
   return (
     <div className="space-y-6">
+      <CoverageTable
+        knownClientCodes={knownClientCodes}
+        clientsByCode={clientsByCode}
+        lists={lists}
+      />
       <UploadForm knownCodes={knownClientCodes} />
       <ListsTable lists={lists} clientsByCode={clientsByCode} />
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+/* Cobertura: todos los códigos del ERP vs archivos subidos             */
+/* -------------------------------------------------------------------- */
+
+type SortKey = "code" | "clientes" | "fecha";
+
+function CoverageTable({
+  knownClientCodes,
+  clientsByCode,
+  lists,
+}: {
+  knownClientCodes: string[];
+  clientsByCode: Record<string, number>;
+  lists: PriceList[];
+}) {
+  const [sortKey, setSortKey] = useState<SortKey>("fecha");
+  const [sortAsc, setSortAsc] = useState(false);
+
+  if (knownClientCodes.length === 0) return null;
+
+  const listsByCode = Object.fromEntries(lists.map((l) => [l.code, l]));
+
+  type Row = {
+    code: string;
+    clientes: number;
+    list: PriceList | null;
+  };
+
+  const rows: Row[] = knownClientCodes.map((code) => ({
+    code,
+    clientes: clientsByCode[code] ?? 0,
+    list: listsByCode[code] ?? null,
+  }));
+
+  const sorted = [...rows].sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === "code") {
+      cmp = a.code.localeCompare(b.code);
+    } else if (sortKey === "clientes") {
+      cmp = a.clientes - b.clientes;
+    } else {
+      // fecha: sin archivo va al final
+      const da = a.list ? new Date(a.list.uploadedAt).getTime() : 0;
+      const db = b.list ? new Date(b.list.uploadedAt).getTime() : 0;
+      cmp = da - db;
+    }
+    return sortAsc ? cmp : -cmp;
+  });
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortAsc((v) => !v);
+    } else {
+      setSortKey(key);
+      setSortAsc(key === "code");
+    }
+  }
+
+  const ok = rows.filter((r) => r.list).length;
+  const total = rows.length;
+
+  function Th({ label, k }: { label: string; k: SortKey }) {
+    const active = sortKey === k;
+    return (
+      <th className="px-4 py-3 font-semibold">
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className={`flex items-center gap-1 hover:text-primary transition ${active ? "text-primary" : ""}`}
+        >
+          {label}
+          <span className="text-[10px]">{active ? (sortAsc ? "▲" : "▼") : "↕"}</span>
+        </button>
+      </th>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-[#0a2b3d]">
+            Cobertura de listas
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Todos los códigos activos en el ERP y si tienen archivo subido.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-600 shrink-0">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-emerald-700 font-bold">
+            ✓ {ok} OK
+          </span>
+          {total - ok > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-red-700 font-bold">
+              ✗ {total - ok} falta
+            </span>
+          )}
+        </div>
+      </div>
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+          <tr>
+            <Th label="Código ERP" k="code" />
+            <Th label="Clientes" k="clientes" />
+            <th className="px-4 py-3 font-semibold">Estado</th>
+            <th className="px-4 py-3 font-semibold">Archivo</th>
+            <Th label="Fecha de subida" k="fecha" />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {sorted.map((row) => (
+            <tr key={row.code} className="hover:bg-gray-50">
+              <td className="px-4 py-3 font-mono font-bold text-[#0a2b3d]">
+                {row.code}
+              </td>
+              <td className="px-4 py-3 text-gray-700 tabular-nums">
+                {row.clientes}
+              </td>
+              <td className="px-4 py-3">
+                {row.list ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                    ✓ OK
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[11px] font-bold text-red-700">
+                    ✗ Falta lista
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-600">
+                {row.list ? (
+                  <a
+                    href={row.list.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {row.list.name}
+                  </a>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                {row.list ? (
+                  new Date(row.list.uploadedAt).toLocaleString("es-AR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
