@@ -95,6 +95,7 @@ export default async function ClienteDetallePage({
               mono
               hint="Asignada en el ERP · de solo lectura"
             />
+          </dl>
 
           <div className="mt-5 pt-5 border-t border-gray-100">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
