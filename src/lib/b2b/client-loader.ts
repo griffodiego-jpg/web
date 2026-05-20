@@ -17,10 +17,10 @@ import { getPriceListOverrides } from "@/lib/b2b/price-list-overrides";
 import type { BejermanClient, BejermanWarehouse } from "@/types/bejerman";
 
 /**
- * Aplica el override manual de `priceListCode` que setea el admin desde
- * `/admin/clientes`. Si hay override, prevalece sobre lo que devuelva
- * el ERP — así si Griffo quiere cambiar la lista de un cliente sin
- * tocar Bejerman, lo puede hacer desde acá.
+ * Aplica el override manual de `priceListCode` guardado en Redis.
+ * El ERP siempre gana: el override solo se aplica cuando el ERP no
+ * devuelve un valor (campo vacío o ausente). Así los overrides manuales
+ * viejos no pisan el dato real del ERP.
  */
 function applyPriceListOverrides(
   clients: BejermanClient[],
@@ -29,7 +29,7 @@ function applyPriceListOverrides(
   if (Object.keys(overrides).length === 0) return clients;
   return clients.map((c) => {
     const override = overrides[c.client_id];
-    if (override) return { ...c, priceListCode: override };
+    if (override && !c.priceListCode) return { ...c, priceListCode: override };
     return c;
   });
 }
