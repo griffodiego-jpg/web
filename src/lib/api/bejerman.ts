@@ -147,11 +147,12 @@ async function requestBinary(
  * agregue en el futuro se propaga tal cual.
  */
 export async function getClients(): Promise<BejermanClient[]> {
-  type Raw = BejermanClient & { tax_id?: string };
+  type Raw = BejermanClient & { tax_id?: string; price_list_code?: string };
   const raws = await request<Raw[]>("/ERP/Clients");
   return raws.map((r) => ({
     ...r,
     cuit: r.cuit ?? r.tax_id,
+    priceListCode: r.priceListCode ?? r.price_list_code,
   }));
 }
 
